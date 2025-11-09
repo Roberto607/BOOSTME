@@ -1,0 +1,198 @@
+/* === Contenedor general del formulario === */
+.login-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0d1117, #1a1f25);
+  padding: 20px;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1000;
+}
+
+/* === Ocultar formularios duplicados === */
+.login-container:not(:first-of-type) {
+  display: none !important;
+}
+
+/* === Caja del formulario === */
+.login-form {
+  background: #ffffff;
+  border-radius: 16px;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.15);
+  padding: 35px 30px;
+  width: 100%;
+  max-width: 420px;
+  position: relative;
+  animation: fadeIn 0.4s ease;
+}
+
+/* === Responsive Design === */
+@media (max-width: 480px) {
+  .login-container {
+    padding: 10px;
+  }
+  
+  .login-form {
+    padding: 25px 20px;
+    max-width: 100%;
+  }
+  
+  .login-form h2 {
+    font-size: 1.5rem;
+  }
+  
+  .login-form input {
+    padding: 10px 12px;
+    font-size: 0.95rem;
+  }
+  
+  .login-form button[type="submit"] {
+    padding: 10px;
+    font-size: 0.95rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .login-form {
+    max-width: 420px;
+    margin: 0 auto;
+  }
+}
+
+/* === Inputs === */
+.login-form input {
+  width: 100%;
+  padding: 12px 14px;
+  margin-bottom: 15px;
+  border-radius: 8px;
+  border: 1px solid #ccc;
+  font-size: 1rem;
+  transition: border 0.2s, box-shadow 0.2s;
+}
+
+.login-form input:focus {
+  border-color: #0077ff;
+  box-shadow: 0 0 4px rgba(0, 119, 255, 0.3);
+  outline: none;
+}
+
+/* === Botón principal === */
+.login-form button[type="submit"] {
+  width: 100%;
+  background: #0077ff;
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 600;
+  border: none;
+  padding: 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.login-form button[type="submit"]:hover {
+  background: #005ed6;
+}
+
+.login-form button[type="submit"]:disabled {
+  background: #a0c4ff;
+  cursor: not-allowed;
+}
+
+/* === Mensaje de error === */
+.error-message {
+  background: #ffe6e6;
+  border-left: 6px solid #ff3b3b;
+  color: #b60000;
+  padding: 10px 14px;
+  border-radius: 8px;
+  margin-bottom: 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  animation: fadeIn 0.3s ease;
+}
+
+.error-close {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: #b60000;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+/* === 🔔 Notificación de éxito tipo toast === */
+.success-toast {
+  background: #e6fff0;
+  border-left: 6px solid #00b36b;
+  color: #046c3a;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  margin-bottom: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  line-height: 1.4;
+  animation: slideDown 0.4s ease forwards;
+}
+
+.close-toast {
+  background: transparent;
+  border: none;
+  font-size: 1.2rem;
+  color: #046c3a;
+  cursor: pointer;
+  margin-left: 10px;
+  font-weight: bold;
+}
+
+/* === Link de registro/login === */
+.register-link {
+  text-align: center;
+  margin-top: 15px;
+  color: #333;
+  font-size: 0.95rem;
+}
+
+.register-link button {
+  background: none;
+  border: none;
+  color: #0077ff;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 5px;
+}
+
+.register-link button:hover {
+  text-decoration: underline;
+}
+
+/* === Animaciones === */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

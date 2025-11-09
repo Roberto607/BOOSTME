@@ -1,0 +1,154 @@
+/* RevisarCorreo.css */
+.container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    padding: 1.5rem;
+    box-sizing: border-box;
+}
+
+/* Tarjeta principal */
+.success-card {
+    background: white;
+    border-radius: 20px;
+    padding: 2.5rem;
+    box-shadow: 0 5px 20px rgba(0, 0, 0, 0.1);
+    width: 100%;
+    max-width: 450px;
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.success-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.success-card h1 {
+    color: #222;
+    font-size: clamp(1.3rem, 2.5vw, 1.8rem);
+    margin-bottom: 1.25rem;
+    font-weight: 600;
+    line-height: 1.4;
+}
+
+.success-card p {
+    color: #555;
+    font-size: clamp(0.85rem, 2vw, 1rem);
+    line-height: 1.6;
+    margin-bottom: 1.25rem;
+}
+
+/* Botón */
+.actions {
+    margin-top: 2rem;
+}
+
+.actions button {
+    width: 100%;
+    padding: 1rem;
+    border: none;
+    border-radius: 12px;
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    font-size: clamp(0.9rem, 2vw, 1rem);
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.actions button:hover {
+    transform: scale(1.03);
+    box-shadow: 0 6px 18px rgba(0, 123, 255, 0.3);
+}
+
+/* Tablets y pantallas medianas */
+@media (max-width: 768px) {
+    .success-card {
+        max-width: 400px;
+        padding: 2rem;
+    }
+
+    .success-card h1 {
+        font-size: 1.4rem;
+    }
+
+    .actions button {
+        padding: 0.9rem;
+    }
+}
+
+/* Móviles */
+@media (max-width: 480px) {
+    .container {
+        padding: 1rem;
+    }
+
+    .success-card {
+        padding: 1.75rem;
+        border-radius: 15px;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    }
+
+    .success-card h1 {
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .success-card p {
+        font-size: 0.9rem;
+        margin-bottom: 0.75rem;
+    }
+
+    .actions button {
+        padding: 0.85rem;
+        font-size: 0.9rem;
+    }
+}
+
+/* Teléfonos muy pequeños */
+@media (max-width: 320px) {
+    .success-card {
+        padding: 1.25rem;
+    }
+
+    .success-card h1 {
+        font-size: 1.1rem;
+    }
+
+    .success-card p {
+        font-size: 0.8rem;
+    }
+
+    .actions button {
+        padding: 0.75rem;
+        font-size: 0.8rem;
+    }
+}
+
+/* Pantallas grandes (desktop) */
+@media (min-width: 1200px) {
+    .container {
+        background: linear-gradient(120deg, #e3f2fd 0%, #c8d9f1 100%);
+    }
+
+    .success-card {
+        max-width: 500px;
+        padding: 3rem;
+    }
+
+    .success-card h1 {
+        font-size: 2rem;
+    }
+
+    .success-card p {
+        font-size: 1.1rem;
+    }
+
+    .actions button {
+        font-size: 1rem;
+        padding: 1rem;
+    }
+}

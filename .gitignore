@@ -1,0 +1,25 @@
+# Dependencias de Node.js (si usas Node)
+node_modules/
+npm-debug.log*
+
+# Entornos virtuales de Python (si usas Python)
+__pycache__/
+*.py[cod]
+*$py.class
+venv/
+env/
+
+# Archivos de configuración del IDE (VSCode, etc.)
+.vscode/
+.idea/
+
+# Archivos de log
+*.log
+
+# Archivos de sistema operativo
+.DS_Store # macOS
+Thumbs.db # Windows
+
+# Posibles secretos o variables de entorno locales
+.env
+.env.local
