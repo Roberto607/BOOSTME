@@ -5,7 +5,7 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #38bdf8 100%);
     padding: 1rem;
 }
 
@@ -78,7 +78,7 @@
 .submit-button {
     width: 100%;
     padding: 0.875rem;
-    background: linear-gradient(135deg, #007bff, #0056b3);
+    background: linear-gradient(135deg, #0f172a, #38bdf8);
     color: white;
     border: none;
     border-radius: 8px;
@@ -103,7 +103,7 @@
 .link-button {
     background: none;
     border: none;
-    color: #007bff;
+    color: #38bdf8;
     cursor: pointer;
     text-decoration: underline;
     font-size: 0.875rem;
@@ -114,7 +114,7 @@
 
 .forgot-password-link:hover,
 .link-button:hover {
-    color: #0056b3;
+    color: #0f172a;
 }
 
 .auth-links {

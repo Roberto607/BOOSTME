@@ -1,7 +1,7 @@
 // src/contexts/AuthContext.jsx
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { API_BASE_URL } from '../Base'
+import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
+import { API_BASE_URL } from '../Base';
 
 const AuthContext = createContext();
 
@@ -14,49 +14,164 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [user, setUser] = useState(null);
-    const [accessToken, setAccessToken] = useState(null);
-    const [loading, setLoading] = useState(true);
     const navigate = useNavigate();
-
-    useEffect(() => {
-        console.log("AuthProvider - Inicializando...");
-        
-        const token = localStorage.getItem('access_token');
-        const refreshTokenValue = localStorage.getItem('refresh_token');
-        const userData = localStorage.getItem('user_data');
-
-        if (!token || !refreshTokenValue || !userData) {
-            console.log("No hay datos de autenticación");
-            setLoading(false);
-            return;
+    const location = useLocation();
+    const [authState, setAuthState] = useState(() => {
+        if (typeof window === 'undefined') {
+            return { isAuthenticated: false, user: null, accessToken: null, loading: true };
         }
 
+        let storedUser = null;
         try {
-            const parsedUser = JSON.parse(userData);
-            setUser(parsedUser);
-            setAccessToken(token);
-            setIsAuthenticated(true);
+            storedUser = JSON.parse(sessionStorage.getItem('user') || 'null');
+        } catch {
+            storedUser = null;
+        }
+
+        return {
+            isAuthenticated: Boolean(sessionStorage.getItem('accessToken')),
+            user: storedUser,
+            accessToken: sessionStorage.getItem('accessToken'),
+            loading: true
+        };
+    });
+
+    // Función para actualizar el estado de autenticación
+    const updateAuthState = useCallback((updates) => {
+        setAuthState(prevState => {
+            const newState = {
+                ...prevState,
+                ...updates
+            };
+            // Persistir accessToken y user en sessionStorage
+            if (updates.accessToken !== undefined) {
+                if (updates.accessToken) {
+                    sessionStorage.setItem('accessToken', updates.accessToken);
+                } else {
+                    sessionStorage.removeItem('accessToken');
+                }
+            }
+            if (updates.user !== undefined) {
+                if (updates.user) {
+                    sessionStorage.setItem('user', JSON.stringify(updates.user));
+                } else {
+                    sessionStorage.removeItem('user');
+                }
+            }
+            return newState;
+        });
+    }, []);
+
+    const clearAuthData = useCallback(() => {
+        sessionStorage.removeItem('accessToken');
+        sessionStorage.removeItem('user');
+        updateAuthState({
+            isAuthenticated: false,
+            user: null,
+            accessToken: null,
+            loading: false
+        });
+    }, [updateAuthState]);
+
+    // Helpers para exponer setters compatibles con componentes existentes
+    const setUser = useCallback((user) => updateAuthState({ user }), [updateAuthState]);
+    const setAccessToken = useCallback((accessToken) => updateAuthState({ accessToken }), [updateAuthState]);
+    const setIsAuthenticated = useCallback((isAuthenticated) => updateAuthState({ isAuthenticated }), [updateAuthState]);
+
+    const updateUserProfile = useCallback(async (formData) => {
+        try {
+            const response = await fetch(`${API_BASE_URL}/profile/`, {
+                method: 'PATCH',
+                credentials: 'include',
+                body: formData
+            });
+
+            const parseJsonSafe = async (res) => {
+                const text = await res.text();
+                if (!text) return null;
+                try {
+                    return JSON.parse(text);
+                } catch (err) {
+                    console.error('Invalid JSON response:', text);
+                    return null;
+                }
+            };
+
+            if (!response.ok) {
+                const errorData = await parseJsonSafe(response);
+                throw new Error((errorData && (errorData.error || errorData.detail)) || 'Error al actualizar el perfil');
+            }
+
+            const result = await parseJsonSafe(response);
+            if (!result || typeof result !== 'object') {
+                throw new Error('Respuesta inválida del servidor al actualizar el perfil');
+            }
+
+            const updatedUser = result.user || result;
+            if (!updatedUser || typeof updatedUser !== 'object') {
+                throw new Error('No se recibió el usuario actualizado');
+            }
+
+            // Actualizar el usuario solo en el estado en memoria
+            updateAuthState({ user: updatedUser });
+
+            return result;
         } catch (error) {
-            console.error("Error al procesar datos de autenticación:", error);
-            localStorage.removeItem('access_token');
-            localStorage.removeItem('refresh_token');
-            localStorage.removeItem('user_data');
-        } finally {
-            setLoading(false);
+            console.error('Error al actualizar perfil:', error);
+            throw error;
         }
-    }, [navigate]);
+    }, [updateAuthState]);
 
-    const login = async (credentials) => {
+    const refreshToken = useCallback(async () => {
         try {
-            console.log("AuthContext - Iniciando login...");
-            
+            // Usar cookie HttpOnly: realizar llamada al endpoint de refresh con credentials
+            const response = await fetch(`${API_BASE_URL}/token/refresh/`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                body: JSON.stringify({})
+            });
+            const parseJsonSafe = async (res) => {
+                const text = await res.text();
+                if (!text) return null;
+                try {
+                    return JSON.parse(text);
+                } catch (err) {
+                    console.error('Invalid JSON response:', text);
+                    return null;
+                }
+            };
+
+            if (!response.ok) {
+                const errData = await parseJsonSafe(response);
+                console.error('Refresh token failed:', errData);
+                return null;
+            }
+
+            const data = await parseJsonSafe(response);
+            updateAuthState({
+                accessToken: data?.access || null,
+                user: data?.user || null,
+                isAuthenticated: Boolean(data?.access)
+            });
+            return data?.access || null;
+        } catch (error) {
+            console.error("Error al refrescar token:", error);
+            clearAuthData();
+            throw error;
+        }
+    }, [clearAuthData, updateAuthState]);
+
+    const login = useCallback(async (credentials) => {
+        try {
             const response = await fetch(`${API_BASE_URL}/login/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
+                credentials: 'include',
                 body: JSON.stringify({
                     username: credentials.username.trim(),
                     password: credentials.password.trim(),
@@ -64,64 +179,142 @@ export const AuthProvider = ({ children }) => {
                 })
             });
 
-            const data = await response.json();
-            
+            const parseJsonSafe = async (res) => {
+                const text = await res.text();
+                if (!text) return null;
+                try {
+                    return JSON.parse(text);
+                } catch (err) {
+                    console.error('Invalid JSON response:', text);
+                    return null;
+                }
+            };
+
+            const data = await parseJsonSafe(response);
+
             if (!response.ok) {
-                if (data.code === 'invalid_credentials') {
+                if (data && data.code === 'invalid_credentials') {
                     throw new Error('Credenciales inválidas');
-                } else if (data.code === 'email_not_verified') {
+                } else if (data && data.code === 'email_not_verified') {
                     throw new Error('Debes verificar tu email antes de iniciar sesión');
                 } else {
-                    throw new Error(data.error || 'Error de autenticación');
+                    throw new Error((data && (data.error || data.detail)) || 'Error de autenticación');
                 }
             }
 
-            // Guardar tokens y datos del usuario
-            localStorage.setItem('access_token', data.access);
-            localStorage.setItem('refresh_token', data.refresh);
-            localStorage.setItem('user_data', JSON.stringify(data.user));
-
-            // Actualizar estado
-            setIsAuthenticated(true);
-            setUser(data.user);
-            setAccessToken(data.access);
+            // Backend setea cookies HttpOnly; actualizar estado en memoria
+            updateAuthState({
+                isAuthenticated: true,
+                user: data.user,
+                accessToken: data.access || null,
+                loading: false
+            });
 
             return data;
         } catch (error) {
             console.error("Error en login:", error);
             throw error;
         }
-    };
+    }, [updateAuthState]);
 
-    const logout = () => {
-        // Limpiar storage
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('user_data');
+    const logout = useCallback(() => {
+        clearAuthData();
+        navigate('/');
+    }, [navigate, clearAuthData]);
 
-        // Limpiar estado
-        setIsAuthenticated(false);
-        setUser(null);
-        setAccessToken(null);
-        
-        navigate('/register');
-    };
+    // Inicialización: comprobar sesión con cookies solo para rutas privadas
+    useEffect(() => {
+        const initializeAuth = async () => {
+            try {
+                const hasSession = Boolean(sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
+                if (!hasSession) {
+                    updateAuthState({ loading: false, isAuthenticated: false, user: null, accessToken: null });
+                    return;
+                }
+
+                let res = await fetch(`${API_BASE_URL}/status/`, {
+                    method: 'GET',
+                    credentials: 'include'
+                });
+
+                if (res.status === 401) {
+                    try {
+                        await refreshToken();
+                        res = await fetch(`${API_BASE_URL}/status/`, {
+                            method: 'GET',
+                            credentials: 'include'
+                        });
+                    } catch (refreshError) {
+                        console.error('Refresh token failed during initialization:', refreshError);
+                    }
+                }
+
+                if (!res.ok) {
+                    clearAuthData();
+                    return;
+                }
+
+                const data = await res.json();
+                updateAuthState({
+                    isAuthenticated: true,
+                    user: data.user,
+                    loading: false
+                });
+            } catch (error) {
+                console.error("Error al inicializar autenticación:", error);
+                clearAuthData();
+            }
+        };
+
+        const publicPaths = [
+            '/',
+            '/login',
+            '/register',
+            '/revisar-correo',
+            '/forgot-password'
+        ];
+
+        const isPublicPath = publicPaths.includes(location.pathname) ||
+            location.pathname.startsWith('/verify-email/') ||
+            location.pathname.startsWith('/reset-password/');
+
+        if (isPublicPath) {
+            updateAuthState({ loading: false });
+            return;
+        }
+
+        initializeAuth();
+    }, [location.pathname, refreshToken, updateAuthState, clearAuthData]);
+
+    useEffect(() => {
+        if (!authState.isAuthenticated || authState.loading) {
+            return;
+        }
+
+        const interval = window.setInterval(() => {
+            refreshToken().catch(() => {});
+        }, 4 * 60 * 1000);
+
+        return () => window.clearInterval(interval);
+    }, [authState.isAuthenticated, authState.loading, refreshToken]);
 
     return (
         <AuthContext.Provider value={{
-            isAuthenticated,
-            user,
-            accessToken,
-            loading,
+            ...authState,
+            updateAuthState,
+            verifyToken: () => authState.isAuthenticated,
+            refreshToken,
+            login,
+            logout,
+            updateUserProfile,
+            // Backwards-compatible setters
             setUser,
             setAccessToken,
-            setIsAuthenticated,
-            isEmailVerified: user?.is_email_verified || false,
-            hasFinancialActivation: user?.has_financial_activation || false,
-            login,
-            logout
+            setIsAuthenticated
         }}>
             {children}
         </AuthContext.Provider>
     );
 };
+
+export default AuthProvider;

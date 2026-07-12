@@ -2,109 +2,122 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { API_BASE_URL } from '../Base';
-import './AccountActivation.css';
+import { MailCheck, Loader2, XCircle } from 'lucide-react';
 
 const AccountActivation = () => {
-    const [isLoading, setIsLoading] = useState(true);
-    const [status, setStatus] = useState('loading');
-    const [message, setMessage] = useState('');
-    const { uidb64, token } = useParams();
-    const navigate = useNavigate();
-    const { user, setUser, setAccessToken, setIsAuthenticated } = useAuth();
+  const [isLoading, setIsLoading] = useState(true);
+  const [status, setStatus] = useState('loading');
+  const [message, setMessage] = useState('');
 
-    useEffect(() => {
-        // Si ya hay un usuario autenticado, redirigir
-        if (user && user.is_email_verified) {
-            navigate('/deposit', { replace: true });
-            return;
-        }
+  const { uidb64, token } = useParams();
+  const navigate = useNavigate();
+  const { user, setUser, setAccessToken, setIsAuthenticated } = useAuth();
 
-        activateAccount();
-    }, [user, navigate]);
-
-    const activateAccount = async () => {
-        try {
-            const response = await fetch(`${API_BASE_URL}/verify-email/${uidb64}/${token}/`, {
-                method: 'GET',
-                headers: { 'Content-Type': 'application/json' },
-            });
-
-            const data = await response.json();
-
-            if (response.ok) {
-                setStatus('success');
-                setMessage(data.message || 'Correo verificado exitosamente 🎉');
-
-                // Actualizar el estado del usuario si se proporciona en la respuesta
-                if (data.user) {
-                    setUser(data.user);
-                    localStorage.setItem('user_data', JSON.stringify(data.user));
-                }
-
-                // Actualizar tokens si se proporcionan
-                if (data.access && data.refresh) {
-                    setAccessToken(data.access);
-                    localStorage.setItem('access_token', data.access);
-                    localStorage.setItem('refresh_token', data.refresh);
-                    setIsAuthenticated(true);
-                }
-
-                // Redirigir automáticamente al deposito después de la verificación
-                setTimeout(() => {
-                    navigate('/deposit', { replace: true });
-                }, 1500);
-            } else {
-                setStatus('error');
-                setMessage(data.error || 'El enlace de verificación no es válido o ya fue usado.');
-            }
-        } catch (err) {
-            setStatus('error');
-            setMessage('Error de conexión. Intenta nuevamente.');
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    // Si el usuario ya está verificado, no mostrar nada mientras redirige
+  useEffect(() => {
     if (user && user.is_email_verified) {
-        return null;
+      navigate('/deposit', { replace: true });
+      return;
     }
+    activateAccount();
+  }, [user]);
 
-    return (
-        <div className="auth-container">
-            <div className="auth-form">
-                <h2>Verificación de Email</h2>
+  const activateAccount = async () => {
+    try {
+      const response = await fetch(
+        `${API_BASE_URL}/verify-email/${uidb64}/${token}/`,
+        {
+          method: 'GET',
+          credentials: 'omit',
+          headers: {
+            'Accept': 'application/json',
+          },
+        }
+      );
 
-                {status === 'loading' && (
-                    <div className="loading-message">
-                        <div className="spinner"></div>
-                        Verificando tu correo...
-                    </div>
-                )}
+      const data = await response.json();
 
-                {status === 'success' && !isLoading && (
-                    <div className="success-message">
-                        {message}
-                        <div className="loading-spinner"></div>
-                        <p>Serás redirigido al deposito en unos segundos...</p>
-                    </div>
-                )}
+        if (response.ok) {
+        setStatus('success');
+        setMessage(data.message || 'Correo verificado exitosamente 🎉');
 
-                {status === 'error' && !isLoading && (
-                    <div className="error-message">
-                        {message}
-                        <button 
-                            onClick={() => window.location.reload()} 
-                            className="retry-button"
-                        >
-                            Reintentar
-                        </button>
-                    </div>
-                )}
+        if (data.user) {
+          setUser(data.user);
+          setIsAuthenticated(true);
+        }
+
+        setTimeout(() => {
+          navigate('/deposit', { replace: true });
+        }, 1500);
+      } else {
+        setStatus('error');
+        setMessage(
+          data.error || 'El enlace de verificación no es válido o ya fue usado.'
+        );
+      }
+    } catch {
+      setStatus('error');
+      setMessage('Error de conexión. Intenta nuevamente.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  if (user && user.is_email_verified) return null;
+
+  return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
+
+      <div className="bg-white rounded-xl shadow p-6 sm:p-8 max-w-md w-full text-center">
+
+        {/* HEADER */}
+        <h2 className="text-2xl font-bold text-gray-800 mb-2">
+          Verificación de Email
+        </h2>
+        <p className="text-gray-500 text-sm mb-6">
+          Estamos validando tu cuenta
+        </p>
+
+        {/* LOADING */}
+        {status === 'loading' && (
+          <div className="flex flex-col items-center gap-4">
+            <Loader2 className="w-10 h-10 text-blue-600 animate-spin" />
+            <p className="text-gray-600">Verificando tu correo…</p>
+          </div>
+        )}
+
+        {/* SUCCESS */}
+        {status === 'success' && !isLoading && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-green-100 flex items-center justify-center">
+              <MailCheck className="w-7 h-7 text-green-600" />
             </div>
-        </div>
-    );
+            <p className="text-green-700 font-medium">{message}</p>
+            <p className="text-sm text-gray-500">
+              Serás redirigido al depósito en unos segundos…
+            </p>
+            <Loader2 className="w-5 h-5 text-blue-600 animate-spin mt-2" />
+          </div>
+        )}
+
+        {/* ERROR */}
+        {status === 'error' && !isLoading && (
+          <div className="flex flex-col items-center gap-4">
+            <div className="w-14 h-14 rounded-full bg-red-100 flex items-center justify-center">
+              <XCircle className="w-7 h-7 text-red-600" />
+            </div>
+            <p className="text-red-600 font-medium">{message}</p>
+            <button
+              onClick={() => window.location.reload()}
+              className="mt-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg transition"
+            >
+              Reintentar
+            </button>
+          </div>
+        )}
+
+      </div>
+    </div>
+  );
 };
 
 export default AccountActivation;
-

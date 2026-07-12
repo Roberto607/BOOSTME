@@ -9,32 +9,44 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-
+import os
+from dotenv import load_dotenv
 from pathlib import Path
+
+# Static files (CSS, JavaScript, Images)
+# https://docs.djangoproject.com/en/5.2/howto/static-files/
+
+
+
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
-
+# Detectar si estamos en Docker
+IS_DOCKER = os.path.exists('/.dockerenv')
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-g1ytl#g@05!1(j7n8u(@i^lx^ez$!)133308&j*xd1_90p1gol'
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'testserver', 'backend', 'backend:8000']
+
 if DEBUG:
     FRONTEND_URL = "http://localhost:5173"
+    BACKEND_URL = "http://localhost:8000"
     CSRF_TRUSTED_ORIGINS = [
         "http://localhost:5173",
         "http://127.0.0.1:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5174",
     ]
 else:
     # Para producción
     FRONTEND_URL = "https://tudominio.com"
+    BACKEND_URL = "https://tudominio.com"
     CSRF_TRUSTED_ORIGINS = [
         "https://tudominio.com",
         "https://www.tudominio.com",
@@ -42,18 +54,14 @@ else:
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'users.authentication.CookieJWTAuthentication',
     ],
-     # por defecto requieren autenticación
     'DEFAULT_RENDERER_CLASSES': [
         'rest_framework.renderers.JSONRenderer',
     ],
-
-      'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',  # Por defecto protegido
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
     ],
-    
-  
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
     'PAGE_SIZE': 20
 }
@@ -61,13 +69,11 @@ REST_FRAMEWORK = {
 import logging
 import warnings
 
-# Configurar logging para ver solo errores importantes
 logging.basicConfig(
     level=logging.ERROR,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 
-# Filtrar solo esta advertencia específica
 warnings.filterwarnings(
     'ignore',
     message='.*first seen with mtime.*',
@@ -75,7 +81,6 @@ warnings.filterwarnings(
     module='rest_framework_simplejwt'
 )
 
-# O si quieres ser aún más específico
 warnings.filterwarnings(
     'ignore',
     message=r'File .*django\.mo first seen with mtime.*',
@@ -83,63 +88,77 @@ warnings.filterwarnings(
 )
 
 from datetime import timedelta
+
+# Para desarrollo local con proxy Vite y frontend en localhost,
+# usamos cookies de sesión same-site seguras en HTTP.
+# En producción, usamos SameSite=None y Secure=True para permitir envíos cross-site.
+if DEBUG:
+    auth_cookie_samesite = 'Lax'
+    auth_cookie_secure = False
+    refresh_cookie_samesite = 'Lax'
+    refresh_cookie_secure = False
+else:
+    auth_cookie_samesite = 'None'
+    auth_cookie_secure = True
+    refresh_cookie_samesite = 'None'
+    refresh_cookie_secure = True
+
 SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=5),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
     'ROTATE_REFRESH_TOKENS': True,
     'BLACKLIST_AFTER_ROTATION': True,
     'UPDATE_LAST_LOGIN': True,
-    
     'ALGORITHM': 'HS256',
     'SIGNING_KEY': SECRET_KEY,
     'VERIFYING_KEY': None,
-    
     'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_HEADER_NAME': 'HTTP_AUTHORIZATION',
-    'USER_ID_FIELD': 'id',
-    'USER_ID_CLAIM': 'user_id',
-    
-    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
-    'TOKEN_TYPE_CLAIM': 'token_type',
-    
-    'JTI_CLAIM': 'jti',
-    
-    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
-    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
-    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'AUTH_COOKIE': 'access',  # Nombre de la cookie de acceso JWT
+    'REFRESH_COOKIE': 'refresh',  # Nombre de la cookie de refresh JWT
+    'AUTH_COOKIE_DOMAIN': None,  # Especifica el dominio si es necesario
+    'AUTH_COOKIE_SECURE': auth_cookie_secure,
+    'AUTH_COOKIE_HTTP_ONLY': True,  # No accesible desde JavaScript
+    'AUTH_COOKIE_PATH': '/',
+    'AUTH_COOKIE_SAMESITE': auth_cookie_samesite,
+    'AUTH_COOKIE_REFRESH_TOKEN_PATH': '/',
+    'AUTH_COOKIE_REFRESH_TOKEN_SECURE': refresh_cookie_secure,
+    'AUTH_COOKIE_REFRESH_TOKEN_HTTP_ONLY': True,
+    'AUTH_COOKIE_REFRESH_TOKEN_SAMESITE': refresh_cookie_samesite,
 }
 
 
-#Para desarrollo 
-CORS_ALLOW_ALL_ORIGINS = True
-
-FRONTEND_URL = "http://localhost:5173"
-
 CORS_ALLOWED_ORIGINS = [
-    FRONTEND_URL,
-   
-    
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
-# Permitir cookies跨域
-CORS_ALLOW_CREDENTIALS = True
 
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Más seguro que CORS_ALLOWED_ORIGINS
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
+    'authorization',
     'content-type',
+    'dnt',
     'origin',
     'user-agent',
+    'x-csrftoken',
     'x-requested-with',
 ]
 CORS_ALLOW_METHODS = [
-    'GET',  # Para la verificación del token
-    'POST', # Si tienes alguna acción POST relacionada
+    'GET',
+    'POST',
+    'PUT',
+    'DELETE',
+    'OPTIONS',
+]
+CORS_EXPOSE_HEADERS = [
+    'Content-Type',
+    'X-CSRFToken',
 ]
 
 
-
 # Application definition
-
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -152,7 +171,9 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework_simplejwt',
     'plan',
-   
+    'tasks',
+    'referrals',
+    'bonuses',
 ]
 
 MIDDLEWARE = [
@@ -164,10 +185,25 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'Bakend.middleware.ErrorLoggingMiddleware', 
-    'django.middleware.gzip.GZipMiddleware',  # Para comprimir respuestas
-   
-] 
+    'django.middleware.gzip.GZipMiddleware',
+]
+# Configuración de seguridad adicional
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+
+# Configuración de sesión segura
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 3600  # 1 hora
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
 
 ROOT_URLCONF = 'Bakend.urls'
 
@@ -188,35 +224,32 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'Bakend.wsgi.application'
 
-
 # Database
-# https://docs.djangoproject.com/en/5.2/ref/settings/#databases
+load_dotenv()
 
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
+        'USER': os.getenv('POSTGRES_USER', 'boostme'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
+        'HOST': os.getenv('POSTGRES_HOST', 'db'),  # 'db' para Docker, 'localhost' para desarrollo local
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+    }
+}
+
+YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
+
+# Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
 EMAIL_HOST_USER = 'martinecarlo697@gmail.com'
-EMAIL_HOST_PASSWORD = 'iskwigmanmnyjvmn'  # <-- tu clave de aplicación
+EMAIL_HOST_PASSWORD = 'iskwigmanmnyjvmn'
 DEFAULT_FROM_EMAIL = 'BoostMe <martinecarlo697@gmail.com>'
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'App',
-        'USER': 'Boostme',
-        'PASSWORD': '2025',
-        'HOST': 'localhost',
-        'PORT': '5432',
-
-
-    }
-}
-
-
 # Password validation
-# https://docs.djangoproject.com/en/5.2/ref/settings/#auth-password-validators
-
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -232,19 +265,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-
 # Internationalization
-# https://docs.djangoproject.com/en/5.2/topics/i18n/
-
 LANGUAGE_CODE = 'en-us'
-
 TIME_ZONE = 'America/Mexico_City'
-
 USE_I18N = True
-
 USE_TZ = True
 
-LANGUAGE =[
+LANGUAGE = [
     ('es', 'Español'),
     ('en', 'English'),
 ]
@@ -253,38 +280,12 @@ LOCALE_PATHS = [
 ]
 
 
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-STATIC_URL = 'static/'
 
 # Default primary key field type
-# https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
-
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
 
-
-# Headers para móviles
-CORS_ALLOW_HEADERS = [
-    'accept',
-    'accept-encoding',
-    'authorization',
-    'content-type',
-    'dnt',
-    'origin',
-    'user-agent',
-    'x-csrftoken',
-    'x-requested-with',
-]
-
-# Para permitir cookies en móviles si es necesario
-CORS_ALLOW_CREDENTIALS = True
-
-
-
-# Agrega esto al final
-# settings.py - Configuración de logging para producción
+# Logging configuration
 LOGGING = {
     'version': 1,
     'disable_existing_loggers': False,
@@ -312,4 +313,6 @@ LOGGING = {
         },
     },
 }
-
+STATIC_URL = 'static/'
+# AGREGA ESTA LÍNEA ABAJO:
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')

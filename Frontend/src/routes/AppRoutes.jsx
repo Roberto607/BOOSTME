@@ -1,4 +1,4 @@
-import { Routes, Route } from "react-router-dom";
+import { Routes, Route, Navigate } from "react-router-dom";
 import RegisterForm from "../components/RegisterForm";
 import Home from '../components/Home';
 import AccountActivation from '../components/AccountActivation';
@@ -8,7 +8,25 @@ import Dashboard from "../components/Dashboard";
 import ForgotPassword from "../components/auth/ForgotPassword";
 import ResetPassword from "../components/auth/ResetPassword";
 import Profile from "../components/Perfil/Profile";
-import DepositForm from "../components/Deposito/DepositForm";
+import Plans from "../components/Plans/Plans";
+import Bonuses from "../components/Bonuses/bonuses"
+import Withdraw from "../components/Withdraw";
+import { useAuth } from "../contexts/AuthContext";
+import LoadingScreen from "../components/LoadingScreen";
+import ContactPage from "../components/ContactPage";
+import HelpPage from "../components/HelpPage";
+import PrivacyPage from "../components/PrivacyPage";
+
+const ProtectedRoute = ({ children }) => {
+  const { isAuthenticated, loading, accessToken, user } = useAuth();
+  const hasPersistedSession = Boolean(accessToken || sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
+  const isSessionValid = Boolean(isAuthenticated && (user || accessToken));
+
+  if (loading) return <LoadingScreen />;
+  if (!isSessionValid && !hasPersistedSession) return <Navigate to="/login" replace />;
+
+  return children;
+};
 
 const AppRoutes = () => {
   return (
@@ -18,12 +36,20 @@ const AppRoutes = () => {
       <Route path="/verify-email/:uidb64/:token" element={<AccountActivation />} />
       <Route path="/revisar-correo" element={<RevisarCorreo />} />
       <Route path="/login" element={<Login />} />
-      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:uidb64/:token" element={<ResetPassword />} />
-      <Route path="/Profile" element={<Profile />} />
-      <Route path="/deposit" element={<DepositForm />} />
-      
+      <Route path="/Profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/deposit" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
+      <Route path="/bonuses" element={<ProtectedRoute><Bonuses /></ProtectedRoute>} />
+      <Route path="/Referidos" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/referidos" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard/referidos" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/contact" element={<ContactPage />} />
+      <Route path="/help" element={<HelpPage />} />
+      <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 };

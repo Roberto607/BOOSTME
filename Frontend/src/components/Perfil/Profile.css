@@ -29,7 +29,7 @@
 
 .profile-section h2 {
   font-size: 1.3rem;
-  color: #2563eb;
+  color: var(--brand-900);
   margin-bottom: 1rem;
   text-align: center;
 }
@@ -81,7 +81,7 @@
   position: absolute;
   bottom: 0;
   right: 0;
-  background: rgba(37, 99, 235, 0.9);
+  background: rgba(15, 23, 42, 0.9);
   color: white;
   border-radius: 50%;
   padding: 0.4rem;
@@ -89,7 +89,7 @@
   transition: 0.2s;
 }
 .camera-overlay:hover {
-  background: #1e40af;
+  background: #111c33;
 }
 
 /* ---------- INFORMACIÓN ---------- */
@@ -143,8 +143,8 @@
 
 .profile-input:focus {
   outline: none;
-  border-color: #2563eb;
-  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.15);
+  border-color: var(--brand-700);
+  box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.18);
 }
 
 /* ---------- BOTONES DE EDICIÓN ---------- */
@@ -173,27 +173,27 @@
 }
 
 .edit-button {
-  background: #2563eb;
+  background: var(--brand-900);
   color: white;
 }
 .edit-button:hover {
-  background-color: #1e50c3;
+  background-color: #111c33;
 }
 
 .save-button {
-  background: #10b981;
+  background: var(--brand-emerald);
   color: white;
 }
 .save-button:hover {
-  background-color: #059669;
+  background-color: #14b8a6;
 }
 
 .cancel-button {
-  background: #ef4444;
+  background: var(--brand-300);
   color: white;
 }
 .cancel-button:hover {
-  background-color: #dc2626;
+  background-color: #ea580c;
 }
 
 /* =========================
@@ -254,7 +254,7 @@
 }
 
 .copy-button {
-  background: #2563eb;
+  background: var(--brand-900);
   color: white;
   border: none;
   border-radius: 10px;
@@ -267,7 +267,7 @@
   gap: 0.3rem;
 }
 .copy-button:hover {
-  background-color: #1e40af;
+  background-color: #111c33;
 }
 
 /* =========================

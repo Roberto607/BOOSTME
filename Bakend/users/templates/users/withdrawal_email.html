@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Confirmación de retiro</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Open Sans', Arial; background:#f7fafc; color:#333; }
+        .container { max-width:600px; margin:24px auto; background:#fff; padding:24px; border-radius:8px; box-shadow:0 2px 6px rgba(0,0,0,0.06); }
+        .header { text-align:center; margin-bottom:18px; }
+        .logo { font-weight:700; color:#0b5fff; font-size:20px; }
+        .content p { margin:10px 0; line-height:1.5; }
+        .important { background:#fff3cd; padding:10px; border-radius:6px; border:1px solid #ffeeba; color:#664d03; }
+        .footer { font-size:13px; color:#666; margin-top:20px; border-top:1px solid #eee; padding-top:12px; }
+        .muted { color:#888; font-size:13px; }
+    </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <div class="logo">BoostMe</div>
+    </div>
+
+    <div class="content">
+      <h2>Hola {{ user.username }},</h2>
+
+      <p>Hemos procesado tu solicitud de retiro por <strong>{{ boost_amount }} BOOST</strong>.</p>
+
+      <p>El monto convertido corresponde a <strong>{{ usdt_amount }} USDT</strong> y será acreditado en tu wallet.</p>
+
+      <div class="important">
+        <strong>Importante:</strong> Por favor espera hasta <strong>{{ wait_hours }} horas</strong> como tiempo máximo para la ejecución y confirmación del retiro.
+      </div>
+
+      <p class="muted">Si tienes dudas, inicia sesión en tu cuenta en <a href="{{ protocol }}://{{ domain }}">nuestra app</a> y revisa el historial de transacciones.</p>
+
+      <div class="footer">
+        <p>Este es un correo automático, por favor no respondas.</p>
+        <p>© {{ now.year }} BoostMe</p>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

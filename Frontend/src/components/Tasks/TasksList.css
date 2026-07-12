@@ -1,0 +1,162 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  /* Contenedor principal */
+  .tasks-container {
+    @apply flex flex-col items-center gap-4 min-h-screen bg-gray-50;
+    /* Mobile first */
+    @apply px-4 py-4;
+    /* Tablet */
+    @apply md:px-6 md:py-6 md:gap-6;
+    /* Desktop */
+    @apply lg:px-8 lg:py-8 lg:gap-8;
+  }
+
+  /* Tarjeta de información del plan */
+  .plan-info-card {
+    @apply rounded-2xl shadow-md w-full transition-all duration-300;
+    background: linear-gradient(135deg, rgba(245, 158, 11, 0.14) 0%, rgba(56, 189, 248, 0.18) 100%);
+    /* Mobile first */
+    @apply p-4 mb-4;
+    /* Tablet */
+    @apply md:p-6 md:mb-6;
+    /* Desktop */
+    @apply lg:p-8 lg:mb-8;
+  }
+
+  /* Header de tareas */
+  .tasks-header {
+    @apply text-white rounded-2xl shadow-lg w-full transition-all duration-200;
+    background: linear-gradient(135deg, var(--brand-900) 0%, var(--brand-700) 100%);
+    /* Mobile first */
+    @apply p-4 mb-4;
+    /* Tablet */
+    @apply md:p-6 md:mb-6;
+    /* Desktop */
+    @apply lg:p-8 lg:mb-8;
+  }
+
+  .tasks-header h2 {
+    @apply font-bold mb-4;
+    /* Mobile first */
+    @apply text-xl;
+    /* Tablet */
+    @apply md:text-2xl;
+    /* Desktop */
+    @apply lg:text-3xl;
+  }
+
+  /* Pestañas de tareas */
+  .task-tabs {
+    @apply flex;
+    /* Mobile first */
+    @apply flex-col gap-2;
+    /* Tablet y Desktop */
+    @apply md:flex-row md:gap-4;
+  }
+
+  .tab-button {
+    @apply flex items-center gap-2 rounded-lg transition-all duration-200;
+    /* Mobile first */
+    @apply px-4 py-2 text-sm;
+    /* Tablet */
+    @apply md:px-6 md:py-3 md:text-base;
+  }
+
+  /* Grid de tareas */
+  .tasks-grid {
+    @apply w-full mx-auto;
+    /* Mobile first */
+    @apply grid grid-cols-1 gap-4 max-w-full;
+    /* Tablet */
+    @apply md:grid-cols-2 md:gap-6 md:max-w-4xl;
+    /* Desktop */
+    @apply lg:grid-cols-3 lg:max-w-6xl;
+  }
+
+  /* Tarjeta de tarea individual */
+  .task-card {
+    @apply bg-white rounded-2xl shadow-md transition-all duration-300 cursor-pointer relative overflow-hidden;
+    /* Mobile first */
+    @apply p-4 border-l-4;
+    /* Tablet */
+    @apply md:p-5;
+    /* Desktop */
+    @apply lg:p-6;
+  }
+
+  .task-card:hover {
+    @apply -translate-y-1 shadow-xl;
+    border-color: var(--brand-700);
+  }
+
+  .task-card.completed {
+    @apply bg-emerald-50;
+    border-color: var(--brand-emerald);
+  }
+
+  .task-card.locked {
+    @apply border-gray-300 bg-gray-50 opacity-75 cursor-not-allowed;
+  }
+
+  /* Icono de tarea */
+  .task-icon {
+    @apply rounded-xl flex items-center justify-center text-white shadow-md;
+    background: linear-gradient(135deg, var(--brand-900) 0%, var(--brand-700) 100%);
+    /* Mobile first */
+    @apply w-12 h-12;
+    /* Tablet */
+    @apply md:w-14 md:h-14;
+    /* Desktop */
+    @apply lg:w-16 lg:h-16;
+  }
+
+  /* Información de la tarea */
+  .task-info {
+    @apply flex flex-col gap-2 flex-1;
+  }
+
+  .task-info h3 {
+    @apply font-semibold text-gray-800;
+    /* Mobile first */
+    @apply text-lg;
+    /* Tablet */
+    @apply md:text-xl;
+    /* Desktop */
+    @apply lg:text-2xl;
+  }
+
+  .task-info p {
+    @apply text-gray-600;
+    /* Mobile first */
+    @apply text-sm;
+    /* Tablet */
+    @apply md:text-base;
+  }
+
+  /* Footer de la tarea */
+  .task-footer {
+    @apply flex items-center justify-between mt-4;
+  }
+
+  /* Barra de progreso */
+  .progress-bar {
+    @apply relative h-2 bg-gray-200 rounded-full overflow-hidden mt-4;
+  }
+
+  .progress-fill {
+    @apply absolute top-0 left-0 h-full transition-all duration-300;
+    background: linear-gradient(90deg, var(--brand-700) 0%, var(--brand-900) 100%);
+  }
+
+  .progress-text {
+    @apply absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-white font-medium;
+    /* Mobile first */
+    @apply text-xs;
+    /* Tablet */
+    @apply md:text-sm;
+  }
+}
+

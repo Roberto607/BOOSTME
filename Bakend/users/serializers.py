@@ -1,7 +1,8 @@
 from rest_framework import serializers
-from .models import User, UserPlan, Transaction, TaskCompletion
+from .models import User, UserPlan, Transaction
 from django.utils import timezone
 from django.contrib.auth import authenticate  # ← Importar authenticate aquí
+from django.conf import settings
 
 class UserPlanSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,6 +21,9 @@ class UserPlanSerializer(serializers.ModelSerializer):
 class UserSerializer(serializers.ModelSerializer):
     user_plan = UserPlanSerializer(read_only=True)
     total_boost = serializers.SerializerMethodField()
+    photo_url = serializers.SerializerMethodField()
+    full_name = serializers.SerializerMethodField()
+    join_date = serializers.DateTimeField(format='%Y-%m-%d', read_only=True)
 
     class Meta:
         model = User
@@ -27,8 +31,19 @@ class UserSerializer(serializers.ModelSerializer):
             'id',
             'username',
             'email',
+            'first_name',
+            'last_name',
+            'full_name',
+            'bio',
+            'country',
+            'city',
+            'phone',
+            'photo',
+            'photo_url',
+            'join_date',
             'is_email_verified',
             'has_financial_activation',
+            'balance',
             'boost_balance',
             'purchased_boost',
             'earned_boost',
@@ -42,9 +57,16 @@ class UserSerializer(serializers.ModelSerializer):
             'user_plan'
         ]
         read_only_fields = [
+            'id',
+            'username',
+            'email',
+            'join_date',
+            'is_email_verified',
+            'balance',
             'boost_balance',
             'purchased_boost',
             'earned_boost',
+            'total_boost',
             'weekly_limit',
             'current_week_withdrawn',
             'is_active',
@@ -54,6 +76,40 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_total_boost(self, obj):
         return float(obj.purchased_boost + obj.earned_boost)
+
+    def get_photo_url(self, obj):
+        if obj.photo:
+            # Construir URL que sea accesible desde el navegador cliente
+            # Usar localhost:8000 para desarrollo local, o configurar via BACKEND_URL
+            backend_url = getattr(settings, 'BACKEND_URL', 'http://localhost:8000')
+            return f"{backend_url}{obj.photo.url}"
+        return None
+
+    def get_full_name(self, obj):
+        return f"{obj.first_name} {obj.last_name}".strip()
+
+    def validate_email(self, value):
+        request = self.context.get('request')
+        if request is None:
+            return value
+        user = request.user
+        if User.objects.filter(email=value).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError("Este email ya está en uso.")
+        return value
+
+    def validate_username(self, value):
+        request = self.context.get('request')
+        if request is None:
+            return value
+        user = request.user
+        if User.objects.filter(username=value).exclude(pk=user.pk).exists():
+            raise serializers.ValidationError("Este nombre de usuario ya está en uso.")
+        return value
+
+    def validate_phone(self, value):
+        if value and not value.isdigit():
+            raise serializers.ValidationError("El teléfono debe contener solo números.")
+        return value
 
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -70,6 +126,7 @@ class UserSerializer(serializers.ModelSerializer):
                 data[field] = float(data[field])
         return data
 
+
 class RegisterSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(write_only=True)
 
@@ -83,25 +140,29 @@ class RegisterSerializer(serializers.ModelSerializer):
         return data
 
     def create(self, validated_data):
-        user = User.objects.create_user(
-            username=validated_data['username'],
-            email=validated_data['email'],
-            password=validated_data['password'],
-            is_active=False,               # ❌ No activo hasta elegir plan
-            is_email_verified=False,       # ❌ Inicialmente no verificado
-            has_financial_activation=False # ❌ Plan no seleccionado
-        )
-        # Crear plan Free por defecto (inactivo)
-        UserPlan.objects.create(
-            user=user,
-            plan_name='Free',
-            daily_tasks=3,
-            bonus_percentage=0,
-            weekly_withdrawal_limit=5,
-            price=0,
-            is_active=False  # ❌ Inactivo hasta que el usuario lo active
-        )
-        return user
+        try:
+            # Intentar crear el usuario usando create_user estándar
+            user = User.objects.create_user(
+                username=validated_data['username'],
+                email=validated_data['email'],
+                password=validated_data['password'],
+                is_active=False,
+                is_email_verified=False,
+                has_financial_activation=False
+            )
+            return user
+        except RecursionError as e:
+            # Si hay recursión, intentar crear el usuario de forma manual
+            user = User(
+                username=validated_data['username'],
+                email=validated_data['email'],
+                is_active=False,
+                is_email_verified=False,
+                has_financial_activation=False
+            )
+            user.set_password(validated_data['password'])
+            user.save()
+            return user
 
 class LoginSerializer(serializers.Serializer):
     username = serializers.CharField()
@@ -124,6 +185,14 @@ class LoginSerializer(serializers.Serializer):
 
         # Devuelve estado completo del usuario
         return UserSerializer(user).data
+
+class WithdrawSerializer(serializers.Serializer):
+    boost_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+
+    def validate_boost_amount(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("El monto de retiro debe ser mayor a 0")
+        return value
 
 class ActivatePlanSerializer(serializers.Serializer):
     email = serializers.EmailField()
@@ -187,7 +256,7 @@ class ActivatePlanSerializer(serializers.Serializer):
         # Boost para planes pagos
         boost_added = 0
         if amount > 0:
-            boost_added = amount * 10
+            boost_added = amount * 100
             user.purchased_boost += boost_added
             user.boost_balance += boost_added
             Transaction.objects.create(
@@ -210,26 +279,3 @@ class ActivatePlanSerializer(serializers.Serializer):
             'user': UserSerializer(user).data,
             'boost_added': float(boost_added)
         }
-
-
-
-class TaskCompletionSerializer(serializers.ModelSerializer):
-    user_id = serializers.IntegerField(source='user.id', read_only=True)
-    username = serializers.CharField(source='user.username', read_only=True)
-    completed_at_formatted = serializers.SerializerMethodField()
-
-    class Meta:
-        model = TaskCompletion
-        fields = [
-            'id',
-            'user_id',
-            'username',
-            'task_name',
-            'completed_at',
-            'completed_at_formatted',
-            'streak_count',
-        ]
-        read_only_fields = ['id', 'user_id', 'username', 'completed_at', 'completed_at_formatted', 'streak_count']
-
-    def get_completed_at_formatted(self, obj):
-        return obj.completed_at.strftime("%Y-%m-%d %H:%M:%S")

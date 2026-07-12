@@ -4,7 +4,7 @@
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #38bdf8 100%);
     padding: 1.5rem;
     box-sizing: border-box;
 }
@@ -51,7 +51,7 @@
     padding: 1rem;
     border: none;
     border-radius: 12px;
-    background: linear-gradient(135deg, #007bff, #0056b3);
+    background: linear-gradient(135deg, #0f172a, #38bdf8);
     color: white;
     font-size: clamp(0.9rem, 2vw, 1rem);
     font-weight: bold;
@@ -131,7 +131,7 @@
 /* Pantallas grandes (desktop) */
 @media (min-width: 1200px) {
     .container {
-        background: linear-gradient(120deg, #e3f2fd 0%, #c8d9f1 100%);
+        background: linear-gradient(120deg, #0f172a 0%, #38bdf8 100%);
     }
 
     .success-card {

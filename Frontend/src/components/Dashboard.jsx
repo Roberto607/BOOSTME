@@ -1,29 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { useNavigate } from 'react-router-dom';
-import { 
-  Wallet, 
-  TrendingUp, 
-  Target, 
-  Gift, 
-  Users, 
+import { useNavigate, useLocation } from 'react-router-dom';
+import {
+  Wallet,
+  TrendingUp,
+  Target,
+  Gift,
+  Users,
   Star,
   Trophy,
   Menu,
-  X
+  X,
+  Crown,
+  CheckCircle2,
+  ArrowRight,
+  Flame,
+  Clock3
 } from 'lucide-react';
 import './Dashboard.css';
 import Profile from './Perfil/Profile';
+import TasksList from './Tasks/TasksList';
+import Referidos from './Referidos/Referidos';
+import Bonuses from './Bonuses/bonuses';
 
 const Dashboard = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
   const [currentView, setCurrentView] = useState('dashboard');
 
   const [userBalance, setUserBalance] = useState({
     purchased: 0,
     earned: 0,
+    wallet: 0,
     weeklyLimit: 0,
     currentWeekWithdrawn: 0,
     nextWithdrawalDate: null
@@ -38,13 +48,13 @@ const Dashboard = () => {
     daysRemaining: 0
   });
 
-  const [dailyTasks, setDailyTasks] = useState({
-    completed: 0,
-    total: 3,
-    earnings: 0
+  const [referralStats, setReferralStats] = useState({
+    referralCount: 0,
+    totalEarnings: 0,
+    pendingEarnings: 0,
+    canWithdraw: false
   });
 
-  // Calcular días restantes del plan
   const calculateDaysRemaining = (expiryDate) => {
     if (!expiryDate) return 0;
     const today = new Date();
@@ -54,7 +64,6 @@ const Dashboard = () => {
     return diffDays;
   };
 
-  // Calcular próxima fecha de retiro
   const calculateNextWithdrawalDate = () => {
     const today = new Date();
     const daysUntilSunday = (7 - today.getDay()) % 7 || 7;
@@ -63,7 +72,26 @@ const Dashboard = () => {
     return nextSunday.toLocaleDateString();
   };
 
+  const canWithdrawNow = userBalance.earned > 0 && userBalance.currentWeekWithdrawn < userBalance.weeklyLimit;
+  const progressPercent = Math.min(100, Math.round(((userBalance.earned + userBalance.purchased) / Math.max(1, userBalance.weeklyLimit * 2)) * 100));
+  const streakValue = user?.user_plan?.plan_name ? 4 : 2;
+  const recommendedActions = [
+    { title: 'Completa una tarea', description: 'Sigue acumulando BOOST', action: () => setCurrentView('tasks') },
+    { title: 'Reclama un bono', description: 'Activa recompensas disponibles', action: () => setCurrentView('bonuses') },
+    { title: 'Invita a un amigo', description: 'Gana más por referidos', action: () => setCurrentView('referrals') }
+  ];
+  const achievements = [
+    { title: 'Racha activa', text: `${streakValue} días seguidos` },
+    { title: 'Plan actual', text: userPlan.name },
+    { title: 'Retiro', text: canWithdrawNow ? 'Disponible' : 'Pendiente' }
+  ];
+
   useEffect(() => {
+    const path = location.pathname.toLowerCase();
+    if (path.includes('/referidos') || path.includes('/dashboard/referrals')) {
+      setCurrentView('referrals');
+    }
+
     const loadUserData = async () => {
       const planData = {
         name: user?.plan_name || 'Free',
@@ -76,20 +104,16 @@ const Dashboard = () => {
 
       setUserPlan(planData);
       setUserBalance({
-        purchased: user?.purchased_boost || 0,
-        earned: user?.earned_boost || 0,
-        weeklyLimit: planData.weeklyLimit,
-        currentWeekWithdrawn: user?.current_week_withdrawn || 0,
+        purchased: Number(user?.purchased_boost) || 0,
+        earned: Number(user?.earned_boost) || 0,
+        wallet: Number(user?.balance) || 0,
+        weeklyLimit: Number(planData.weeklyLimit) || 0,
+        currentWeekWithdrawn: Number(user?.current_week_withdrawn) || 0,
         nextWithdrawalDate: calculateNextWithdrawalDate()
-      });
-      setDailyTasks({
-        completed: user?.tasks_completed_today || 0,
-        total: planData.dailyTasks,
-        earnings: user?.earnings_today || 0
       });
     };
     loadUserData();
-  }, [user]);
+  }, [user, location.pathname]);
 
   const handleLogout = async () => {
     await logout();
@@ -100,21 +124,36 @@ const Dashboard = () => {
     navigate('/deposit');
   };
 
+  const handleGoToWithdraw = () => {
+    console.log('handleGoToWithdraw called');
+    try {
+      navigate('/withdraw');
+    } catch (e) {
+      console.error('navigate failed:', e);
+    }
+    // Fallback forcible navigation (useful for debugging if SPA navigation fails)
+    try {
+      window.location.href = '/withdraw';
+    } catch (e) {
+      console.error('window.location fallback failed:', e);
+    }
+  };
+
   return (
     <div className="dashboard-container">
       <header className="dashboard-header">
         <div className="header-top">
-          <h1>BoostMe</h1>
+          <h1 className="text-2xl md:text-3xl">BoostMe</h1>
 
           <button
-            className="menu-button"
+            className="menu-button md:hidden"
             onClick={() => setMenuOpen(!menuOpen)}
             aria-label="Abrir menú"
           >
             {menuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
 
-          <div className="user-info">
+          <div className="user-info hidden md:flex">
             <span className="plan-badge">Plan {userPlan.name}</span>
             <button onClick={handleLogout} className="logout-button">
               Cerrar Sesión
@@ -122,7 +161,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-        <p className="saludo">¡Hola, {user?.username || "Padre"}!</p>
+        <p className="saludo text-base md:text-lg">¡Hola, {user?.username || "Usuario"}!</p>
 
         <nav className="top-nav">
           <button 
@@ -130,29 +169,36 @@ const Dashboard = () => {
             onClick={() => setCurrentView('dashboard')}
           >
             <Wallet className="nav-icon" />
-            <span>Inicio</span>
+            <span className="hidden md:inline">Inicio</span>
           </button>
-          <button className="nav-button">
+          <button 
+            className={`nav-button ${currentView === 'tasks' ? 'active' : ''}`}
+            onClick={() => setCurrentView('tasks')}
+          >
             <Target className="nav-icon" />
-            <span>Tareas</span>
+            <span className="hidden md:inline">Tareas</span>
           </button>
-          <button className="nav-button">
-            <TrendingUp className="nav-icon" />
-            <span>Estadísticas</span>
+          <button 
+            className={`nav-button ${currentView === 'referrals' ? 'active' : ''}`}
+            onClick={() => setCurrentView('referrals')}
+          >
+            <Users className="nav-icon" />
+            <span className="hidden md:inline">Referidos</span>
           </button>
+        
           <button 
             className={`nav-button ${currentView === 'profile' ? 'active' : ''}`}
             onClick={() => setCurrentView('profile')}
           >
             <Users className="nav-icon" />
-            <span>Perfil</span>
+            <span className="hidden md:inline">Perfil</span>
           </button>
         </nav>
       </header>
 
       <aside className={`side-menu ${menuOpen ? 'open' : ''}`}>
         <button onClick={() => setMenuOpen(false)} className="menu-close"><X /></button>
-        <p className="saludo-side">¡Hola, {user?.username || "Padre"}!</p>
+        <p className="saludo-side">¡Hola, {user?.username || "Usuario"}!</p>
         
         <button 
           className={`nav-button ${currentView === 'dashboard' ? 'active' : ''}`}
@@ -163,11 +209,32 @@ const Dashboard = () => {
         >
           <Wallet /> Inicio
         </button>
-        <button className="nav-button">
+        <button 
+          className={`nav-button ${currentView === 'tasks' ? 'active' : ''}`}
+          onClick={() => {
+            setCurrentView('tasks');
+            setMenuOpen(false);
+          }}
+        >
           <Target /> Tareas
         </button>
-        <button className="nav-button">
-          <TrendingUp /> Estadísticas
+        <button 
+          className={`nav-button ${currentView === 'referrals' ? 'active' : ''}`}
+          onClick={() => {
+            setCurrentView('referrals');
+            setMenuOpen(false);
+          }}
+        >
+          <Users /> Referidos
+        </button>
+        <button 
+          className={`nav-button ${currentView === 'bonuses' ? 'active' : ''}`}
+          onClick={() => {
+            setCurrentView('bonuses');
+            setMenuOpen(false);
+          }}
+        >
+          <Gift /> Bonos
         </button>
         <button 
           className={`nav-button ${currentView === 'profile' ? 'active' : ''}`}
@@ -183,17 +250,17 @@ const Dashboard = () => {
       </aside>
 
       <main className="main-content">
-        {currentView === 'dashboard' ? (
+        {currentView === 'dashboard' && (
           <>
             <div className="balance-card">
               <div className="balance-header">
                 <div>
                   <p className="balance-label">Saldo Total BOOST</p>
-                  <p className="balance-amount">
+                  <p className="balance-amount text-3xl md:text-4xl">
                     {userBalance.purchased + userBalance.earned}
                   </p>
                 </div>
-                <Wallet className="balance-icon" />
+                <Wallet className="balance-icon w-8 h-8 md:w-10 md:h-10" />
               </div>
 
               <div className="balance-details">
@@ -208,71 +275,127 @@ const Dashboard = () => {
               </div>
 
               <div className="withdraw-section">
-                <p className="withdraw-label">Próximo retiro disponible</p>
-                <p className="withdraw-date">{userBalance.nextWithdrawalDate}</p>
-                <p className="withdraw-amount">
+                <p className="withdraw-label text-sm md:text-base">
+                  {canWithdrawNow ? 'Retiro disponible ahora' : 'Próximo retiro disponible'}
+                </p>
+                <p className="withdraw-date text-base md:text-lg">{userBalance.nextWithdrawalDate}</p>
+                <p className="withdraw-amount text-sm md:text-base">
                   {userBalance.currentWeekWithdrawn} / {userBalance.weeklyLimit} BOOST
                 </p>
                 <button 
                   className="withdraw-button"
-                  disabled={userBalance.currentWeekWithdrawn >= userBalance.weeklyLimit}
+                  onClick={(e) => { console.log('Retirar button clicked'); handleGoToWithdraw(); }}
                 >
-                  {userBalance.currentWeekWithdrawn >= userBalance.weeklyLimit 
-                    ? 'Límite alcanzado' 
-                    : 'Retirar BOOST'
-                  }
+                  Retirar BOOST
                 </button>
-              </div>
-            </div>
-
-            <div className="tasks-card">
-              <div className="tasks-header">
-                <h2>Tareas Diarias</h2>
-                <span className="tasks-counter">
-                  {dailyTasks.completed}/{dailyTasks.total}
-                </span>
-              </div>
-              <div className="progress-bar">
-                <div 
-                  className="progress-fill"
-                  style={{ width: `${(dailyTasks.completed / dailyTasks.total) * 100}%` }}
-                />
-              </div>
-              <div className="earnings-info">
-                <p>Ganado hoy</p>
-                <p className="earnings-amount">{dailyTasks.earnings} BOOST</p>
+                <p className="withdraw-note text-xs text-gray-500 mt-2">
+                  Saldo en wallet: {userBalance.wallet.toFixed(2)} USDT
+                </p>
               </div>
             </div>
 
             <div className="quick-actions">
-              <h2>Acciones Rápidas</h2>
-              <div className="actions-grid">
+              <h2 className="text-xl md:text-2xl">Resumen de hoy</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-2 text-blue-600 mb-2">
+                    <Flame size={18} />
+                    <span className="font-semibold">Racha</span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-800">{streakValue} días</p>
+                  <p className="text-sm text-gray-500">Tu progreso sigue en marcha</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-2 text-emerald-600 mb-2">
+                    <TrendingUp size={18} />
+                    <span className="font-semibold">Progreso semanal</span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-800">{progressPercent}%</p>
+                  <p className="text-sm text-gray-500">Meta de BOOST acumulado</p>
+                </div>
+                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
+                  <div className="flex items-center gap-2 text-amber-600 mb-2">
+                    <Clock3 size={18} />
+                    <span className="font-semibold">Próximo retiro</span>
+                  </div>
+                  <p className="text-2xl font-bold text-gray-800">{userBalance.nextWithdrawalDate || '—'}</p>
+                  <p className="text-sm text-gray-500">Revisa tu disponibilidad</p>
+                </div>
+              </div>
+            </div>
+
+            <div className="quick-actions">
+              <h2 className="text-xl md:text-2xl">Acciones recomendadas</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                {recommendedActions.map((item) => (
+                  <button
+                    key={item.title}
+                    onClick={item.action}
+                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-left hover:-translate-y-1 transition"
+                  >
+                    <div className="flex items-center justify-between mb-2">
+                      <h3 className="font-semibold text-gray-800">{item.title}</h3>
+                      <ArrowRight className="text-blue-600" size={16} />
+                    </div>
+                    <p className="text-sm text-gray-500">{item.description}</p>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="quick-actions">
+              <h2 className="text-xl md:text-2xl">Logros recientes</h2>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                {achievements.map((item) => (
+                  <div key={item.title} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
+                    <CheckCircle2 className="text-emerald-500 mt-1" size={18} />
+                    <div>
+                      <p className="font-semibold text-gray-800">{item.title}</p>
+                      <p className="text-sm text-gray-500">{item.text}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="quick-actions">
+              <h2 className="text-xl md:text-2xl">Acciones Rápidas</h2>
+              <div className="actions-grid grid-cols-2 md:grid-cols-4 gap-4">
                 <button 
                   className="action-button"
                   onClick={handleDepositClick}
                 >
-                  <Wallet className="action-icon" />
-                  <span>Depositar</span>
+                  <Crown className="action-icon w-6 h-6 md:w-8 md:h-8" />
+                  <span className="text-xs md:text-sm">Planes</span>
                 </button>
-                <button className="action-button">
-                  <Gift className="action-icon" />
-                  <span>Bonos</span>
+                <button 
+                  className="action-button" 
+                  onClick={() => setCurrentView('bonuses')}
+                >
+                  <Gift className="action-icon w-6 h-6 md:w-8 md:h-8" />
+                  <span className="text-xs md:text-sm">Bonos</span>
                 </button>
-                <button className="action-button">
-                  <Users className="action-icon" />
-                  <span>Referidos</span>
+                <button 
+                  className="action-button"
+                  onClick={() => setCurrentView('referrals')}
+                >
+                  <Users className="action-icon w-6 h-6 md:w-8 md:h-8" />
+                  <span className="text-xs md:text-sm">Referidos</span>
                 </button>
-                <button className="action-button">
-                  <Trophy className="action-icon" />
-                  <span>Retos</span>
+                <button 
+                  className="action-button"
+                  onClick={() => setCurrentView('tasks')}
+                >
+                  <Trophy className="action-icon w-6 h-6 md:w-8 md:h-8" />
+                  <span className="text-xs md:text-sm">Tareas</span>
                 </button>
               </div>
             </div>
 
             <div className="plan-card">
               <div className="plan-header">
-                <h2>Estado del Plan</h2>
-                <Star className="plan-star" />
+                <h2 className="text-xl md:text-2xl">Estado del Plan</h2>
+                <Star className="plan-star w-6 h-6 md:w-8 md:h-8" />
               </div>
               <div className="plan-details">
                 <div className="plan-item">
@@ -296,12 +419,15 @@ const Dashboard = () => {
                   <span>{userPlan.weeklyLimit} BOOST/semana</span>
                 </div>
               </div>
-              <button className="upgrade-button">Actualizar Plan</button>
             </div>
           </>
-        ) : (
-          <Profile />
         )}
+
+        
+        {currentView === 'tasks' && <TasksList />}
+        {currentView === 'referrals' && <Referidos />}
+        {currentView === 'bonuses' && <Bonuses />}
+        {currentView === 'profile' && <Profile />}
       </main>
     </div>
   );

@@ -4,7 +4,7 @@
   justify-content: center;
   align-items: center;
   min-height: 100vh;
-  background: linear-gradient(135deg, #0d1117, #1a1f25);
+  
   padding: 20px;
   position: fixed;
   top: 0;
@@ -84,7 +84,7 @@
 /* === Botón principal === */
 .login-form button[type="submit"] {
   width: 100%;
-  background: #0077ff;
+  background: linear-gradient(135deg, #0f172a, #38bdf8);
   color: #fff;
   font-size: 1.05rem;
   font-weight: 600;
@@ -96,7 +96,7 @@
 }
 
 .login-form button[type="submit"]:hover {
-  background: #005ed6;
+  background: linear-gradient(135deg, #111c33, #0ea5e9);
 }
 
 .login-form button[type="submit"]:disabled {
@@ -164,7 +164,7 @@
 .register-link button {
   background: none;
   border: none;
-  color: #0077ff;
+  color: #38bdf8;
   font-weight: 600;
   cursor: pointer;
   margin-left: 5px;

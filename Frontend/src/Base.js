@@ -1,3 +1,20 @@
 // src/config.js
 
-export const API_BASE_URL = "http://127.0.0.1:8000/api/users";
+const rawApiBaseUrl = import.meta.env.VITE_API_URL?.trim();
+
+export const API_BASE_URL = rawApiBaseUrl
+  ? `${rawApiBaseUrl.replace(/\/$/, "")}/api/users`
+  : "/api/users";
+
+export const TASKS_API_BASE_URL = "/api/tasks";
+export const REFERRALS_API_BASE_URL = "/api/referrals";
+export const BONUSES_API_BASE_URL = "/api/bonuses";
+
+export const buildApiUrl = (path) => {
+  if (typeof window !== 'undefined' && window.location.hostname === 'localhost') {
+    return `/api${path.startsWith('/') ? path : `/${path}`}`;
+  }
+
+  return `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;
+};
+

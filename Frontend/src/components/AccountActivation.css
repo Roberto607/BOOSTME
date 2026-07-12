@@ -9,7 +9,7 @@
     align-items: center;
     min-height: 100vh;
     padding: 2rem;
-    background: linear-gradient(135deg, #1a1a1a 0%, #2c2c2c 100%);
+    background: linear-gradient(135deg, #0f172a 0%, #38bdf8 100%);
     box-sizing: border-box;
     font-family: 'Roboto', sans-serif;
 }
@@ -82,7 +82,7 @@
     padding: 0.6rem 1.2rem;
     border: none;
     border-radius: 8px;
-    background: linear-gradient(135deg, #c62828, #b71c1c);
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
     color: white;
     font-size: clamp(0.85rem, 2vw, 0.95rem);
     cursor: pointer;
@@ -90,7 +90,7 @@
 }
 
 .retry-button:hover {
-    background: linear-gradient(135deg, #d32f2f, #c62828);
+    background: linear-gradient(135deg, #f59e0b, #ef4444);
     transform: scale(1.05);
 }
 
@@ -174,7 +174,7 @@
 /* Pantallas grandes (monitores y desktop grandes) */
 @media (min-width: 1200px) {
     .auth-container {
-        background: linear-gradient(120deg, #202020 0%, #3a3a3a 100%);
+        background: linear-gradient(120deg, #0f172a 0%, #38bdf8 100%);
     }
 
     .auth-form {

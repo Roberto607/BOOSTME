@@ -1,4 +1,3 @@
-# views.py
 from rest_framework import status
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -7,7 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
 from django.utils import timezone
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import send_mail, EmailMessage
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -16,31 +15,66 @@ import logging
 from rest_framework_simplejwt.views import TokenRefreshView
 import re
 from django.db import transaction
-from django.core.mail import send_mail, EmailMessage
 from rest_framework.throttling import UserRateThrottle
 from django.utils.decorators import method_decorator
+from threading import Thread
 from django.views.decorators.csrf import csrf_exempt
 from urllib.parse import urljoin
 from .tokens import password_reset_token 
 from threading import Thread
-from .models import User, Transaction
-from .serializers import UserSerializer,RegisterSerializer, ActivatePlanSerializer
+from .models import User, Transaction, UserPlan
+from .serializers import UserSerializer, RegisterSerializer, ActivatePlanSerializer, WithdrawSerializer
 from .tokens import account_activation_token
 from django.conf import settings
 from django.utils.encoding import force_str, force_bytes
-from decimal import Decimal
-
-
-
 
 logger = logging.getLogger(__name__)
-
 User = get_user_model()
 
 
-# views.py
-@method_decorator(csrf_exempt, name='dispatch')
+def _sanitize_for_json(obj):
+    """Recursively convert non-serializables to strings to avoid JSON encoder errors
+    when constructing Response objects in edge cases (e.g., EmailMessage instances).
+    """
+    # Primitives are fine
+    if obj is None or isinstance(obj, (str, bool, int, float)):
+        return obj
+    # Dict -> sanitize entries
+    if isinstance(obj, dict):
+        return {str(k): _sanitize_for_json(v) for k, v in obj.items()}
+    # List/tuple -> sanitize elements
+    if isinstance(obj, (list, tuple)):
+        return [_sanitize_for_json(v) for v in obj]
+    # Fallback: convert to string
+    try:
+        return str(obj)
+    except Exception:
+        return repr(obj)
 
+
+def _attach_jwt_cookies(resp, access_token, refresh_token, access_max_age, refresh_max_age):
+    secure_access = settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False)
+    secure_refresh = settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', False)
+
+    resp.set_cookie(
+        'access', access_token,
+        httponly=True,
+        secure=secure_access,
+        samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+        max_age=access_max_age,
+        path='/'
+    )
+    resp.set_cookie(
+        'refresh', refresh_token,
+        httponly=True,
+        secure=secure_refresh,
+        samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
+        max_age=refresh_max_age,
+        path='/'
+    )
+    return resp
+
+@method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [UserRateThrottle]
@@ -49,12 +83,12 @@ class RegisterView(APIView):
         try:
             logger.info(f"Intento de registro desde IP: {request.META.get('REMOTE_ADDR')}")
 
-            # Datos
+            # Datos básicos
             email = request.data.get('email', '').strip().lower()
             username = request.data.get('username', '').strip()
             password = request.data.get('password', '')
 
-            # Validaciones
+            # Validaciones básicas
             if not all([email, username, password]):
                 return Response({
                     "error": "Todos los campos son requeridos",
@@ -87,14 +121,16 @@ class RegisterView(APIView):
 
             # Crear usuario
             with transaction.atomic():
-                user = User.objects.create_user(
+                # Usar create directo y set_password para evitar recursión con create_user
+                user = User.objects.create(
                     username=username,
                     email=email,
-                    password=password,
                     is_active=False,
                     is_email_verified=False,
                     has_financial_activation=False
                 )
+                user.set_password(password)
+                user.save()
 
                 # Generar tokens JWT
                 refresh = RefreshToken.for_user(user)
@@ -118,24 +154,46 @@ class RegisterView(APIView):
                     'protocol': 'https' if not settings.DEBUG else 'http',
                 })
 
-                email_msg = EmailMessage(
-                    subject=mail_subject,
-                    body=message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[email]
-                )
-                email_msg.content_subtype = "html"
-                Thread(target=lambda: email_msg.send()).start()
+                def _send_verification():
+                    try:
+                        send_mail(
+                            mail_subject,
+                            '',
+                            settings.DEFAULT_FROM_EMAIL,
+                            [email],
+                            fail_silently=False,
+                            html_message=message,
+                        )
+                    except Exception:
+                        logger.exception("Error sending verification email")
+
+                Thread(target=_send_verification).start()
 
                 logger.info(f"Email de verificación enviado a {email}")
 
-                return Response({
+                # Serializar el usuario completo
+                user_data = UserSerializer(user, context={'request': request}).data
+
+                # Devolver respuesta completa con usuario serializado
+                response_data = {
                     "message": "Registro exitoso. Revisa tu email para verificar tu cuenta.",
-                    "user": UserSerializer(user).data,
+                    "user": user_data,
                     "access": str(refresh.access_token),
                     "refresh": str(refresh),
                     "next_step": "verify_email"
-                }, status=status.HTTP_201_CREATED)
+                }
+
+                resp = Response(response_data, status=status.HTTP_201_CREATED)
+                # Setear cookies para sesión segura
+                access_token = str(refresh.access_token)
+                refresh_token = str(refresh)
+                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+                resp.set_cookie('access', access_token, httponly=True, secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG), samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'), max_age=access_max_age, path='/')
+                resp.set_cookie('refresh', refresh_token, httponly=True, secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG), samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'), max_age=refresh_max_age, path='/')
+
+                return resp
 
         except Exception as e:
             logger.error(f"Error en el registro: {str(e)}", exc_info=True)
@@ -143,7 +201,6 @@ class RegisterView(APIView):
                 "error": "Error interno del servidor",
                 "detail": str(e) if settings.DEBUG else None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
 
 @method_decorator(csrf_exempt, name='dispatch')
 class EmailVerificationView(APIView):
@@ -155,21 +212,64 @@ class EmailVerificationView(APIView):
             user = User.objects.get(pk=uid)
 
             if user.is_email_verified:
-                return Response({
+                refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
+                refresh_token = str(refresh)
+                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+                resp = Response({
                     "message": "Correo ya verificado. Puedes proceder con tu depósito.",
-                    "user": UserSerializer(user).data,
+                    "user": UserSerializer(user, context={'request': request}).data,
                     "next_step": "deposit"
                 }, status=200)
 
+                resp.set_cookie('access', access_token,
+                                httponly=True,
+                                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+                                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+                                max_age=access_max_age,
+                                path='/')
+                resp.set_cookie('refresh', refresh_token,
+                                httponly=True,
+                                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
+                                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
+                                max_age=refresh_max_age,
+                                path='/')
+
+                return resp
+
             if account_activation_token.check_token(user, token):
                 user.is_email_verified = True
-                user.save(update_fields=['is_email_verified'])
-                
-                return Response({
+                user.is_active = True
+                user.save(update_fields=['is_email_verified', 'is_active'])
+
+                refresh = RefreshToken.for_user(user)
+                access_token = str(refresh.access_token)
+                refresh_token = str(refresh)
+                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+                resp = Response({
                     "message": "Correo verificado correctamente. Ahora puedes realizar tu depósito.",
-                    "user": UserSerializer(user).data,
+                    "user": UserSerializer(user, context={'request': request}).data,
                     "next_step": "deposit"
                 }, status=200)
+
+                resp.set_cookie('access', access_token,
+                                httponly=True,
+                                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+                                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+                                max_age=access_max_age,
+                                path='/')
+                resp.set_cookie('refresh', refresh_token,
+                                httponly=True,
+                                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
+                                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
+                                max_age=refresh_max_age,
+                                path='/')
+
+                return resp
             else:
                 return Response({
                     "error": "El enlace de verificación es inválido o ha expirado",
@@ -211,18 +311,19 @@ class ResendVerificationView(APIView):
 
             # Enviar email
             mail_subject = 'Activa tu cuenta'
-            message = render_to_string('acc_active_email.html', {
+            message = render_to_string('users/acc_active_email.html', {
                 'user': user,
-                'verification_url': verification_url,
+                'verification_link': verification_url,
             })
             
-            send_mail(
-                mail_subject,
-                message,
-                settings.DEFAULT_FROM_EMAIL,
-                [email],
-                fail_silently=False,
+            email_msg = EmailMessage(
+                subject=mail_subject,
+                body=message,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=[email]
             )
+            email_msg.content_subtype = "html"
+            Thread(target=lambda: email_msg.send()).start()
 
             return Response({
                 "message": "Email de verificación reenviado"
@@ -233,10 +334,7 @@ class ResendVerificationView(APIView):
                 "error": "No existe una cuenta con este email"
             }, status=status.HTTP_404_NOT_FOUND)
 
-
 @method_decorator(csrf_exempt, name='dispatch')
-# users/views.py
-
 class LoginView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [UserRateThrottle]
@@ -257,30 +355,32 @@ class LoginView(APIView):
 
             # Intentar autenticar con username o email
             user = None
+            user_obj = None
+
             if '@' in username:
-                # Si es un email, buscar el username asociado
                 try:
                     user_obj = User.objects.get(email=username.lower())
-                    user = authenticate(username=user_obj.username, password=password)
                 except User.DoesNotExist:
-                    pass
+                    user_obj = None
             else:
-                # Si es un username, autenticar directamente
-                user = authenticate(username=username, password=password)
+                user_obj = User.objects.filter(username=username).first()
+
+            if user_obj is not None:
+                if not getattr(user_obj, 'is_active', False) or not getattr(user_obj, 'is_email_verified', False):
+                    return Response({
+                        "error": "Debes verificar tu email antes de iniciar sesión",
+                        "code": "email_not_verified",
+                        "requires_verification": True,
+                        "email": user_obj.email
+                    }, status=status.HTTP_401_UNAUTHORIZED)
+
+                user = authenticate(username=user_obj.username, password=password)
 
             if user is None:
                 logger.warning(f"Fallo de autenticación para: {username}")
                 return Response({
                     "error": "Credenciales inválidas",
                     "code": "invalid_credentials"
-                }, status=status.HTTP_401_UNAUTHORIZED)
-
-            if not getattr(user, 'is_email_verified', False):
-                return Response({
-                    "error": "Debes verificar tu email antes de iniciar sesión",
-                    "code": "email_not_verified",
-                    "requires_verification": True,
-                    "email": user.email
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Generar tokens y actualizar último login
@@ -295,15 +395,41 @@ class LoginView(APIView):
                     refresh.set_exp(lifetime=timezone.timedelta(hours=24))
 
                 # Respuesta completa con UserSerializer
+                access_token = str(refresh.access_token)
+                refresh_token = str(refresh)
+
                 response_data = {
-                    "access": str(refresh.access_token),
-                    "refresh": str(refresh),
-                    "user": UserSerializer(user).data,
+                    "access": access_token,
+                    "refresh": refresh_token,
+                    "user": UserSerializer(user, context={'request': request}).data,
                     "token_type": "Bearer"
                 }
 
                 logger.info(f"Login exitoso para usuario: {user.username}")
-                return Response(response_data, status=status.HTTP_200_OK)
+                resp = Response(response_data, status=status.HTTP_200_OK)
+
+                # Setear cookies HttpOnly para access y refresh
+                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+                resp.set_cookie(
+                    'access', access_token,
+                    httponly=True,
+                    secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+                    samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+                    max_age=access_max_age,
+                    path='/'
+                )
+                resp.set_cookie(
+                    'refresh', refresh_token,
+                    httponly=True,
+                    secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
+                    samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
+                    max_age=refresh_max_age,
+                    path='/'
+                )
+
+                return resp
 
         except Exception as e:
             logger.error(f"Error en el login: {str(e)}", exc_info=True)
@@ -312,9 +438,6 @@ class LoginView(APIView):
                 "code": "server_error",
                 "detail": str(e) if settings.DEBUG else None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
 
 @method_decorator(csrf_exempt, name='dispatch')
 class LogoutView(APIView):
@@ -330,8 +453,6 @@ class LogoutView(APIView):
         except Exception as e:
             return Response({"error": "Error al cerrar sesión"}, status=status.HTTP_400_BAD_REQUEST)
 
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class CustomTokenRefreshView(TokenRefreshView):
     """
@@ -339,8 +460,8 @@ class CustomTokenRefreshView(TokenRefreshView):
     """
     def post(self, request, *args, **kwargs):
         try:
-            # Obtener el refresh token del request
-            refresh_token = request.data.get('refresh')
+            # Obtener el refresh token del request o de la cookie
+            refresh_token = request.data.get('refresh') or request.COOKIES.get('refresh')
             
             if not refresh_token:
                 return Response({
@@ -376,17 +497,40 @@ class CustomTokenRefreshView(TokenRefreshView):
             refresh_token_new = str(refresh)
             
             # Serializar el usuario
-            user_data = UserSerializer(user).data
+            user_data = UserSerializer(user, context={'request': request}).data
             
             response_data = {
                 'access': access_token,
                 'refresh': refresh_token_new,
                 'token_type': 'Bearer',
-                'expires_in': 300,  # 5 minutos en segundos
+                'expires_in': int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds()),
                 'user': user_data
             }
 
-            return Response(response_data, status=status.HTTP_200_OK)
+            resp = Response(response_data, status=status.HTTP_200_OK)
+
+            # Actualizar cookies
+            access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+            refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+            resp.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+                max_age=access_max_age,
+                path='/'
+            )
+            resp.set_cookie(
+                'refresh', refresh_token_new,
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
+                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
+                max_age=refresh_max_age,
+                path='/'
+            )
+
+            return resp
 
         except Exception as e:
             return Response({
@@ -395,7 +539,6 @@ class CustomTokenRefreshView(TokenRefreshView):
                 'detail': str(e) if settings.DEBUG else None
             }, status=status.HTTP_401_UNAUTHORIZED)
 
-# users/views.py
 @method_decorator(csrf_exempt, name='dispatch')
 class ResetPasswordView(APIView):
     permission_classes = [AllowAny]
@@ -481,16 +624,20 @@ class ForgotPasswordView(APIView):
                     'reset_url': reset_url,
                 })
                 
-                email_msg = EmailMessage(
-                    subject=mail_subject,
-                    body=message,
-                    from_email=settings.DEFAULT_FROM_EMAIL,
-                    to=[email]
-                )
-                email_msg.content_subtype = "html"
+                def _send_reset():
+                    try:
+                        send_mail(
+                            mail_subject,
+                            '',
+                            settings.DEFAULT_FROM_EMAIL,
+                            [email],
+                            fail_silently=False,
+                            html_message=message,
+                        )
+                    except Exception:
+                        logger.exception("Error sending password reset email")
 
-                # Enviar email en hilo separado
-                Thread(target=lambda: email_msg.send()).start()
+                Thread(target=_send_reset).start()
 
                 logger.info(f"Email de recuperación enviado a {email}")
 
@@ -517,11 +664,6 @@ class DepositView(APIView):
 
     def post(self, request):
         try:
-            # Debug: Verificar el usuario y su estado
-            print(f"Usuario: {request.user}")
-            print(f"Email verificado: {request.user.is_email_verified}")
-            print(f"Activación financiera: {request.user.has_financial_activation}")
-
             # Verificar que el email esté verificado
             if not request.user.is_email_verified:
                 return Response({
@@ -537,7 +679,7 @@ class DepositView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             user = request.user
-            boost_equiv = amount_usdt * 10  # 1 USDT = 10 BOOST
+            boost_equiv = amount_usdt * 100  # 1 USDT = 100 BOOST
 
             with transaction.atomic():
                 # Actualizar cuenta y balance
@@ -557,8 +699,7 @@ class DepositView(APIView):
                 )
 
                 # Serializar el usuario actualizado
-                user_data = UserSerializer(user).data
-                print(f"Datos del usuario actualizado: {user_data}")
+                user_data = UserSerializer(user, context={'request': request}).data
 
             return Response({
                 "message": "Depósito confirmado. Tu cuenta ya está activa.",
@@ -567,15 +708,12 @@ class DepositView(APIView):
             }, status=status.HTTP_200_OK)
 
         except Exception as e:
-            print(f"Error en el depósito: {str(e)}")
+            logger.error(f"Error en el depósito: {str(e)}", exc_info=True)
             return Response({
                 "error": "Error procesando el depósito",
                 "code": "deposit_error",
                 "detail": str(e) if settings.DEBUG else None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-
-
 
 @method_decorator(csrf_exempt, name='dispatch')
 class UserStatusView(APIView):
@@ -585,14 +723,8 @@ class UserStatusView(APIView):
         try:
             user = request.user
             
-            # Debug: Verificar el estado del usuario
-            print(f"Usuario: {user.username}")
-            print(f"Email verificado: {user.is_email_verified}")
-            print(f"Activación financiera: {user.has_financial_activation}")
-            print(f"Estado activo: {user.is_active}")
-
             # Serializar el usuario
-            user_data = UserSerializer(user).data
+            user_data = UserSerializer(user, context={'request': request}).data
             
             return Response({
                 "user": user_data,
@@ -600,12 +732,13 @@ class UserStatusView(APIView):
                     "is_email_verified": user.is_email_verified,
                     "has_financial_activation": user.has_financial_activation,
                     "is_active": user.is_active,
+                    "can_withdraw": user.can_withdraw,
                     "next_step": self.get_next_step(user)
                 }
             }, status=status.HTTP_200_OK)
             
         except Exception as e:
-            print(f"Error en UserStatusView: {str(e)}")
+            logger.error(f"Error en UserStatusView: {str(e)}", exc_info=True)
             return Response({
                 "error": "Error al obtener el estado del usuario",
                 "code": "status_error",
@@ -620,30 +753,89 @@ class UserStatusView(APIView):
             return "make_deposit"
         return "complete"
 
-
-
-
-
 @method_decorator(csrf_exempt, name='dispatch')
 class ActivatePlanView(APIView):
-    permission_classes = []  # Sin autenticación requerida
+    permission_classes = [IsAuthenticated]
     
     def post(self, request):
         try:
-            # Usar el serializer para validar los datos
-            serializer = ActivatePlanSerializer(data=request.data)
+            user = request.user
+            # Aceptar tanto 'plan' (frontend) como 'plan_name' (posible clientes)
+            plan_name = request.data.get('plan') or request.data.get('plan_name') or 'Free'
             
-            if not serializer.is_valid():
-                return Response({
-                    'error': 'Datos inválidos',
-                    'code': 'validation_error',
-                    'details': serializer.errors
-                }, status=status.HTTP_400_BAD_REQUEST)
+            # Obtener o crear el UserPlan
+            user_plan, created = UserPlan.objects.get_or_create(
+                user=user,
+                defaults={
+                    'plan_name': plan_name,
+                    'is_active': True
+                }
+            )
             
-            # El serializer se encarga de toda la lógica de activación
-            result = serializer.save()
+            if not created:
+                # Si ya existe, actualizarlo
+                user_plan.plan_name = plan_name
+                user_plan.is_active = True
+                user_plan.save()
             
-            return Response(result, status=status.HTTP_200_OK)
+            # Activar el plan (esto generará las tareas automáticamente)
+            try:
+                user_plan.activate_plan()
+            except Exception as exc:
+                logger.error("Excepción al ejecutar user_plan.activate_plan()", exc_info=True)
+                # Re-raise so outer try/except logs and returns a 500 as well,
+                # but we've logged the precise location already.
+                raise
+
+            # Marcar la activación financiera del usuario
+            if not user.has_financial_activation:
+                user.has_financial_activation = True
+                user.is_active = True
+                user.save()
+
+            # Generar tokens y setear cookies para que el navegador los almacene de forma segura
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+
+            # Serializar la respuesta
+            user_data = UserSerializer(user, context={'request': request}).data
+
+            resp_payload = {
+                'message': f'Plan {plan_name} activado exitosamente',
+                'user': user_data,
+                'plan': {
+                    'name': user_plan.plan_name,
+                    'daily_tasks': user_plan.daily_tasks,
+                    'bonus_percentage': user_plan.bonus_percentage,
+                    'weekly_withdrawal_limit': user_plan.weekly_withdrawal_limit
+                }
+            }
+
+            # Sanitizar antes de crear la Response
+            resp = Response(_sanitize_for_json(resp_payload), status=status.HTTP_200_OK)
+
+            access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+            refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+            resp.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+                max_age=access_max_age,
+                path='/'
+            )
+            resp.set_cookie(
+                'refresh', refresh_token,
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
+                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
+                max_age=refresh_max_age,
+                path='/'
+            )
+
+            return resp
             
         except Exception as e:
             logger.error(f"Error al activar plan: {str(e)}", exc_info=True)
@@ -654,68 +846,147 @@ class ActivatePlanView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-from rest_framework.views import APIView
-from rest_framework.response import Response
-from rest_framework import status, permissions
-from django.contrib.auth import get_user_model
-from .models import TaskCompletion, Transaction
+@method_decorator(csrf_exempt, name='dispatch')
+class WithdrawView(APIView):
+    permission_classes = [IsAuthenticated]
 
-User = get_user_model()
-
-class UserHistoryView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        user = request.user
-
+    def post(self, request):
         try:
-            # Historial de tareas completadas / rachas
-            tasks = TaskCompletion.objects.filter(user=user).order_by('-date_completed')
+            serializer = WithdrawSerializer(data=request.data)
+            serializer.is_valid(raise_exception=True)
+            boost_amount = serializer.validated_data['boost_amount']
 
-            # Historial de retiros / transacciones
-            withdrawals = Transaction.objects.filter(user=user).order_by('-date')
+            user = request.user
+            if not user.can_withdraw:
+                return Response({
+                    'error': 'No tienes saldo disponible para retirar o alcanzaste el límite semanal',
+                    'code': 'cannot_withdraw'
+                }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Referidos
-            referrals = Referral.objects.filter(inviter=user)
+            if boost_amount > user.earned_boost:
+                return Response({
+                    'error': 'Solo puedes retirar BOOST ganados por tareas',
+                    'code': 'insufficient_earned_boost'
+                }, status=status.HTTP_400_BAD_REQUEST)
 
-            # Datos del usuario
-            data = {
-                "user": {
-                    "id": user.id,
-                    "username": user.username,
-                    "email": user.email,
-                    "plan": user.plan_name if hasattr(user, 'plan_name') else None,
-                    "boost_balance": user.boost_balance,
-                    "registered_at": user.date_joined,
-                    "last_activity": user.last_login,
-                },
-                "tasks_history": [
-                    {
-                        "task": t.task_name,
-                        "completed_at": t.date_completed,
-                        "streak": t.streak
-                    } for t in tasks
-                ],
-                "withdrawals_history": [
-                    {
-                        "amount": w.amount,
-                        "status": w.status,
-                        "date": w.date
-                    } for w in withdrawals
-                ],
-                "referrals": [
-                    {
-                        "referred_user_id": r.referred.id,
-                        "referred_username": r.referred.username,
-                        "joined_at": r.referred.date_joined
-                    } for r in referrals
-                ]
-            }
+            if user.current_week_withdrawn + boost_amount > user.weekly_limit:
+                return Response({
+                    'error': 'Límite semanal de retiro superado',
+                    'code': 'weekly_limit_exceeded'
+                }, status=status.HTTP_400_BAD_REQUEST)
 
-            return Response(data, status=status.HTTP_200_OK)
+            if boost_amount > user.boost_balance:
+                return Response({
+                    'error': 'Saldo BOOST insuficiente',
+                    'code': 'insufficient_balance'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            transaction = Transaction.objects.create(
+                user=user,
+                transaction_type='withdrawal',
+                boost_amount=boost_amount,
+                status='pending',
+                description='Solicitud de retiro BOOST a USDT'
+            )
+
+            if not transaction.complete_withdrawal():
+                return Response({
+                    'error': 'No se pudo procesar el retiro',
+                    'code': 'withdrawal_failed'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            # Enviar notificación por email al usuario informando tiempos de espera
+            def _send_withdraw_email():
+                try:
+                    subject = 'Confirmación de retiro en BoostMe'
+                    # Texto plano como fallback
+                    plain_message = (
+                        f"Hola {user.username},\n\n"
+                        f"Tu solicitud de retiro de {boost_amount} BOOST ha sido procesada. "
+                        f"El monto convertido corresponde a {transaction.usdt_amount} USDT y será acreditado en tu wallet. "
+                        "Por favor espera hasta 32 horas como máximo para la ejecución y confirmación del retiro.\n\n"
+                        "Gracias por usar BoostMe.\n"
+                    )
+
+                    html_message = render_to_string('users/withdrawal_email.html', {
+                        'user': user,
+                        'boost_amount': boost_amount,
+                        'usdt_amount': transaction.usdt_amount,
+                        'wait_hours': 32,
+                        'domain': settings.FRONTEND_URL,
+                        'protocol': 'https' if not settings.DEBUG else 'http',
+                        'now': timezone.now(),
+                    })
+
+                    send_mail(
+                        subject,
+                        plain_message,
+                        settings.DEFAULT_FROM_EMAIL,
+                        [user.email],
+                        fail_silently=False,
+                        html_message=html_message,
+                    )
+                except Exception:
+                    logger.exception('Error enviando email de confirmación de retiro')
+
+            Thread(target=_send_withdraw_email).start()
+
+            return Response({
+                'message': 'Retiro procesado correctamente',
+                'withdrawn_boost': float(boost_amount),
+                'received_usdt': float(transaction.usdt_amount),
+                'wallet_balance_usdt': float(user.balance),
+                'current_week_withdrawn': float(user.current_week_withdrawn)
+            }, status=status.HTTP_200_OK)
 
         except Exception as e:
+            logger.error(f"Error en WithdrawView: {str(e)}", exc_info=True)
             return Response({
-                "error": "No se pudo obtener el historial del usuario",
-                "detail": str(e)
+                'error': 'Error procesando el retiro',
+                'code': 'withdrawal_error',
+                'detail': str(e) if settings.DEBUG else None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+class ProfileView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        """Obtener el perfil del usuario."""
+        try:
+            serializer = UserSerializer(request.user, context={'request': request})
+            return Response(serializer.data)
+        except Exception as e:
+            return Response({
+                'error': 'Error al obtener el perfil',
+                'detail': str(e) if settings.DEBUG else None
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+    def patch(self, request):
+        """Actualizar el perfil del usuario."""
+        try:
+            user = request.user
+            serializer = UserSerializer(user, data=request.data, partial=True, context={'request': request})
+            
+            if serializer.is_valid():
+                serializer.save()
+
+                profile_task = user.tasks.filter(
+                    task_type='profile',
+                    status='pending'
+                ).order_by('-created_at').first()
+
+                if profile_task:
+                    profile_task.complete_task()
+
+                return Response({
+                    'message': 'Perfil actualizado exitosamente',
+                    'user': serializer.data,
+                    'boost_awarded': float(profile_task.boost_reward) if profile_task else 0
+                })
+            return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as e:
+            return Response({
+                'error': 'Error al actualizar el perfil',
+                'detail': str(e) if settings.DEBUG else None
+            }, status=status.HTTP_400_BAD_REQUEST)

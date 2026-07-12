@@ -6,16 +6,22 @@ from .models import User
 @admin.register(User)
 class UserAdmin(BaseUserAdmin):
     # campos que se mostrarán en la lista
-    list_display = ('email', 'username', 'is_staff', 'is_active', 'is_email_verified', 'balance', 'level')
+    list_display = ('username', 'email', 'first_name', 'is_staff', 'is_active', 'is_email_verified', 'balance', 'level')
     list_filter = ('is_staff', 'is_active', 'is_email_verified', 'level')
-    search_fields = ('email', 'username')
+    search_fields = ('email', 'username', 'first_name', 'last_name')
     ordering = ('-date_joined',)
+
+    # Campos que solo se leen (no editable)
+    readonly_fields = ('join_date', 'date_joined', 'last_login', 'boost_balance', 'purchased_boost', 'earned_boost')
 
     # organización de los campos en el formulario del admin
     fieldsets = (
-        (None, {'fields': ('email', 'password')}),
-        ('Información personal', {'fields': ('username', 'first_name', 'last_name')}),
-        ('Datos extra', {'fields': ('is_email_verified', 'balance', 'level')}),
+        (None, {'fields': ('email', 'username', 'password')}),
+        ('Información personal', {'fields': ('first_name', 'last_name', 'bio', 'photo')}),
+        ('Ubicación', {'fields': ('country', 'city', 'phone')}),
+        ('Información financiera', {'fields': ('balance', 'boost_balance', 'purchased_boost', 'earned_boost', 'current_week_withdrawn', 'weekly_limit', 'has_financial_activation')}),
+        ('Plan y nivel', {'fields': ('level', 'plan_name', 'plan_expiry_date')}),
+        ('Verificación', {'fields': ('is_email_verified', 'join_date')}),
         ('Permisos', {'fields': ('is_active', 'is_staff', 'is_superuser', 'groups', 'user_permissions')}),
         ('Fechas importantes', {'fields': ('last_login', 'date_joined')}),
     )

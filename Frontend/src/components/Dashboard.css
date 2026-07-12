@@ -1,420 +1,253 @@
-/* ========================
-   ESTRUCTURA GENERAL
-======================== */
-body {
-  background-color: #f7f9fc;
-  font-family: "Inter", sans-serif;
-  margin: 0;
-  padding: 0;
-}
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-.dashboard-container {
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
-
-/* ========================
-   ENCABEZADO
-======================== */
-.dashboard-header {
-  background-color: #fff;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  padding: 1rem 2rem;
-  position: relative;
-  z-index: 10;
-}
-
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.header-top h1 {
-  color: #2563eb;
-  font-size: 1.8rem;
-  margin: 0;
-}
-
-.user-info {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.plan-badge {
-  background: #e0edff;
-  color: #2563eb;
-  padding: 0.3rem 0.8rem;
-  border-radius: 1rem;
-  font-weight: 600;
-  font-size: 0.9rem;
-}
-
-.logout-button {
-  background-color: #2563eb;
-  color: #fff;
-  border: none;
-  border-radius: 10px;
-  padding: 0.4rem 0.8rem;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.logout-button:hover {
-  background-color: #1e50c3;
-}
-
-/* ========================
-   MENÚ PRINCIPAL (DESKTOP)
-======================== */
-.top-nav {
-  display: flex;
-  justify-content: center;
-  gap: 2rem;
-  margin-top: 1rem;
-}
-
-.nav-button {
-  background: none;
-  border: none;
-  color: #555;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  gap: 0.4rem;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.nav-button:hover,
-.nav-button.active {
-  color: #2563eb;
-}
-
-.nav-icon {
-  width: 18px;
-  height: 18px;
-}
-
-/* ========================
-   MENÚ LATERAL (MÓVIL)
-======================== */
-.menu-button {
-  display: none;
-  background: none;
-  border: none;
-  color: #2563eb;
-  cursor: pointer;
-}
-
-.side-menu {
-  position: fixed;
-  top: 0;
-  left: -260px;
-  width: 240px;
-  height: 100vh;
-  background: #fff;
-  box-shadow: 2px 0 10px rgba(0,0,0,0.1);
-  padding: 2rem 1rem;
-  transition: left 0.3s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  z-index: 20;
-}
-
-.side-menu.open {
-  left: 0;
-}
-
-.side-menu button {
-  background: none;
-  border: none;
-  font-size: 1rem;
-  text-align: left;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  color: #333;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.side-menu button:hover {
-  color: #2563eb;
-}
-
-.menu-close {
-  align-self: flex-end;
-  background: none;
-  border: none;
-  color: #2563eb;
-  cursor: pointer;
-}
-
-.logout-side {
-  margin-top: auto;
-  background-color: #2563eb !important;
-  color: white !important;
-  border-radius: 10px;
-  padding: 0.6rem;
-}
-
-/* ========================
-   CONTENIDO PRINCIPAL
-======================== */
-.main-content {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1.2rem;
-  padding: 2rem 1rem;
-}
-
-.balance-card,
-.tasks-card,
-.plan-card,
-.quick-actions {
-  background: #fff;
-  border-radius: 16px;
-  box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-  padding: 1.5rem;
-  width: 100%;
-  max-width: 600px;
-  transition: transform 0.2s;
-}
-
-.balance-card:hover,
-.tasks-card:hover,
-.plan-card:hover,
-.quick-actions:hover {
-  transform: scale(1.02);
-}
-
-/* ========================
-   SALDO
-======================== */
-.balance-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.balance-label {
-  color: #6b7280;
-  font-size: 0.9rem;
-}
-
-.balance-amount {
-  font-size: 2rem;
-  font-weight: 700;
-  color: #2563eb;
-}
-
-.balance-icon {
-  color: #2563eb;
-}
-
-.balance-details {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 1rem;
-}
-
-.item-label {
-  font-size: 0.85rem;
-  color: #6b7280;
-}
-
-.item-value {
-  font-weight: 600;
-  color: #1f2937;
-}
-
-.withdraw-section {
-  margin-top: 1rem;
-  text-align: center;
-}
-
-.withdraw-button {
-  width: 60%;
-  max-width: 220px;
-  background-color: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 0.5rem 1rem;
-  margin-top: 0.5rem;
-  cursor: pointer;
-  transition: 0.2s;
-}
-
-.withdraw-button:hover {
-  background-color: #1d4ed8;
-}
-
-/* ========================
-   TAREAS DIARIAS
-======================== */
-.tasks-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.tasks-header h2 {
-  font-size: 1.2rem;
-}
-
-.progress-bar {
-  height: 8px;
-  background-color: #e5e7eb;
-  border-radius: 6px;
-  overflow: hidden;
-  margin: 1rem 0;
-}
-
-.progress-fill {
-  height: 100%;
-  background-color: #2563eb;
-  transition: width 0.3s ease;
-}
-
-.earnings-info {
-  display: flex;
-  justify-content: space-between;
-  color: #374151;
-  font-weight: 600;
-}
-
-.earnings-amount {
-  color: #2563eb;
-}
-
-/* ========================
-   ACCIONES RÁPIDAS
-======================== */
-.quick-actions h2 {
-  margin-bottom: 1rem;
-  font-size: 1.2rem;
-}
-
-.actions-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 1rem;
-}
-
-.action-button {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.4rem;
-  background-color: #f3f4f6;
-  border: none;
-  border-radius: 12px;
-  padding: 1rem;
-  cursor: pointer;
-  font-weight: 600;
-  color: #111827;
-  transition: 0.2s;
-}
-
-.action-button:hover {
-  background-color: #e0e7ff;
-}
-
-.action-icon {
-  color: #2563eb;
-}
-
-/* ========================
-   PLAN
-======================== */
-.plan-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.plan-star {
-  color: #facc15;
-}
-
-.plan-item {
-  display: flex;
-  justify-content: space-between;
-  margin-top: 0.5rem;
-  font-size: 0.95rem;
-}
-
-/* Ajuste del botón "Actualizar Plan" */
-.upgrade-button {
-  width: 60%;
-  max-width: 220px;
-  display: block;
-  margin: 1rem auto 0;
-  background-color: #2563eb;
-  color: white;
-  border: none;
-  border-radius: 10px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  transition: 0.2s;
-  text-align: center;
-}
-
-.upgrade-button:hover {
-  background-color: #1d4ed8;
-}
-
-/* En pantallas pequeñas, vuelve a ocupar todo el ancho */
-@media (max-width: 600px) {
-  .upgrade-button {
-    width: 100%;
-    max-width: none;
-  }
-}
-/* ========================
-   RESPONSIVE
-======================== */
-@media (max-width: 900px) {
-  .top-nav {
-    display: none;
+/* Componentes personalizados */
+@layer components {
+  .dashboard-container {
+    @apply flex flex-col min-h-screen;
+    background: var(--bg);
   }
 
-  .menu-button {
-    display: block;
+  .dashboard-header {
+    @apply bg-white shadow-sm px-4 md:px-8 py-4 relative z-10;
+    border-bottom: 1px solid rgba(56, 189, 248, 0.15);
+  }
+
+  .header-top {
+    @apply flex justify-between items-center;
+  }
+
+  .header-top h1 {
+    @apply font-bold m-0;
+    color: var(--brand-900);
   }
 
   .user-info {
-    display: none;
+    @apply flex items-center gap-4;
+  }
+
+  .plan-badge {
+    @apply px-3 py-1 rounded-full font-semibold text-sm;
+    background: rgba(56, 189, 248, 0.14);
+    color: var(--brand-900);
+  }
+
+  .logout-button {
+    @apply text-white border-0 rounded-lg px-3 py-1 cursor-pointer transition-all duration-200;
+    background: var(--brand-900);
+  }
+  .logout-button:hover { background: #111c33; }
+
+  .top-nav {
+    @apply hidden md:flex justify-center gap-4 md:gap-8 mt-4;
+  }
+
+  .nav-button {
+    @apply bg-transparent border-0 text-gray-600 font-semibold flex items-center gap-1 cursor-pointer transition-all duration-200;
+  }
+  .nav-button:hover { color: var(--brand-700); }
+
+  .nav-button.active {
+    color: var(--brand-900);
+  }
+
+  .menu-button {
+    @apply block md:hidden bg-transparent border-0 cursor-pointer;
+    color: var(--brand-900);
+  }
+
+  .side-menu {
+    @apply fixed top-0 -left-64 w-60 h-screen bg-white shadow-lg px-4 py-8 transition-all duration-300 flex flex-col gap-4 z-20 md:hidden;
+  }
+
+  .side-menu.open {
+    @apply left-0;
+  }
+
+  .side-menu button {
+    @apply bg-transparent border-0 text-base text-left flex items-center gap-2 text-gray-700 cursor-pointer transition-all duration-200 hover:text-blue-600;
+  }
+
+  .menu-close {
+    @apply self-end bg-transparent border-0 cursor-pointer;
+    color: var(--brand-900);
+  }
+
+  .logout-side {
+    @apply mt-auto text-white rounded-lg px-2 py-1.5;
+    background: var(--brand-900);
   }
 
   .main-content {
-    padding: 1rem;
+    @apply flex flex-col items-center gap-5 px-4 md:px-8 py-4 md:py-8;
   }
 
   .balance-card,
   .tasks-card,
   .plan-card,
   .quick-actions {
-    max-width: 100%;
+    @apply bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full max-w-2xl transition-transform duration-200 hover:scale-105;
   }
-}
-.saludo {
-  text-align: center;
-  font-weight: 600;
-  color: #2563eb;
-  margin-top: 0.5rem;
-  font-size: 1rem;
-}
 
-.saludo-side {
-  text-align: center;
-  font-weight: 600;
-  color: #2563eb;
-  margin-bottom: 1rem;
+  .balance-header {
+    @apply flex justify-between items-center;
+  }
+
+  .balance-label {
+    @apply text-gray-500 text-sm md:text-base;
+  }
+
+  .balance-amount {
+    @apply font-bold;
+    color: var(--brand-900);
+  }
+
+  .balance-icon {
+    color: var(--brand-700);
+  }
+
+  .balance-details {
+    @apply flex justify-between mt-4;
+  }
+
+  .item-label {
+    @apply text-xs md:text-sm text-gray-500;
+  }
+
+  .item-value {
+    @apply font-semibold text-gray-800;
+  }
+
+  .withdraw-section {
+    @apply mt-4 text-center;
+  }
+
+  .withdraw-button {
+    @apply w-full md:w-3/5 max-w-56 text-white border-0 rounded-lg px-4 py-2 mt-2 cursor-pointer transition-all duration-200;
+    background: var(--brand-900);
+  }
+  .withdraw-button:hover { background: #111c33; }
+
+  .tasks-header {
+    @apply flex justify-between items-center;
+  }
+
+  .tasks-header h2 {
+    @apply text-xl md:text-2xl;
+  }
+
+  .progress-bar {
+    @apply h-2 bg-gray-200 rounded-lg overflow-hidden my-4;
+  }
+
+  .progress-fill {
+    @apply h-full transition-all duration-300;
+    background: linear-gradient(90deg, var(--brand-700) 0%, var(--brand-900) 100%);
+  }
+
+  .earnings-info {
+    @apply flex justify-between text-gray-700 font-semibold;
+  }
+
+  .earnings-amount {
+    color: var(--brand-700);
+  }
+
+  .quick-actions h2 {
+    @apply mb-4 text-xl md:text-2xl;
+  }
+
+  .actions-grid {
+    @apply grid gap-4;
+  }
+
+  .action-button {
+    @apply flex flex-col items-center gap-1 bg-gray-100 border-0 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200;
+  }
+  .action-button:hover { background: rgba(56, 189, 248, 0.12); }
+
+  .action-icon {
+    color: var(--brand-700);
+  }
+
+  .plan-header {
+    @apply flex justify-between items-center;
+  }
+
+  .plan-star {
+    color: var(--brand-300);
+  }
+
+  .plan-item {
+    @apply flex justify-between mt-2 text-sm md:text-base;
+  }
+
+  .withdraw-note {
+    @apply text-xs text-gray-500;
+  }
+
+  .modal-overlay {
+    @apply fixed inset-0 bg-black/40 flex items-center justify-center z-50;
+  }
+
+  .modal-card {
+    @apply bg-white rounded-3xl shadow-2xl w-full max-w-lg p-6;
+  }
+
+  .modal-header {
+    @apply flex justify-between items-center mb-4;
+  }
+
+  .modal-title {
+    @apply text-xl font-semibold;
+  }
+
+  .modal-close {
+    @apply bg-gray-100 rounded-full p-2 border-0 cursor-pointer text-gray-600 hover:bg-gray-200;
+  }
+
+  .withdraw-form {
+    @apply flex flex-col gap-4;
+  }
+
+  .input-label {
+    @apply flex flex-col gap-2 text-sm font-medium text-gray-700;
+  }
+
+  .input-field {
+    @apply border border-gray-300 rounded-xl px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-200;
+  }
+
+  .modal-actions {
+    @apply flex justify-end gap-3 mt-2;
+  }
+
+  .cancel-button {
+    @apply bg-gray-200 text-gray-700 rounded-xl px-4 py-2 hover:bg-gray-300;
+  }
+
+  .error-message {
+    @apply text-sm text-red-600;
+  }
+
+  .success-message {
+    @apply text-sm text-green-600;
+  }
+
+  .upgrade-button {
+    @apply w-full md:w-3/5 max-w-56 block mx-auto mt-4 text-white border-0 rounded-lg px-4 py-2 cursor-pointer transition-all duration-200 text-center;
+    background: var(--brand-900);
+  }
+  .upgrade-button:hover { background: #111c33; }
+
+  .saludo {
+    @apply text-center font-semibold mt-2;
+    color: var(--brand-900);
+  }
+
+  .saludo-side {
+    @apply text-center font-semibold mb-4;
+    color: var(--brand-900);
+  }
 }
