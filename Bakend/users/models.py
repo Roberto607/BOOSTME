@@ -16,6 +16,13 @@ class User(AbstractUser):
     photo = models.ImageField(upload_to='profile_photos/', blank=True, null=True)
     join_date = models.DateTimeField(auto_now_add=True, null=True, blank=True)
 
+    # SurveyMonkey OAuth data
+    surveymonkey_access_token = models.TextField(blank=True, null=True)
+    surveymonkey_refresh_token = models.TextField(blank=True, null=True)
+    surveymonkey_scope = models.CharField(max_length=255, blank=True, null=True)
+    surveymonkey_user_id = models.CharField(max_length=255, blank=True, null=True)
+    surveymonkey_token_expires_at = models.DateTimeField(blank=True, null=True)
+
     # 💰 Balance en USDT (referencia global)
     balance = models.DecimalField(max_digits=10, decimal_places=2, default=Decimal('0.00'))
 

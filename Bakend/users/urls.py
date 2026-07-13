@@ -20,7 +20,8 @@ urlpatterns = [
     
     
     path('login/',views.LoginView.as_view(), name='login'),
-    path('logout/',views. LogoutView.as_view(), name='token_logout'),
-    
+    path('logout/',views.LogoutView.as_view(), name='token_logout'),
+    path('surveymonkey/authorize/', views.SurveyMonkeyAuthorizeView.as_view(), name='surveymonkey_authorize'),
+    path('surveymonkey/callback/', views.SurveyMonkeyCallbackView.as_view(), name='surveymonkey_callback'),
 ]
 

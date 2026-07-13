@@ -240,6 +240,19 @@ DATABASES = {
 
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 
+SURVEYMONKEY_CLIENT_ID = os.getenv('SURVEYMONKEY_CLIENT_ID', '')
+SURVEYMONKEY_CLIENT_SECRET = os.getenv('SURVEYMONKEY_CLIENT_SECRET', '')
+SURVEYMONKEY_SCOPES = os.getenv(
+    'SURVEYMONKEY_SCOPES',
+    'view_users view_surveys view_responses create_modify_collectors view_collectors'
+)
+SURVEYMONKEY_OAUTH_BASE_URL = os.getenv('SURVEYMONKEY_OAUTH_BASE_URL', 'https://api.surveymonkey.com/oauth/authorize')
+SURVEYMONKEY_OAUTH_REDIRECT_URI = os.getenv(
+    'SURVEYMONKEY_OAUTH_REDIRECT_URI',
+    f"{BACKEND_URL}/api/users/surveymonkey/callback/"
+)
+SURVEYMONKEY_API_BASE_URL = os.getenv('SURVEYMONKEY_API_BASE_URL', 'https://api.surveymonkey.com')
+
 # Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'

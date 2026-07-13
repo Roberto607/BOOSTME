@@ -6,6 +6,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate, get_user_model
 from django.utils import timezone
 from django.conf import settings
+from django.shortcuts import redirect
 from django.core.mail import send_mail, EmailMessage
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
@@ -19,14 +20,12 @@ from rest_framework.throttling import UserRateThrottle
 from django.utils.decorators import method_decorator
 from threading import Thread
 from django.views.decorators.csrf import csrf_exempt
-from urllib.parse import urljoin
-from .tokens import password_reset_token 
-from threading import Thread
+from urllib.parse import urljoin, urlencode
+from urllib import request as urllib_request, error as urllib_error
+import json
+from .tokens import password_reset_token
 from .models import User, Transaction, UserPlan
 from .serializers import UserSerializer, RegisterSerializer, ActivatePlanSerializer, WithdrawSerializer
-from .tokens import account_activation_token
-from django.conf import settings
-from django.utils.encoding import force_str, force_bytes
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -73,6 +72,143 @@ def _attach_jwt_cookies(resp, access_token, refresh_token, access_max_age, refre
         path='/'
     )
     return resp
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SurveyMonkeyAuthorizeView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        if not settings.SURVEYMONKEY_CLIENT_ID or not settings.SURVEYMONKEY_OAUTH_REDIRECT_URI:
+            return Response({
+                'error': 'SurveyMonkey configuration missing',
+                'message': 'Set SURVEYMONKEY_CLIENT_ID and SURVEYMONKEY_OAUTH_REDIRECT_URI in environment.'
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+        params = {
+            'response_type': 'code',
+            'client_id': settings.SURVEYMONKEY_CLIENT_ID,
+            'redirect_uri': settings.SURVEYMONKEY_OAUTH_REDIRECT_URI,
+            'scope': settings.SURVEYMONKEY_SCOPES,
+            'state': str(request.user.pk)
+        }
+        auth_url = f"{settings.SURVEYMONKEY_OAUTH_BASE_URL}?{urlencode(params)}"
+        return Response({'authorization_url': auth_url}, status=status.HTTP_200_OK)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class SurveyMonkeyCallbackView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        code = request.GET.get('code')
+        state = request.GET.get('state')
+        if not code:
+            redirect_path = f"{settings.FRONTEND_URL}/surveymonkey/connected?status=error&message=missing_code"
+            return redirect(redirect_path)
+
+        if not settings.SURVEYMONKEY_CLIENT_ID or not settings.SURVEYMONKEY_CLIENT_SECRET:
+            redirect_path = f"{settings.FRONTEND_URL}/surveymonkey/connected?status=error&message=missing_credentials"
+            return redirect(redirect_path)
+
+        user = request.user if request.user.is_authenticated else None
+        if user is None and state:
+            try:
+                user = User.objects.get(pk=state)
+            except User.DoesNotExist:
+                user = None
+
+        if user is None:
+            redirect_path = f"{settings.FRONTEND_URL}/surveymonkey/connected?status=error&message=user_not_found"
+            return redirect(redirect_path)
+
+        token_url = f"{settings.SURVEYMONKEY_API_BASE_URL}/oauth/token"
+        payload = {
+            'client_id': settings.SURVEYMONKEY_CLIENT_ID,
+            'client_secret': settings.SURVEYMONKEY_CLIENT_SECRET,
+            'code': code,
+            'redirect_uri': settings.SURVEYMONKEY_OAUTH_REDIRECT_URI,
+            'grant_type': 'authorization_code'
+        }
+
+        try:
+            request_data = urlencode(payload).encode('utf-8')
+            req = urllib_request.Request(
+                token_url,
+                data=request_data,
+                headers={
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'Accept': 'application/json'
+                }
+            )
+            with urllib_request.urlopen(req, timeout=15) as response:
+                token_response = json.loads(response.read().decode('utf-8'))
+        except urllib_error.HTTPError as exc:
+            error_body = exc.read().decode('utf-8', errors='ignore')
+            try:
+                error_json = json.loads(error_body)
+            except Exception:
+                error_json = {'detail': error_body}
+            return Response({
+                'error': 'SurveyMonkey token exchange failed',
+                'details': error_json,
+                'status_code': exc.code
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            redirect_path = f"{settings.FRONTEND_URL}/surveymonkey/connected?status=error&message=token_exchange_failed"
+            return redirect(redirect_path)
+
+        access_token = token_response.get('access_token')
+        if not access_token:
+            return Response({
+                'error': 'SurveyMonkey token response missing access_token',
+                'details': token_response
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        validate_url = f"{settings.SURVEYMONKEY_API_BASE_URL}/v3/users/me"
+        try:
+            validate_req = urllib_request.Request(
+                validate_url,
+                headers={
+                    'Authorization': f'Bearer {access_token}',
+                    'Accept': 'application/json'
+                }
+            )
+            with urllib_request.urlopen(validate_req, timeout=15) as response:
+                survey_user = json.loads(response.read().decode('utf-8'))
+        except urllib_error.HTTPError as exc:
+            error_body = exc.read().decode('utf-8', errors='ignore')
+            try:
+                error_json = json.loads(error_body)
+            except Exception:
+                error_json = {'detail': error_body}
+            return Response({
+                'error': 'SurveyMonkey token validation failed',
+                'details': error_json,
+                'status_code': exc.code
+            }, status=status.HTTP_400_BAD_REQUEST)
+        except Exception as exc:
+            redirect_path = f"{settings.FRONTEND_URL}/surveymonkey/connected?status=error&message=token_validation_failed"
+            return redirect(redirect_path)
+
+        user.surveymonkey_access_token = access_token
+        user.surveymonkey_refresh_token = token_response.get('refresh_token')
+        user.surveymonkey_scope = token_response.get('scope')
+        user.surveymonkey_user_id = survey_user.get('id') or survey_user.get('account_id')
+        expires_in = token_response.get('expires_in')
+        if expires_in is not None:
+            try:
+                user.surveymonkey_token_expires_at = timezone.now() + timezone.timedelta(seconds=int(expires_in))
+            except Exception:
+                user.surveymonkey_token_expires_at = None
+        user.save(update_fields=[
+            'surveymonkey_access_token',
+            'surveymonkey_refresh_token',
+            'surveymonkey_scope',
+            'surveymonkey_user_id',
+            'surveymonkey_token_expires_at'
+        ])
+
+        redirect_path = f"{settings.FRONTEND_URL}/surveymonkey/connected?status=success"
+        return redirect(redirect_path)
 
 @method_decorator(csrf_exempt, name='dispatch')
 class RegisterView(APIView):

@@ -214,6 +214,10 @@ class TaskViewSet(viewsets.ModelViewSet):
                     )
 
             if task.complete_task(watched_seconds=watched_seconds):
+                if hasattr(request.user, 'plan_name') and request.user.plan_name == 'Free':
+                    pending_count = request.user.tasks.filter(status='pending').count()
+                    if pending_count < 2:
+                        self.generate_free_tasks(request.user)
                 return Response({'message': 'Tarea completada exitosamente'})
             return Response(
                 {'error': 'No se pudo completar la tarea'},
@@ -263,17 +267,16 @@ class TaskViewSet(viewsets.ModelViewSet):
                 ).delete()
 
             pending_tasks = request.user.tasks.filter(status='pending')
-            required_task_types = ['profile', 'referral', 'survey', 'review', 'video']
-            missing_required_task = any(
-                not pending_tasks.filter(task_type=task_type).exists()
-                for task_type in required_task_types
-            )
+            pending_survey_exists = pending_tasks.filter(task_type='survey').exists()
+            pending_task_count = pending_tasks.count()
+
+            # Usamos encuestas internas definidas por la plataforma en lugar de enlaces externos.
             should_generate_free_tasks = (
                 user_plan.plan_name == 'Free' and (
                     created or
-                    not pending_tasks.exists() or
-                    pending_tasks.count() < 4 or
-                    missing_required_task
+                    pending_task_count == 0 or
+                    not pending_survey_exists or
+                    pending_task_count < min(3, user_plan.daily_tasks)
                 )
             )
             # Allow disabling automatic task generation via env var
@@ -473,6 +476,41 @@ class TaskViewSet(viewsets.ModelViewSet):
                 'simulated_content': 'Inspírate con este video de bienvenida.'
             }
 
+            survey_task = self.get_platform_survey_task(user) or {
+                'task_type': 'survey',
+                'description': 'Completa una encuesta breve de intereses para desbloquear más contenido.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta rápida de la plataforma',
+                    'questions': [
+                        {
+                            'id': 'q1',
+                            'question': '¿Con qué frecuencia usas BoostMe?',
+                            'type': 'single_choice',
+                            'options': ['Todos los días', 'Varias veces a la semana', 'Una vez a la semana', 'Menos de una vez a la semana']
+                        },
+                        {
+                            'id': 'q2',
+                            'question': '¿Qué característica te gusta más?',
+                            'type': 'single_choice',
+                            'options': ['Tareas', 'Recompensas', 'Progreso', 'Referidos']
+                        },
+                        {
+                            'id': 'q3',
+                            'question': '¿Qué mejorarías en BoostMe?',
+                            'type': 'text',
+                            'options': []
+                        }
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta de preferencias.'
+            }
+
             free_tasks = [
                 {
                     'task_type': 'profile',
@@ -494,15 +532,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                     'simulated_content': 'Comparte tu enlace de referido con tus amigos y gana Boost.'
                 },
                 video_task,
-                {
-                    'task_type': 'survey',
-                    'description': 'Completa una encuesta breve de intereses para desbloquear más contenido.',
-                    'boost_reward': 6.00,
-                    'content_type': 'text',
-                    'content_url': None,
-                    'simulated_action': 'survey',
-                    'simulated_content': 'Encuesta de preferencias.'
-                },
+                survey_task,
                 {
                     'task_type': 'review',
                     'description': 'Activa tu primer objetivo y marca tu primera meta.',
@@ -525,12 +555,207 @@ class TaskViewSet(viewsets.ModelViewSet):
                     content_type=task_data.get('content_type'),
                     content_url=task_data.get('content_url'),
                     content_data=task_data.get('content_data', {}),
+                    action_type=task_data.get('action_type', task_data.get('simulated_action', 'survey')),
+                    action_url=task_data.get('action_url', task_data.get('content_url')),
                     simulated_action=task_data.get('simulated_action', ''),
                     simulated_content=task_data.get('simulated_content', ''),
                     expires_at=timezone.now() + timezone.timedelta(hours=24)
                 )
         except Exception as e:
             raise e
+
+    def get_surveymonkey_survey_task(self, user):
+        """Crear una tarea de encuesta usando SurveyMonkey si el usuario ya está conectado."""
+        access_token = getattr(user, 'surveymonkey_access_token', None)
+        if not access_token:
+            return None
+
+        headers = {
+            'Authorization': f'Bearer {access_token}',
+            'Accept': 'application/json'
+        }
+
+        try:
+            list_url = f"{settings.SURVEYMONKEY_API_BASE_URL}/v3/surveys?per_page=5"
+            list_req = urllib_request.Request(list_url, headers=headers)
+            with urllib_request.urlopen(list_req, timeout=15) as response:
+                survey_list = json.loads(response.read().decode('utf-8'))
+
+            surveys = survey_list.get('data', [])
+            if not surveys:
+                return None
+
+            survey = surveys[0]
+            survey_id = survey.get('id')
+            survey_title = survey.get('title') or 'Encuesta de SurveyMonkey'
+            if not survey_id:
+                return None
+
+            collector_payload = json.dumps({
+                'type': 'weblink',
+                'name': 'BoostMe survey task collector'
+            }).encode('utf-8')
+            collector_url = f"{settings.SURVEYMONKEY_API_BASE_URL}/v3/surveys/{survey_id}/collectors"
+            collector_req = urllib_request.Request(
+                collector_url,
+                data=collector_payload,
+                headers={**headers, 'Content-Type': 'application/json'}
+            )
+            with urllib_request.urlopen(collector_req, timeout=15) as response:
+                collector_data = json.loads(response.read().decode('utf-8'))
+
+            collector_id = collector_data.get('id')
+            if not collector_id:
+                return None
+
+            collector_detail_url = f"{settings.SURVEYMONKEY_API_BASE_URL}/v3/collectors/{collector_id}"
+            detail_req = urllib_request.Request(collector_detail_url, headers=headers)
+            with urllib_request.urlopen(detail_req, timeout=15) as response:
+                collector_detail = json.loads(response.read().decode('utf-8'))
+
+            survey_link = (
+                collector_detail.get('preview_url') or
+                collector_detail.get('web_link') or
+                collector_detail.get('href') or
+                collector_detail.get('url')
+            )
+            if not survey_link:
+                return None
+
+            return {
+                'task_type': 'survey',
+                'description': f'Completa la encuesta "{survey_title}" en SurveyMonkey.',
+                'boost_reward': 6.00,
+                'content_type': 'text',
+                'content_url': survey_link,
+                'content_data': {
+                    'survey_id': survey_id,
+                    'collector_id': collector_id,
+                    'survey_title': survey_title
+                },
+                'action_type': 'survey',
+                'action_url': survey_link,
+                'simulated_action': 'survey',
+                'simulated_content': survey_title
+            }
+        except Exception:
+            return None
+
+    def get_platform_survey_task(self, user):
+        """Crear una tarea interna de encuesta definida por la plataforma."""
+        surveys = [
+            {
+                'task_type': 'survey',
+                'description': 'Responde esta encuesta breve para ayudarnos a mejorar BoostMe.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta interna de BoostMe',
+                    'questions': [
+                        {
+                            'id': 'q1',
+                            'question': '¿Con qué frecuencia usas BoostMe?',
+                            'type': 'single_choice',
+                            'options': ['Todos los días', 'Varias veces a la semana', 'Una vez a la semana', 'Menos de una vez a la semana']
+                        },
+                        {
+                            'id': 'q2',
+                            'question': '¿Qué característica de BoostMe valoras más?',
+                            'type': 'single_choice',
+                            'options': ['Tareas', 'Recompensas', 'Referidos', 'Progreso']
+                        },
+                        {
+                            'id': 'q3',
+                            'question': '¿Qué mejorarías en BoostMe?',
+                            'type': 'text',
+                            'options': []
+                        }
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta de la plataforma'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Ayúdanos a mejorar la plataforma respondiendo esta breve encuesta.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta de satisfacción BoostMe',
+                    'questions': [
+                        {
+                            'id': 'q1',
+                            'question': '¿Qué tan fácil te resulta usar BoostMe?',
+                            'type': 'single_choice',
+                            'options': ['Muy fácil', 'Fácil', 'Regular', 'Difícil']
+                        },
+                        {
+                            'id': 'q2',
+                            'question': '¿Qué contenido te gustaría ver más?',
+                            'type': 'single_choice',
+                            'options': ['Tareas', 'Videos', 'Recompensas', 'Referidos']
+                        },
+                        {
+                            'id': 'q3',
+                            'question': '¿Alguna sugerencia adicional?',
+                            'type': 'text',
+                            'options': []
+                        }
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta de satisfacción.'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Comparte tu opinión en esta encuesta corta.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta de feedback BoostMe',
+                    'questions': [
+                        {
+                            'id': 'q1',
+                            'question': '¿Qué te motiva a usar BoostMe?',
+                            'type': 'single_choice',
+                            'options': ['Recompensas', 'Progreso', 'Retos', 'Referidos']
+                        },
+                        {
+                            'id': 'q2',
+                            'question': '¿Qué mejorarías primero?',
+                            'type': 'single_choice',
+                            'options': ['Interfaz', 'Tareas', 'Recompensas', 'Soporte']
+                        },
+                        {
+                            'id': 'q3',
+                            'question': 'Describe tu experiencia en una frase.',
+                            'type': 'text',
+                            'options': []
+                        }
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta de feedback.'
+            }
+        ]
+        existing_survey_titles = set(
+            task.content_data.get('survey_title')
+            for task in Task.objects.filter(user=user, task_type='survey')
+            if task.content_data and isinstance(task.content_data, dict) and task.content_data.get('survey_title')
+        )
+        available_surveys = [survey for survey in surveys if survey['content_data']['survey_title'] not in existing_survey_titles]
+        if available_surveys:
+            return random.choice(available_surveys)
+        return random.choice(surveys)
 
 class TaskCompletionViewSet(viewsets.ReadOnlyModelViewSet):
     """

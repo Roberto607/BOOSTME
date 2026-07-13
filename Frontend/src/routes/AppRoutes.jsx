@@ -16,6 +16,7 @@ import LoadingScreen from "../components/LoadingScreen";
 import ContactPage from "../components/ContactPage";
 import HelpPage from "../components/HelpPage";
 import PrivacyPage from "../components/PrivacyPage";
+import SurveyMonkeyConnected from "../components/SurveyMonkeyConnected";
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading, accessToken, user } = useAuth();
@@ -48,6 +49,7 @@ const AppRoutes = () => {
       <Route path="/dashboard/referidos" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/help" element={<HelpPage />} />
+      <Route path="/surveymonkey/connected" element={<SurveyMonkeyConnected />} />
       <Route path="/privacy" element={<PrivacyPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

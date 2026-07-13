@@ -13,8 +13,7 @@ import {
   Clock3,
   BadgeCheck
 } from 'lucide-react';
-import { profileService } from '../../services/profileService';
-
+import { profileService } from '../../services/profileService';import { surveyMonkeyService } from '../../services/surveyMonkeyService';
 const Profile = () => {
   const { user, updateUserProfile } = useAuth();
   
@@ -22,6 +21,7 @@ const Profile = () => {
   const [previewImage, setPreviewImage] = useState(null);
   const [selectedImageFile, setSelectedImageFile] = useState(null);
   const [copyMessage, setCopyMessage] = useState('');
+  const [surveyMonkeyStatus, setSurveyMonkeyStatus] = useState('');
 
   const [profileData, setProfileData] = useState({
     username: 'Usuario',
@@ -140,6 +140,20 @@ const Profile = () => {
     setSelectedImageFile(null);
   };
 
+  const handleConnectSurveyMonkey = async () => {
+    try {
+      const response = await surveyMonkeyService.getAuthorizeUrl();
+      if (response?.authorization_url) {
+        window.location.href = response.authorization_url;
+      } else {
+        throw new Error('No se obtuvo la URL de autorización');
+      }
+    } catch (error) {
+      console.error('Error al iniciar SurveyMonkey OAuth:', error);
+      alert('No se pudo conectar con SurveyMonkey. Intenta de nuevo.');
+    }
+  };
+
   const handleCopyReferralLink = async () => {
     if (!user) return;
     const referralLink = `${window.location.origin}/register?ref=${user.username || user.id}`;
@@ -155,6 +169,7 @@ const Profile = () => {
 
   const formatNumber = (value) => Number(value || 0).toLocaleString('es-ES');
   const referralLink = user ? `${window.location.origin}/register?ref=${user.username || user.id}` : '';
+  const surveyMonkeyConnected = Boolean(user?.survey_monkey_connected || user?.surveymonkey_user_id);
 
   return (
     <div className="min-h-screen bg-gray-50 px-3 sm:px-6 lg:px-10 py-6">
@@ -311,6 +326,26 @@ const Profile = () => {
             <div className="flex justify-between"><span>Email verificado</span><span className="font-medium text-gray-800">{user?.is_email_verified ? 'Sí' : 'No'}</span></div>
             <div className="flex justify-between"><span>Activación financiera</span><span className="font-medium text-gray-800">{user?.has_financial_activation ? 'Sí' : 'No'}</span></div>
           </div>
+        </div>
+
+        <div className="bg-white rounded-xl shadow p-4 sm:p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Gift className="text-emerald-600" size={18} />
+            <h3 className="font-semibold text-gray-800">SurveyMonkey</h3>
+          </div>
+          <div className="space-y-2 text-sm text-gray-600 mb-4">
+            <div className="flex justify-between"><span>Conexión</span><span className="font-medium text-gray-800">{surveyMonkeyConnected ? 'Conectado' : 'No conectado'}</span></div>
+            {surveyMonkeyConnected && (
+              <div className="text-xs text-gray-500">Usuario SM: {user?.surveymonkey_user_id || '---'}</div>
+            )}
+          </div>
+          <button
+            type="button"
+            onClick={handleConnectSurveyMonkey}
+            className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg"
+          >
+            {surveyMonkeyConnected ? 'Re-conectar SurveyMonkey' : 'Conectar SurveyMonkey'}
+          </button>
         </div>
 
         <div className="bg-white rounded-xl shadow p-4 sm:p-5">

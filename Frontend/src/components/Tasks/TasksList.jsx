@@ -122,6 +122,10 @@ const TasksList = () => {
   const [videoError, setVideoError] = useState(null);
   const [isCompletingVideo, setIsCompletingVideo] = useState(false);
   const [isYouTubeVideo, setIsYouTubeVideo] = useState(false);
+  const [activeSurveyTask, setActiveSurveyTask] = useState(null);
+  const [surveyResponses, setSurveyResponses] = useState({});
+  const [surveyError, setSurveyError] = useState(null);
+  const [isSubmittingSurvey, setIsSubmittingSurvey] = useState(false);
   const videoRef = useRef(null);
   const youtubeContainerRef = useRef(null);
   const youtubePlayerRef = useRef(null);
@@ -338,6 +342,13 @@ const TasksList = () => {
       return;
     }
 
+    if (task?.taskType === 'survey') {
+      setActiveSurveyTask(task);
+      setSurveyResponses({});
+      setSurveyError(null);
+      return;
+    }
+
     if (task?.url) {
       if (task?.taskType === 'video') {
         const isLocalVideo = task.url.startsWith('/') || task.url.endsWith('.mp4');
@@ -439,6 +450,46 @@ const TasksList = () => {
       setVideoError(error.message || 'Error al completar la tarea de video.');
     } finally {
       setIsCompletingVideo(false);
+    }
+  };
+
+  const handleSurveyResponseChange = (questionId, value) => {
+    setSurveyResponses((prev) => ({
+      ...prev,
+      [questionId]: value
+    }));
+  };
+
+  const submitSurveyTask = async () => {
+    if (!activeSurveyTask) return;
+
+    const questions = activeSurveyTask.contentData?.questions || [];
+    const unanswered = questions.filter((question) => {
+      if (question.type === 'text') {
+        return !surveyResponses[question.id] || surveyResponses[question.id].trim() === '';
+      }
+      return !surveyResponses[question.id];
+    });
+
+    if (unanswered.length > 0) {
+      setSurveyError('Por favor responde todas las preguntas antes de completar la encuesta.');
+      return;
+    }
+
+    setSurveyError(null);
+    setIsSubmittingSurvey(true);
+
+    try {
+      const response = await tasksService.completeTask(activeSurveyTask.id, { survey_responses: surveyResponses });
+      if (response?.message) {
+        setTasks((prev) => prev.map((item) => item.id === activeSurveyTask.id ? { ...item, status: 'completed', progress: 1 } : item));
+        setActiveSurveyTask(null);
+      }
+    } catch (error) {
+      console.error('Error completing survey task:', error);
+      setSurveyError(error.message || 'Error al completar la encuesta.');
+    } finally {
+      setIsSubmittingSurvey(false);
     }
   };
 
@@ -665,6 +716,83 @@ const TasksList = () => {
                   className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   {isCompletingVideo ? 'Registrando...' : videoWatchedSeconds >= videoRequiredSeconds ? 'Completar tarea' : `Ver ${videoRequiredSeconds}s`}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {activeSurveyTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6">
+          <div className="w-full max-w-2xl max-h-[calc(100vh-3rem)] overflow-hidden rounded-3xl bg-white shadow-2xl">
+            <div className="flex flex-col gap-2 border-b px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-xl font-semibold text-slate-900">{activeSurveyTask.title}</h3>
+                <p className="mt-1 text-sm text-slate-600">{activeSurveyTask.description}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setActiveSurveyTask(null)}
+                className="rounded-2xl border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+              >
+                Cerrar
+              </button>
+            </div>
+            <div className="max-h-[calc(100vh-14rem)] overflow-y-auto space-y-6 px-6 py-5">
+              <div className="rounded-3xl bg-slate-50 p-5">
+                <h4 className="text-lg font-semibold text-slate-900">{activeSurveyTask.contentData?.survey_title || 'Encuesta'}</h4>
+                <p className="mt-2 text-sm text-slate-600">Responde las preguntas y completa la tarea para ganar tu boost.</p>
+              </div>
+              {activeSurveyTask.contentData?.questions?.map((question) => (
+                <div key={question.id} className="rounded-3xl border border-slate-200 bg-white p-5">
+                  <p className="text-sm font-semibold text-slate-800">{question.question}</p>
+                  {question.type === 'single_choice' && (
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {question.options.map((option) => (
+                        <label key={option} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm cursor-pointer hover:border-slate-400">
+                          <input
+                            type="radio"
+                            name={question.id}
+                            value={option}
+                            checked={surveyResponses[question.id] === option}
+                            onChange={() => handleSurveyResponseChange(question.id, option)}
+                            className="accent-slate-900"
+                          />
+                          <span>{option}</span>
+                        </label>
+                      ))}
+                    </div>
+                  )}
+                  {question.type === 'text' && (
+                    <textarea
+                      value={surveyResponses[question.id] || ''}
+                      onChange={(event) => handleSurveyResponseChange(question.id, event.target.value)}
+                      rows={4}
+                      className="mt-4 w-full rounded-3xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-800 outline-none transition focus:border-slate-400"
+                      placeholder="Escribe tu respuesta aquí..."
+                    />
+                  )}
+                </div>
+              ))}
+              {surveyError && (
+                <p className="text-sm font-semibold text-rose-600">{surveyError}</p>
+              )}
+              <div className="flex flex-col gap-3 sm:flex-row sm:justify-end">
+                <button
+                  type="button"
+                  onClick={() => setActiveSurveyTask(null)}
+                  className="rounded-2xl border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={submitSurveyTask}
+                  disabled={isSubmittingSurvey}
+                  className="inline-flex items-center justify-center rounded-2xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  {isSubmittingSurvey ? 'Enviando...' : 'Completar encuesta'}
                 </button>
               </div>
             </div>

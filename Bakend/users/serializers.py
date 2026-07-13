@@ -23,6 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
     total_boost = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
+    survey_monkey_connected = serializers.SerializerMethodField()
     join_date = serializers.DateTimeField(format='%Y-%m-%d', read_only=True)
 
     class Meta:
@@ -54,6 +55,9 @@ class UserSerializer(serializers.ModelSerializer):
             'is_active',
             'plan_name',
             'plan_expiry_date',
+            'surveymonkey_scope',
+            'surveymonkey_user_id',
+            'survey_monkey_connected',
             'user_plan'
         ]
         read_only_fields = [
@@ -71,7 +75,10 @@ class UserSerializer(serializers.ModelSerializer):
             'current_week_withdrawn',
             'is_active',
             'plan_name',
-            'plan_expiry_date'
+            'plan_expiry_date',
+            'surveymonkey_scope',
+            'surveymonkey_user_id',
+            'survey_monkey_connected'
         ]
 
     def get_total_boost(self, obj):
@@ -87,6 +94,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_full_name(self, obj):
         return f"{obj.first_name} {obj.last_name}".strip()
+
+    def get_survey_monkey_connected(self, obj):
+        return bool(obj.surveymonkey_access_token)
 
     def validate_email(self, value):
         request = self.context.get('request')
