@@ -200,6 +200,7 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -216,6 +217,8 @@ X_FRAME_OPTIONS = 'DENY'
 SECURE_HSTS_SECONDS = 31536000
 SECURE_HSTS_INCLUDE_SUBDOMAINS = True
 SECURE_HSTS_PRELOAD = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
 
 # Configuración de sesión segura
 SESSION_COOKIE_SECURE = not DEBUG
@@ -253,15 +256,28 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
-else:
+elif any([
+    os.getenv('POSTGRES_DB'),
+    os.getenv('POSTGRES_USER'),
+    os.getenv('POSTGRES_PASSWORD'),
+    os.getenv('POSTGRES_HOST'),
+    os.getenv('POSTGRES_PORT'),
+]):
     DATABASES = {
         'default': {
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
             'USER': os.getenv('POSTGRES_USER', 'boostme'),
             'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
-            'HOST': os.getenv('POSTGRES_HOST', 'db'),  # 'db' para Docker, 'localhost' para desarrollo local
+            'HOST': os.getenv('POSTGRES_HOST', 'db'),
             'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        }
+    }
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
@@ -353,6 +369,13 @@ LOGGING = {
         },
     },
 }
-STATIC_URL = 'static/'
-# AGREGA ESTA LÍNEA ABAJO:
-STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
