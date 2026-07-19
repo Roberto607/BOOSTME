@@ -12,6 +12,8 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 
+import dj_database_url
+
 try:
     from dotenv import load_dotenv
 except ModuleNotFoundError:
@@ -30,32 +32,45 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 # Detectar si estamos en Docker
+load_dotenv()
+
 IS_DOCKER = os.path.exists('/.dockerenv')
+
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = 'django-insecure-g1ytl#g@05!1(j7n8u(@i^lx^ez$!)133308&j*xd1_90p1gol'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').strip().lower() in ('1', 'true', 'yes', 'on')
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0', 'testserver', 'backend', 'backend:8000']
+DEFAULT_ALLOWED_HOSTS = 'localhost,127.0.0.1,0.0.0.0,testserver,backend,backend:8000'
+allowed_hosts = [
+    host.strip() for host in os.getenv('ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS).split(',') if host.strip()
+]
+
+render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+if render_hostname:
+    allowed_hosts.append(render_hostname)
+    allowed_hosts.append(f'www.{render_hostname}')
+
+ALLOWED_HOSTS = allowed_hosts
 
 if DEBUG:
-    FRONTEND_URL = "http://localhost:5173"
-    BACKEND_URL = "http://localhost:8000"
-    CSRF_TRUSTED_ORIGINS = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:5174",
-        "http://127.0.0.1:5174",
-    ]
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+    BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000')
+    default_csrf_origins = os.getenv(
+        'CSRF_TRUSTED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174'
+    )
 else:
     # Para producción
-    FRONTEND_URL = "https://tudominio.com"
-    BACKEND_URL = "https://tudominio.com"
-    CSRF_TRUSTED_ORIGINS = [
-        "https://tudominio.com",
-        "https://www.tudominio.com",
-    ]
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://tudominio.com')
+    BACKEND_URL = os.getenv('BACKEND_URL', 'https://tudominio.com')
+    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://tudominio.com,https://www.tudominio.com')
+
+if render_hostname:
+    default_csrf_origins = f"{default_csrf_origins},https://{render_hostname},https://www.{render_hostname}" if default_csrf_origins else f"https://{render_hostname},https://www.{render_hostname}"
+
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in default_csrf_origins.split(',') if origin.strip()]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -133,8 +148,10 @@ SIMPLE_JWT = {
 
 
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:5173",
-    "http://127.0.0.1:5173",
+    origin.strip() for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:5173,http://127.0.0.1:5173'
+    ).split(',') if origin.strip()
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -230,18 +247,23 @@ TEMPLATES = [
 WSGI_APPLICATION = 'Bakend.wsgi.application'
 
 # Database
-load_dotenv()
+DATABASE_URL = os.getenv('DATABASE_URL')
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
-        'USER': os.getenv('POSTGRES_USER', 'boostme'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
-        'HOST': os.getenv('POSTGRES_HOST', 'db'),  # 'db' para Docker, 'localhost' para desarrollo local
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+if DATABASE_URL:
+    DATABASES = {
+        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
+            'USER': os.getenv('POSTGRES_USER', 'boostme'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
+            'HOST': os.getenv('POSTGRES_HOST', 'db'),  # 'db' para Docker, 'localhost' para desarrollo local
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        }
+    }
 
 YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 
