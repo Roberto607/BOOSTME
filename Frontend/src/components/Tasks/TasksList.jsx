@@ -126,10 +126,15 @@ const TasksList = () => {
   const [surveyResponses, setSurveyResponses] = useState({});
   const [surveyError, setSurveyError] = useState(null);
   const [isSubmittingSurvey, setIsSubmittingSurvey] = useState(false);
+  const [preferredTaskSummary, setPreferredTaskSummary] = useState('');
+  const [surveyCooldownMessage, setSurveyCooldownMessage] = useState('');
+  const [now, setNow] = useState(Date.now());
   const videoRef = useRef(null);
   const youtubeContainerRef = useRef(null);
   const youtubePlayerRef = useRef(null);
   const youtubePollRef = useRef(null);
+  const watchedSecondsRef = useRef(0);
+  const lastTrackedPlaybackTimeRef = useRef(0);
 
   const tabOptions = [
     { id: 'daily', label: 'Diarias', icon: Clock },
@@ -146,6 +151,32 @@ const TasksList = () => {
       setActiveTab('daily');
     }
   }, [planInfo, activeTab]);
+
+  useEffect(() => {
+    const timer = window.setInterval(() => {
+      setNow(Date.now());
+    }, 1000);
+
+    return () => window.clearInterval(timer);
+  }, []);
+
+  const getSurveyCountdownLabel = (availableAt) => {
+    if (!availableAt) return '';
+
+    const availableDate = new Date(availableAt);
+    const diffMs = availableDate.getTime() - now;
+    if (diffMs <= 0) return 'Disponible ahora';
+
+    const totalSeconds = Math.max(0, Math.floor(diffMs / 1000));
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+
+    if (minutes > 0) {
+      return `Disponible en ${minutes}m ${seconds.toString().padStart(2, '0')}s`;
+    }
+
+    return `Disponible en ${seconds}s`;
+  };
 
   const isYouTubeUrl = (url) => {
     if (!url) return false;
@@ -195,13 +226,31 @@ const TasksList = () => {
     }
   };
 
+  const syncTrackedWatchedSeconds = (currentTime) => {
+    const safeCurrentTime = Math.floor(Number(currentTime) || 0);
+    const previousTrackedTime = lastTrackedPlaybackTimeRef.current;
+
+    if (safeCurrentTime <= previousTrackedTime) {
+      lastTrackedPlaybackTimeRef.current = safeCurrentTime;
+      return;
+    }
+
+    const deltaSeconds = safeCurrentTime - previousTrackedTime;
+    if (deltaSeconds > 1) {
+      lastTrackedPlaybackTimeRef.current = safeCurrentTime;
+      return;
+    }
+
+    watchedSecondsRef.current = Math.min(videoRequiredSeconds, watchedSecondsRef.current + 1);
+    lastTrackedPlaybackTimeRef.current = safeCurrentTime;
+    setVideoWatchedSeconds(watchedSecondsRef.current);
+  };
+
   const createYouTubePlayer = (videoId) => {
     if (!youtubeContainerRef.current || !window.YT || !window.YT.Player) {
       setVideoError('No se pudo iniciar el reproductor de YouTube.');
       return;
     }
-
-    const playerOrigin = `${window.location.protocol}//${window.location.hostname}${window.location.port ? `:${window.location.port}` : ''}`;
 
     youtubePlayerRef.current = new window.YT.Player(youtubeContainerRef.current, {
       height: '360',
@@ -212,7 +261,6 @@ const TasksList = () => {
         rel: 0,
         modestbranding: 1,
         enablejsapi: 1,
-        origin: playerOrigin,
       },
       events: {
         onReady: (event) => event.target.playVideo(),
@@ -226,9 +274,9 @@ const TasksList = () => {
             clearYoutubePoll();
             youtubePollRef.current = setInterval(async () => {
               if (!youtubePlayerRef.current) return;
-              const currentTime = Math.ceil(youtubePlayerRef.current.getCurrentTime());
-              setVideoWatchedSeconds((prev) => Math.max(prev, currentTime));
-              if (currentTime >= videoRequiredSeconds) {
+              const currentTime = youtubePlayerRef.current.getCurrentTime();
+              syncTrackedWatchedSeconds(currentTime);
+              if (watchedSecondsRef.current >= videoRequiredSeconds) {
                 clearYoutubePoll();
                 await completeVideoTask();
               }
@@ -266,68 +314,103 @@ const TasksList = () => {
     };
   }, [activeVideoTask, isYouTubeVideo, videoRequiredSeconds]);
 
-  useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        const response = await tasksService.getDailyTasks();
-        const backendTasks = response?.tasks || [];
-        const taskTypeLabels = {
-          profile: 'Completar perfil',
-          referral: 'Invitar referido',
-          welcome: 'Ver guía de bienvenida',
-          survey: 'Completar encuesta',
-          goal: 'Activar objetivo',
-          dashboard: 'Explorar panel',
-          social: 'Invitar a un colega',
-          follow: 'Seguir cuenta',
-          video: 'Ver video',
+  const loadTasks = async () => {
+    try {
+      const response = await tasksService.getDailyTasks();
+      const backendTasks = response?.tasks || [];
+      const taskTypeLabels = {
+        profile: 'Completar perfil',
+        referral: 'Invitar referido',
+        welcome: 'Ver guía de bienvenida',
+        survey: 'Completar encuesta',
+        goal: 'Activar objetivo',
+        dashboard: 'Explorar panel',
+        social: 'Invitar a un colega',
+        follow: 'Seguir cuenta',
+        video: 'Ver video',
+      };
+
+      const normalizedTasks = backendTasks.map((task, index) => {
+        const rawDescription = task.description || '';
+        const title = task.title || taskTypeLabels[task.task_type] || (task.task_type || 'Tarea');
+        const Icon = iconMap[task.task_type] || Zap;
+        const isScheduledSurvey = task.task_type === 'survey' && task.content_data?.available_at;
+        const isAvailable = !isScheduledSurvey || new Date(task.content_data.available_at) <= new Date();
+        const isPendingSurvey = task.task_type === 'survey' && !isAvailable;
+
+        return {
+          id: task.id || `${task.task_type || 'task'}-${index}`,
+          type: 'daily',
+          taskType: task.task_type || null,
+          title,
+          description: rawDescription,
+          reward: Number(task.boost_reward || 0),
+          icon: Icon,
+          status: task.status === 'completed' ? 'completed' : isPendingSurvey ? 'locked' : 'available',
+          progress: task.status === 'completed' ? 1 : 0,
+          maxProgress: 1,
+          provider: task.provider || 'BoostMe',
+          payoutType: task.payoutType || 'Boost demo',
+          url: task.task_type === 'profile' ? null : task.content_url || null,
+          contentData: task.content_data || {},
+          targetPath: task.task_type === 'profile' ? '/Profile' : null
         };
+      });
 
-        const normalizedTasks = backendTasks.map((task, index) => {
-          const rawDescription = task.description || '';
-          const title = task.title || taskTypeLabels[task.task_type] || (task.task_type || 'Tarea');
-          const Icon = iconMap[task.task_type] || Zap;
+      setTasks(normalizedTasks);
 
-          return {
-            id: task.id || `${task.task_type || 'task'}-${index}`,
-            type: 'daily',
-            taskType: task.task_type || null,
-            title,
-            description: rawDescription,
-            reward: Number(task.boost_reward || 0),
-            icon: Icon,
-            status: task.status === 'completed' ? 'completed' : 'available',
-            progress: task.status === 'completed' ? 1 : 0,
-            maxProgress: 1,
-            provider: task.provider || 'BoostMe',
-            payoutType: task.payoutType || 'Boost demo',
-            url: task.task_type === 'profile' ? null : task.content_url || null,
-            contentData: task.content_data || {},
-            targetPath: task.task_type === 'profile' ? '/Profile' : null
-          };
-        });
+      const planData = {
+        name: response?.plan_info?.name || user?.plan_name || 'Free',
+        dailyTasks: response?.plan_info?.daily_tasks || (user?.plan_name === 'Starter' ? 5 : user?.plan_name === 'Pro' ? 10 : user?.plan_name === 'Elite' ? 20 : 6),
+        bonus: response?.plan_info?.bonus_percentage ?? (user?.plan_name === 'Starter' ? 10 : user?.plan_name === 'Pro' ? 20 : user?.plan_name === 'Elite' ? 25 : 0)
+      };
 
-        // Use only backend-provided tasks. If backend returns empty, show no tasks.
-        setTasks(normalizedTasks);
-
-        const planData = {
-          name: response?.plan_info?.name || user?.plan_name || 'Free',
-          dailyTasks: response?.plan_info?.daily_tasks || (user?.plan_name === 'Starter' ? 5 : user?.plan_name === 'Pro' ? 10 : user?.plan_name === 'Elite' ? 20 : 6),
-          bonus: response?.plan_info?.bonus_percentage ?? (user?.plan_name === 'Starter' ? 10 : user?.plan_name === 'Pro' ? 20 : user?.plan_name === 'Elite' ? 25 : 0)
-        };
-
-        setPlanInfo(planData);
-      } catch (error) {
-        console.error('Error loading tasks:', error);
-        // If loading fails, show empty list so UI displays the empty state.
-        setTasks([]);
-      } finally {
-        setLoading(false);
+      const hasSurveyTask = backendTasks.some((task) => task.task_type === 'survey');
+      if (!hasSurveyTask) {
+        setSurveyCooldownMessage('No hay más encuestas nuevas por ahora. Vuelve en 20 minutos para ver otra.');
+      } else {
+        setSurveyCooldownMessage('');
       }
-    };
 
+      const preferences = user?.task_preferences || {};
+      const preferredTypes = preferences.preferred_task_types || [];
+      if (preferredTypes.includes('video')) {
+        setPreferredTaskSummary('Tareas recomendadas para ti: videos y contenido breve.');
+      } else if (preferredTypes.includes('referral')) {
+        setPreferredTaskSummary('Tareas recomendadas para ti: referidos y crecimiento de red.');
+      } else if (preferredTypes.includes('goal')) {
+        setPreferredTaskSummary('Tareas recomendadas para ti: metas y seguimiento de progreso.');
+      } else if (preferredTypes.includes('survey')) {
+        setPreferredTaskSummary('Tareas recomendadas para ti: feedback y encuestas rápidas.');
+      } else {
+        setPreferredTaskSummary('Tu perfil aún está en aprendizaje. Pronto te mostraremos tareas más personalizadas.');
+      }
+
+      setPlanInfo(planData);
+    } catch (error) {
+      console.error('Error loading tasks:', error);
+      setTasks([]);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     loadTasks();
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+
+    const hasLockedSurvey = tasks.some((task) => task.taskType === 'survey' && task.status === 'locked');
+    if (!hasLockedSurvey) return;
+
+    const intervalId = window.setInterval(() => {
+      loadTasks();
+    }, 30000);
+
+    return () => window.clearInterval(intervalId);
+  }, [user, tasks]);
 
   const handleTaskClick = async (task) => {
     const isProfileTask = task?.taskType === 'profile' || (typeof task?.id === 'string' && task.id.startsWith('profile'));
@@ -343,6 +426,9 @@ const TasksList = () => {
     }
 
     if (task?.taskType === 'survey') {
+      if (task?.status === 'locked') {
+        return;
+      }
       setActiveSurveyTask(task);
       setSurveyResponses({});
       setSurveyError(null);
@@ -355,6 +441,8 @@ const TasksList = () => {
         const isYouTube = isYouTubeUrl(task.url);
         if (isLocalVideo || isYouTube) {
           const requiredSeconds = Number(task.contentData?.duration || 30);
+          watchedSecondsRef.current = 0;
+          lastTrackedPlaybackTimeRef.current = 0;
           setActiveVideoTask(task);
           setIsYouTubeVideo(isYouTube);
           setVideoWatchedSeconds(0);
@@ -403,20 +491,38 @@ const TasksList = () => {
 
   const handleVideoTimeUpdate = async () => {
     if (!videoRef.current || !activeVideoTask || isCompletingVideo) return;
-    const currentTime = Math.ceil(videoRef.current.currentTime);
-    if (currentTime <= videoWatchedSeconds) return;
 
-    setVideoWatchedSeconds(currentTime);
-    if (currentTime >= videoRequiredSeconds) {
+    const currentTime = Math.floor(videoRef.current.currentTime);
+    const isPlaying = !videoRef.current.paused && !videoRef.current.ended;
+    if (!isPlaying) return;
+
+    const previousTrackedTime = lastTrackedPlaybackTimeRef.current;
+    if (currentTime <= previousTrackedTime) {
+      lastTrackedPlaybackTimeRef.current = currentTime;
+      return;
+    }
+
+    const deltaSeconds = currentTime - previousTrackedTime;
+    if (deltaSeconds > 1) {
+      lastTrackedPlaybackTimeRef.current = currentTime;
+      return;
+    }
+
+    watchedSecondsRef.current = Math.min(videoRequiredSeconds, watchedSecondsRef.current + 1);
+    lastTrackedPlaybackTimeRef.current = currentTime;
+    setVideoWatchedSeconds(watchedSecondsRef.current);
+
+    if (watchedSecondsRef.current >= videoRequiredSeconds) {
       await completeVideoTask();
     }
   };
 
   const handleVideoEnded = async () => {
     if (!activeVideoTask || isCompletingVideo) return;
-    const endedTime = videoRef.current ? Math.ceil(videoRef.current.currentTime) : videoWatchedSeconds;
-    if (videoWatchedSeconds >= videoRequiredSeconds || endedTime >= videoRequiredSeconds) {
-      setVideoWatchedSeconds((prev) => Math.max(prev, endedTime));
+    const endedTime = videoRef.current ? Math.floor(videoRef.current.currentTime) : watchedSecondsRef.current;
+    if (watchedSecondsRef.current >= videoRequiredSeconds || endedTime >= videoRequiredSeconds) {
+      watchedSecondsRef.current = Math.max(watchedSecondsRef.current, endedTime);
+      setVideoWatchedSeconds(watchedSecondsRef.current);
       await completeVideoTask();
     }
   };
@@ -424,12 +530,7 @@ const TasksList = () => {
   const completeVideoTask = async () => {
     if (!activeVideoTask || isCompletingVideo) return;
 
-    let watchedSeconds = videoWatchedSeconds;
-    if (isYouTubeVideo && youtubePlayerRef.current) {
-      watchedSeconds = Math.ceil(youtubePlayerRef.current.getCurrentTime());
-    } else if (videoRef.current) {
-      watchedSeconds = Math.ceil(videoRef.current.currentTime);
-    }
+    let watchedSeconds = watchedSecondsRef.current;
 
     if (watchedSeconds < videoRequiredSeconds) {
       setVideoWatchedSeconds(watchedSeconds);
@@ -483,7 +584,9 @@ const TasksList = () => {
       const response = await tasksService.completeTask(activeSurveyTask.id, { survey_responses: surveyResponses });
       if (response?.message) {
         setTasks((prev) => prev.map((item) => item.id === activeSurveyTask.id ? { ...item, status: 'completed', progress: 1 } : item));
+        await loadTasks();
         setActiveSurveyTask(null);
+        setSurveyCooldownMessage('Nueva encuesta disponible en 5 minutos.');
       }
     } catch (error) {
       console.error('Error completing survey task:', error);
@@ -494,6 +597,8 @@ const TasksList = () => {
   };
 
   const closeVideoModal = () => {
+    watchedSecondsRef.current = 0;
+    lastTrackedPlaybackTimeRef.current = 0;
     setActiveVideoTask(null);
     setIsYouTubeVideo(false);
     setVideoWatchedSeconds(0);
@@ -562,6 +667,16 @@ const TasksList = () => {
         <div className="rounded-3xl bg-slate-950 text-white shadow-xl p-4 md:p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <h2 className="text-2xl md:text-3xl font-bold">Tareas Disponibles</h2>
+            {preferredTaskSummary && (
+              <div className="rounded-2xl border border-white/20 bg-white/10 px-4 py-3 text-sm text-slate-100">
+                {preferredTaskSummary}
+              </div>
+            )}
+            {surveyCooldownMessage && (
+              <div className="rounded-2xl border border-amber-400/40 bg-amber-500/10 px-4 py-3 text-sm text-amber-200">
+                {surveyCooldownMessage}
+              </div>
+            )}
             <div className="flex flex-wrap gap-2">
               {availableTabs.map((tab) => {
                 const Icon = tab.icon;
@@ -600,6 +715,8 @@ const TasksList = () => {
             const Icon = task.icon || Zap;
             const completed = task.status === 'completed';
             const locked = task.status === 'locked';
+            const surveyUnlockAt = task.taskType === 'survey' ? task.contentData?.available_at : null;
+            const surveyCountdown = surveyUnlockAt && locked ? getSurveyCountdownLabel(surveyUnlockAt) : '';
             return (
               <button
                 key={task.id}
@@ -615,6 +732,9 @@ const TasksList = () => {
                     <div className="min-w-0 flex-1">
                       <h3 className="truncate text-lg font-semibold text-slate-900 md:text-xl">{task.title}</h3>
                       <p className="mt-2 text-sm leading-6 text-slate-600 md:text-base">{task.description}</p>
+                      {surveyCountdown && (
+                        <p className="mt-2 text-xs font-medium text-amber-600">{surveyCountdown}</p>
+                      )}
                     </div>
                   </div>
 

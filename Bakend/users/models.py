@@ -41,6 +41,9 @@ class User(AbstractUser):
     plan_name = models.CharField(max_length=50, default='Free')
     plan_expiry_date = models.DateTimeField(null=True, blank=True)
 
+    # 🎯 Preferencias de tareas basadas en la encuesta inicial
+    task_preferences = models.JSONField(default=dict, blank=True, null=True)
+
     USERNAME_FIELD = 'username'
     REQUIRED_FIELDS = ['email']
 
@@ -108,6 +111,20 @@ class Transaction(models.Model):
     created_at = models.DateTimeField(default=timezone.now)
     description = models.TextField(blank=True, null=True)
     
+    # 🔗 Datos de blockchain (para retiros en Polygon)
+    user_wallet_address = models.CharField(max_length=66, blank=True, null=True)  # 0x...
+    tx_hash = models.CharField(max_length=66, blank=True, null=True)  # Hash de la transacción
+    tx_status = models.CharField(
+        max_length=20,
+        choices=[
+            ('pending_blockchain', 'Esperando confirmación blockchain'),
+            ('confirmed', 'Confirmada en blockchain'),
+            ('failed_blockchain', 'Fallida en blockchain'),
+        ],
+        blank=True,
+        null=True
+    )
+    
     class Meta:
         db_table = 'transaction'
 
@@ -162,17 +179,21 @@ class Transaction(models.Model):
         return True
 
     def complete_withdrawal(self):
-        """Procesa un retiro, restando BOOST del balance e ingresando USDT en wallet."""
+        """
+        Procesa un retiro, enviando USDT realmente a la wallet del usuario en Polygon.
+        """
         if self.transaction_type != 'withdrawal':
             return False
 
         user = self.user
+        
         # Asegurar que `boost_amount` se maneje como Decimal
         try:
             boost_dec = Decimal(str(self.boost_amount))
         except Exception:
             boost_dec = Decimal(self.boost_amount)
 
+        # Validar saldos
         if user.boost_balance < boost_dec:
             self.status = 'failed'
             self.description = "Saldo BOOST insuficiente."
@@ -185,7 +206,38 @@ class Transaction(models.Model):
             self.save()
             return False
 
+        # Obtener wallet del usuario
+        if not self.user_wallet_address:
+            self.status = 'failed'
+            self.description = "No hay dirección de wallet registrada."
+            self.save()
+            return False
+
+        # Convertir BOOST a USDT
         usdt_amount = boost_dec / self.CONVERSION_RATE
+        
+        # Enviar USDT a Polygon
+        from users.blockchain import polygon_manager
+        
+        if not polygon_manager:
+            self.status = 'failed'
+            self.description = "Blockchain manager no disponible."
+            self.save()
+            return False
+        
+        result = polygon_manager.send_usdt(self.user_wallet_address, float(usdt_amount))
+        
+        if not result['success']:
+            self.status = 'failed'
+            self.description = f"Error en blockchain: {result['error']}"
+            self.save()
+            return False
+        
+        # Transacción enviada con éxito
+        self.tx_hash = result['tx_hash']
+        self.tx_status = 'pending_blockchain'
+        
+        # Actualizar balances del usuario
         user.boost_balance -= boost_dec
         user.earned_boost -= boost_dec
         user.current_week_withdrawn += boost_dec
@@ -193,10 +245,10 @@ class Transaction(models.Model):
 
         self.boost_amount = boost_dec
         self.usdt_amount = usdt_amount
-        self.status = 'completed'
-        self.description = "Retiro completado y USDT depositado en wallet."
+        self.status = 'pending'  # Pendiente de confirmación blockchain
+        self.description = f"Retiro pendiente confirmación. TX: {result['tx_hash']}"
 
-        # Activar la wallet/estado financiero si es el primer retiro o si aún no está activada
+        # Activar financiero si es el primer retiro
         if not user.has_financial_activation:
             user.has_financial_activation = True
             user.is_active = True

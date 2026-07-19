@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 
 const Login = () => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { login } = useAuth();
     
     const [formData, setFormData] = useState({
@@ -42,7 +43,7 @@ const Login = () => {
         setErrors({});
         try {
             await login(formData);
-            navigate('/dashboard');
+            navigate(location.state?.from || '/dashboard');
         } catch (error) {
             setErrors({ general: error.message });
         } finally {

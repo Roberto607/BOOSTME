@@ -2,11 +2,13 @@ import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
 import { API_BASE_URL } from "../../Base";
-import { Wallet, Star, Check, ArrowRight, Mail, Loader2 } from "lucide-react";
+import { Wallet, Star, Check, ArrowRight, Mail, Loader2, AlertCircle } from "lucide-react";
 import Web3 from "web3";
 
+const buildPlansUrl = () => "/api/plans/plans/";
+
 const Plans = () => {
-  const { user, loading, accessToken, setUser, setAccessToken, setIsAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, setUser, setAccessToken, setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [selectedPlan, setSelectedPlan] = useState(null);
@@ -19,69 +21,45 @@ const Plans = () => {
   const [walletConnected, setWalletConnected] = useState(false);
   const [web3, setWeb3] = useState(null);
   const [account, setAccount] = useState(null);
+  const [plans, setPlans] = useState([]);
 
-  const plans = [
-    {
-      name: "Free",
-      price: 0,
-      isFree: true,
-      recommended: true,
-      features: [
-        "10 tareas diarias",
-        "Videos y redes sociales",
-        "Encuestas básicas",
-        "5 BOOST/semana",
-        "7 referidos mínimos para retirar",
-        "5% comisión por referido",
-      ],
-    },
-    {
-      name: "Starter",
-      price: 50,
-      features: [
-        "15 tareas diarias",
-        "Videos, redes sociales y encuestas",
-        "Instalación de apps",
-        "10 BOOST/semana",
-        "5 referidos mínimos para retirar",
-        "10% comisión por referido",
-        "Retiros semanales",
-      ],
-    },
-    {
-      name: "Pro",
-      price: 150,
-      features: [
-        "20 tareas diarias",
-        "Todas las categorías básicas",
-        "Registros en servicios",
-        "Ofertas premium",
-        "20 BOOST/semana",
-        "3 referidos mínimos para retirar",
-        "15% comisión por referido",
-        "Retiros cada 3 días",
-      ],
-    },
-    {
-      name: "Elite",
-      price: 300,
-      features: [
-        "Tareas ilimitadas",
-        "Todas las categorías disponibles",
-        "Ofertas exclusivas",
-        "Compras con cashback",
-        "40 BOOST/semana",
-        "Sin mínimo de referidos",
-        "20% comisión por referido",
-        "Retiros diarios",
-      ],
-    },
-  ];
+  useEffect(() => {
+    const loadPlans = async () => {
+      try {
+        const response = await fetch(buildPlansUrl(), { credentials: 'include' });
+        if (response.ok) {
+          const data = await response.json();
+          const normalized = Array.isArray(data?.results)
+            ? data.results
+            : Array.isArray(data)
+              ? data
+              : [];
+          setPlans(normalized);
+        }
+      } catch (error) {
+        console.error('No se pudieron cargar los planes:', error);
+      }
+    };
+
+    loadPlans();
+  }, []);
 
   useEffect(() => {
     if (loading) return;
-    if (!user) return setError("No se encontró la información del usuario.");
-    if (!user.is_email_verified) return setShowVerification(true);
+
+    if (!user) {
+      setShowVerification(false);
+      setShowPlans(true);
+      return;
+    }
+
+    if (!user.is_email_verified) {
+      setShowVerification(true);
+      setShowPlans(false);
+      return;
+    }
+
+    setShowVerification(false);
     setShowPlans(true);
   }, [user, loading]);
 
@@ -147,6 +125,12 @@ const Plans = () => {
     setIsLoading(true);
     setError("");
     setMessage("");
+
+    if (!isAuthenticated || !user) {
+      setIsLoading(false);
+      navigate('/login', { state: { from: '/deposit' } });
+      return;
+    }
 
     if (!selectedPlan.isFree && !walletConnected) {
       setError("Conecta tu Trust Wallet");
@@ -227,7 +211,7 @@ const Plans = () => {
           <p className="text-gray-600">{user.email}</p>
           <button
             onClick={() => navigate("/login")}
-            className="mt-6 bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700"
+            className="mt-6 rounded-lg bg-slate-900 px-6 py-2 text-white transition hover:bg-slate-800"
           >
             Ir a iniciar sesión
           </button>
@@ -245,30 +229,38 @@ const Plans = () => {
           ¡Bienvenido a BoostMe!
         </h1>
         <p className="text-gray-500">
-          {user.has_financial_activation
+          {user?.has_financial_activation
             ? "Actualiza tu plan"
-            : "Activa tu cuenta y empieza a ganar BOOST"}
+            : "Explora los planes y activa tu cuenta cuando quieras."}
         </p>
 
-        {user.has_financial_activation && (
-          <p className="text-emerald-500 font-semibold mt-2">
-            Plan actual: {user.plan_name}
-          </p>
+        {user?.has_financial_activation && (
+          <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+            <Star className="h-4 w-4 text-blue-600" />
+            <span>Plan actual: {user.plan_name}</span>
+          </div>
         )}
 
         {!walletConnected && (
           <button
             onClick={connectWallet}
-            className="mt-4 bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700"
+            className="mt-4 rounded-lg bg-slate-900 px-6 py-3 text-white transition hover:bg-slate-800"
           >
             Conectar Trust Wallet
           </button>
         )}
 
         {walletConnected && (
-          <p className="mt-3 text-emerald-500 font-semibold">
+          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
+            <Check className="h-4 w-4" />
             Wallet conectada: {account.slice(0, 6)}...{account.slice(-4)}
-          </p>
+          </div>
+        )}
+
+        {!isAuthenticated && (
+          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Mira los planes aquí. Inicia sesión para activar uno y empezar a usar tus beneficios.
+          </div>
         )}
       </div>
 
@@ -282,32 +274,47 @@ const Plans = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {plans.map((plan) => (
               <div
-                key={plan.name}
-                onClick={() => setSelectedPlan(plan)}
+                key={plan.slug || plan.name}
+                onClick={() => {
+                  if (!isAuthenticated || !user) {
+                    navigate('/login', { state: { from: '/deposit' } });
+                    return;
+                  }
+                  setSelectedPlan({
+                    ...plan,
+                    name: plan.name,
+                    price: Number(plan.price || 0),
+                    isFree: Boolean(plan.is_free),
+                    recommended: Boolean(plan.recommended),
+                    features: Array.isArray(plan.features) ? plan.features : []
+                  });
+                }}
                 className={`relative bg-white rounded-2xl p-6 shadow hover:-translate-y-1 hover:shadow-lg transition cursor-pointer
                   ${plan.recommended && "border-2 border-blue-600"}
-                  ${plan.isFree && "border-2 border-emerald-500"}
+                  ${plan.is_free && "border-2 border-emerald-500"}
                 `}
               >
-                {plan.recommended && (
-                  <span className="absolute -top-3 right-5 bg-blue-600 text-white px-3 py-1 rounded-full text-sm flex gap-1 items-center">
-                    <Star className="w-4 h-4" /> Recomendado
-                  </span>
-                )}
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  {plan.recommended && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      <Star className="w-3.5 h-3.5" /> Recomendado
+                    </span>
+                  )}
 
-                {plan.isFree && (
-                  <span className="absolute -top-3 right-5 bg-emerald-500 text-white px-3 py-1 rounded-full text-sm flex gap-1 items-center">
-                    <Wallet className="w-4 h-4" /> Gratis
-                  </span>
-                )}
+                  {plan.is_free && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/90 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      <Wallet className="w-3.5 h-3.5" /> Gratis
+                    </span>
+                  )}
+                </div>
 
                 <h3 className="text-lg font-bold mb-2">{plan.name}</h3>
                 <p className="text-2xl font-bold text-blue-600 mb-4">
-                  {plan.isFree ? "GRATIS" : `${plan.price / 10} USDT`}
+                  {plan.is_free ? "GRATIS" : `${Number(plan.price || 0)} USDT`}
                 </p>
 
                 <ul className="space-y-2 mb-6">
-                  {plan.features.map((f, i) => (
+                  {(Array.isArray(plan.features) ? plan.features : []).map((f, i) => (
                     <li key={i} className="flex items-center gap-2 text-gray-600">
                       <Check className="w-4 h-4 text-emerald-500" />
                       {f}
@@ -315,7 +322,7 @@ const Plans = () => {
                   ))}
                 </ul>
 
-                <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold flex justify-center items-center gap-2 hover:bg-blue-700">
+                <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 font-semibold text-white transition hover:bg-slate-800">
                   Seleccionar <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
@@ -342,20 +349,32 @@ const Plans = () => {
           </div>
 
           {message && (
-            <div className="bg-emerald-100 text-emerald-700 p-3 rounded mb-3 text-center">
-              {message}
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 shadow-sm">
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-500/10">
+                <Check className="h-4 w-4 text-emerald-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold">Listo</p>
+                <p className="text-emerald-700/90">{message}</p>
+              </div>
             </div>
           )}
           {error && (
-            <div className="bg-red-100 text-red-700 p-3 rounded mb-3 text-center">
-              {error}
+            <div className="mb-4 flex items-start gap-3 rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700 shadow-sm">
+              <div className="mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-rose-500/10">
+                <AlertCircle className="h-4 w-4 text-rose-600" />
+              </div>
+              <div className="flex-1">
+                <p className="font-semibold">Atención</p>
+                <p className="text-rose-700/90">{error}</p>
+              </div>
             </div>
           )}
 
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold hover:bg-blue-700"
+            className="w-full rounded-lg bg-slate-900 py-3 font-semibold text-white transition hover:bg-slate-800"
           >
             {isLoading ? "Activando..." : "Activar Plan"}
           </button>

@@ -14,16 +14,34 @@ const RegisterForm = () => {
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
+    const [showEmailNotice, setShowEmailNotice] = useState(false);
 
     useEffect(() => {
-        if (user) {
-            if (!user.is_email_verified) navigate("/revisar-correo", { replace: true });
-            else if (!user.has_financial_activation) navigate("/deposit", { replace: true });
-            else navigate("/dashboard", { replace: true });
+        if (!user) {
+            setShowEmailNotice(false);
+            return;
         }
+
+        if (!user.is_email_verified) {
+            setShowEmailNotice(true);
+            return;
+        }
+
+        if (!user.has_financial_activation) navigate("/deposit", { replace: true });
+        else navigate("/dashboard", { replace: true });
     }, [user, navigate]);
 
-    if (user || window.location.pathname.includes("/verify-email/")) return null;
+    useEffect(() => {
+        if (!showEmailNotice) return;
+
+        const timer = window.setTimeout(() => {
+            setShowEmailNotice(false);
+        }, 5000);
+
+        return () => window.clearTimeout(timer);
+    }, [showEmailNotice]);
+
+    if (window.location.pathname.includes("/verify-email/")) return null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -36,6 +54,7 @@ const RegisterForm = () => {
         try {
             setError("");
             setSuccess("");
+            setShowEmailNotice(false);
             setLoading(true);
 
             const registerUrl = `${API_BASE_URL}/register/`;
@@ -79,8 +98,12 @@ const RegisterForm = () => {
                     sessionStorage.setItem('user', JSON.stringify(userData));
                 }
 
-                setSuccess(data?.message || "Registro exitoso. Revisa tu correo.");
-                navigate("/revisar-correo", { replace: true });
+                if (data?.warning === 'email_not_sent') {
+                    setError(data?.message || "No se pudo enviar el email de verificación.");
+                    setSuccess("");
+                } else {
+                    setSuccess(data?.message || "Registro exitoso. Revisa tu correo.");
+                }
             } else {
                 switch (data?.code) {
                     case "missing_fields":
@@ -118,16 +141,20 @@ const RegisterForm = () => {
             >
                 <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Crear Cuenta</h2>
 
-                {error && (
-                    <div className="bg-red-100 border-l-4 border-red-600 text-red-700 px-4 py-3 rounded mb-4 flex justify-between items-center animate-fadeIn">
-                        <span>{error}</span>
-                        <button type="button" className="text-red-600 font-bold text-lg" onClick={() => setError("")}>×</button>
-                    </div>
-                )}
+                {(error || success) && (
+                    <div className="mb-4 space-y-2">
+                        {error && (
+                            <div className="bg-red-100 border-l-4 border-red-600 text-red-700 px-4 py-3 rounded flex justify-between items-center animate-fadeIn">
+                                <span>{error}</span>
+                                <button type="button" className="text-red-600 font-bold text-lg" onClick={() => setError("")}>×</button>
+                            </div>
+                        )}
 
-                {success && (
-                    <div className="bg-green-100 border-l-4 border-green-600 text-green-700 px-4 py-3 rounded mb-4 animate-fadeIn">
-                        <span>{success}</span>
+                        {success && (
+                            <div className="bg-green-100 border-l-4 border-green-600 text-green-700 px-4 py-3 rounded animate-fadeIn">
+                                <span>{success}</span>
+                            </div>
+                        )}
                     </div>
                 )}
 

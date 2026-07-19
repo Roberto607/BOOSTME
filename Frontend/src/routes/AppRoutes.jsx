@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import RegisterForm from "../components/RegisterForm";
 import Home from '../components/Home';
 import AccountActivation from '../components/AccountActivation';
@@ -15,16 +15,21 @@ import { useAuth } from "../contexts/AuthContext";
 import LoadingScreen from "../components/LoadingScreen";
 import ContactPage from "../components/ContactPage";
 import HelpPage from "../components/HelpPage";
+import QuickHelpPage from "../components/QuickHelpPage";
+import WithdrawInfoPage from "../components/WithdrawInfoPage";
 import PrivacyPage from "../components/PrivacyPage";
-import SurveyMonkeyConnected from "../components/SurveyMonkeyConnected";
+import HowItWorksPage from "../components/HowItWorksPage";
 
 const ProtectedRoute = ({ children }) => {
+  const location = useLocation();
   const { isAuthenticated, loading, accessToken, user } = useAuth();
   const hasPersistedSession = Boolean(accessToken || sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
   const isSessionValid = Boolean(isAuthenticated && (user || accessToken));
 
   if (loading) return <LoadingScreen />;
-  if (!isSessionValid && !hasPersistedSession) return <Navigate to="/login" replace />;
+  if (!isSessionValid && !hasPersistedSession) {
+    return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
+  }
 
   return children;
 };
@@ -42,15 +47,17 @@ const AppRoutes = () => {
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:uidb64/:token" element={<ResetPassword />} />
       <Route path="/Profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-      <Route path="/deposit" element={<ProtectedRoute><Plans /></ProtectedRoute>} />
-      <Route path="/bonuses" element={<ProtectedRoute><Bonuses /></ProtectedRoute>} />
+      <Route path="/deposit" element={<Plans />} />
+      <Route path="/bonuses" element={<Bonuses />} />
       <Route path="/Referidos" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/referidos" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/dashboard/referidos" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/contact" element={<ContactPage />} />
       <Route path="/help" element={<HelpPage />} />
-      <Route path="/surveymonkey/connected" element={<SurveyMonkeyConnected />} />
+      <Route path="/quick-help" element={<QuickHelpPage />} />
+      <Route path="/withdraw-info" element={<WithdrawInfoPage />} />
       <Route path="/privacy" element={<PrivacyPage />} />
+      <Route path="/how-it-works" element={<HowItWorksPage />} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

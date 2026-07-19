@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Gift, TrendingUp, Award, Clock, Flame, Check, Star, ArrowRight, Loader2 } from 'lucide-react';
 import { BONUSES_API_BASE_URL } from "../../Base";
 import { useAuth } from '../../contexts/AuthContext';
 
 const Bonuses = () => {
-  const { user, accessToken } = useAuth();
+  const navigate = useNavigate();
+  const { user, accessToken, isAuthenticated } = useAuth();
   
   const [selectedBonus, setSelectedBonus] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,77 +25,18 @@ const Bonuses = () => {
     claimedCount: 5
   });
 
-  // Datos de ejemplo para los bonos
-  const exampleBonuses = [
-    {
-      id: 1,
-      name: "Bono de Racha Diaria",
-      value: 10,
-      description: "Mantén una racha de 7 días consecutivos",
-      requirement_value: 7,
-      current_progress: 3,
-      isSpecial: true,
-      isAvailable: true,
-      bonus_type: "streak",
-      features: [
-        "+10 BOOST al completar",
-        "Multiplicador x2 en tareas",
-        "Bono extra cada 14 días",
-        "Acceso a tareas exclusivas"
-      ]
-    },
-    {
-      id: 2,
-      name: "Bono de Tareas Extra",
-      value: 25,
-      description: "Completa 50 tareas en una semana",
-      requirement_value: 50,
-      current_progress: 32,
-      isSpecial: false,
-      isAvailable: true,
-      bonus_type: "tasks",
-      features: [
-        "+25 BOOST al completar",
-        "Tareas premium desbloqueadas",
-        "Doble recompensa en fines de semana",
-        "Sin límite de tareas diarias"
-      ]
-    },
-    {
-      id: 3,
-      name: "Bono de Referidos",
-      value: 50,
-      description: "Consigue 5 nuevos referidos activos",
-      requirement_value: 5,
-      current_progress: 2,
-      isSpecial: true,
-      isAvailable: false,
-      bonus_type: "referrals",
-      features: [
-        "+50 BOOST por cada referido",
-        "15% extra de comisión",
-        "Bono de equipo mensual",
-        "Acceso a programa VIP"
-      ]
-    },
-    {
-      id: 4,
-      name: "Bono de Super Usuario",
-      value: 100,
-      description: "Alcanza el nivel Elite completando 100 tareas",
-      requirement_value: 100,
-      current_progress: 78,
-      isSpecial: true,
-      isAvailable: true,
-      bonus_type: "achievement",
-      features: [
-        "+100 BOOST al completar",
-        "Retiros instantáneos",
-        "Soporte prioritario",
-        "Acceso a eventos exclusivos"
-      ]
-    }
-  ];
+  const mapBonusToUi = (bonus) => ({
+    id: bonus.id,
+    name: bonus.name,
+    value: Number(bonus.value || 0),
+    description: bonus.description || 'Sin descripción',
+    requirement_value: Number(bonus.requirement_value || 0),
+    current_progress: 0,
+    isSpecial: bonus.bonus_type === 'streak' || bonus.bonus_type === 'referral',
+    isAvailable: Boolean(bonus.is_active),
+    bonus_type: bonus.bonus_type,
+    features: Array.isArray(bonus.features) ? bonus.features : []
+  });
 
   const buildAuthHeaders = () => {
     const headers = {};
@@ -106,9 +49,7 @@ const Bonuses = () => {
   useEffect(() => {
     const loadBonuses = async () => {
       try {
-        // Siempre mostrar los datos de ejemplo primero
-        // Siempre mostrar los datos de ejemplo primero
-        setBonuses(exampleBonuses);
+        setBonuses([]);
         setShowBonuses(true);
         // Intentar cargar datos de la API usando cookies
         try {
@@ -126,7 +67,9 @@ const Bonuses = () => {
                 ? bonusesData
                 : null;
             if (normalizedBonuses && normalizedBonuses.length > 0) {
-              setBonuses(normalizedBonuses);
+              setBonuses(normalizedBonuses.map(mapBonusToUi));
+            } else if (Array.isArray(bonusesData)) {
+              setBonuses(bonusesData.map(mapBonusToUi));
             }
           }
 
@@ -162,7 +105,7 @@ const Bonuses = () => {
             console.log('Stats endpoint not available, using example data');
           }
         } catch (apiError) {
-          console.log('API not available, using example data');
+          console.log('API not available, using example data', apiError);
         }
       } catch (error) {
         console.error('Error loading bonuses:', error);
@@ -178,6 +121,12 @@ const Bonuses = () => {
     setIsLoading(true);
     setError("");
     setMessage("");
+
+    if (!isAuthenticated || !user) {
+      setIsLoading(false);
+      navigate('/login', { state: { from: '/bonuses' } });
+      return;
+    }
 
     try {
       const response = await fetch(`${BONUSES_API_BASE_URL}/user-bonuses/claim_bonus/`, {
@@ -234,10 +183,17 @@ const Bonuses = () => {
           Completa retos y gana BOOST extra
         </p>
 
+        {!isAuthenticated && (
+          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+            Mira los bonos aquí. Inicia sesión para abrir uno y reclamar tus recompensas.
+          </div>
+        )}
+
         {userStreak && (
-          <p className="text-emerald-500 font-semibold mt-2">
-            Racha actual: {userStreak.current_streak} días 🔥
-          </p>
+          <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
+            <span className="text-base">🔥</span>
+            <span>Racha actual: {userStreak.current_streak} días</span>
+          </div>
         )}
       </div>
 
@@ -252,23 +208,28 @@ const Bonuses = () => {
             {bonuses.map((bonus) => (
               <div
                 key={bonus.id}
-                onClick={() => setSelectedBonus(bonus)}
-                className={`relative bg-white rounded-2xl p-6 shadow hover:-translate-y-1 hover:shadow-lg transition cursor-pointer
-                  ${bonus.isSpecial && "border-2 border-blue-600"}
-                  ${bonus.isAvailable && "border-2 border-emerald-500"}
-                `}
+                onClick={() => {
+                  if (!isAuthenticated || !user) {
+                    navigate('/login', { state: { from: '/bonuses' } });
+                    return;
+                  }
+                  setSelectedBonus(bonus);
+                }}
+                className="relative bg-white rounded-2xl p-6 shadow hover:-translate-y-1 hover:shadow-lg transition cursor-pointer border border-slate-200"
               >
-                {bonus.isSpecial && (
-                  <span className="absolute -top-3 right-5 bg-blue-600 text-white px-3 py-1 rounded-full text-sm flex gap-1 items-center">
-                    <Star className="w-4 h-4" /> Especial
-                  </span>
-                )}
+                <div className="mb-4 flex flex-wrap items-center gap-2">
+                  {bonus.isSpecial && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      <Star className="w-3.5 h-3.5" /> Especial
+                    </span>
+                  )}
 
-                {bonus.isAvailable && (
-                  <span className="absolute -top-3 right-5 bg-emerald-500 text-white px-3 py-1 rounded-full text-sm flex gap-1 items-center">
-                    <Gift className="w-4 h-4" /> Disponible
-                  </span>
-                )}
+                  {bonus.isAvailable && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white shadow-sm">
+                      <Gift className="w-3.5 h-3.5" /> Disponible
+                    </span>
+                  )}
+                </div>
 
                 <h3 className="text-lg font-bold mb-2">{bonus.name}</h3>
                 <p className="text-2xl font-bold text-blue-600 mb-4">
@@ -280,7 +241,7 @@ const Bonuses = () => {
                 <div className="mb-4">
                   <div className="w-full bg-gray-200 rounded-full h-2">
                     <div 
-                      className="bg-blue-500 h-2 rounded-full transition-all duration-300"
+                      className="bg-sky-600 h-2 rounded-full transition-all duration-300"
                       style={{ width: `${(bonus.current_progress / bonus.requirement_value) * 100}%` }}
                     />
                   </div>
@@ -292,13 +253,13 @@ const Bonuses = () => {
                 <ul className="space-y-2 mb-6">
                   {bonus.features.map((f, i) => (
                     <li key={i} className="flex items-center gap-2 text-gray-600">
-                      <Check className="w-4 h-4 text-emerald-500" />
+                      <Check className="w-4 h-4 text-sky-600" />
                       {f}
                     </li>
                   ))}
                 </ul>
 
-                <button className="w-full bg-blue-600 text-white py-3 rounded-lg font-semibold flex justify-center items-center gap-2 hover:bg-blue-700">
+                <button className="flex w-full items-center justify-center gap-2 rounded-lg bg-slate-900 py-3 font-semibold text-white transition hover:bg-slate-800">
                   Seleccionar <ArrowRight className="w-5 h-5" />
                 </button>
               </div>
@@ -356,7 +317,7 @@ const Bonuses = () => {
             disabled={isLoading || selectedBonus.current_progress < selectedBonus.requirement_value}
             className={`w-full py-3 rounded-lg font-semibold transition-colors ${
               selectedBonus.current_progress >= selectedBonus.requirement_value
-                ? 'bg-blue-600 text-white hover:bg-blue-700'
+                ? 'bg-slate-900 text-white hover:bg-slate-800'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
           >

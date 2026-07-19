@@ -3,14 +3,14 @@
 @tailwind utilities;
 
 :root {
-  --brand-900: #0f172a;
+  --brand-900: #0f2a44;
   --brand-700: #38bdf8;
-  --brand-500: #7dd3fc;
+  --brand-500: #67e8f9;
   --brand-300: #f59e0b;
   --brand-100: #fef3c7;
   --brand-emerald: #34d399;
-  --bg: #f8fafc;
-  --text: #0f172a;
+  --bg: #f8fbff;
+  --text: #0f2a44;
   --muted: #475569;
 }
 

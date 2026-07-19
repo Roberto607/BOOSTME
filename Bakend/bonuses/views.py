@@ -1,23 +1,27 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from django.utils import timezone
-from django.db.models import Sum, Count
+from django.db.models import Sum
 from .models import BonusType, UserBonus, UserStreak
 from .serializers import BonusTypeSerializer, UserBonusSerializer, UserStreakSerializer
+
 
 class BonusTypeViewSet(viewsets.ReadOnlyModelViewSet):
     queryset = BonusType.objects.filter(is_active=True)
     serializer_class = BonusTypeSerializer
+    permission_classes = [AllowAny]
+
 
 class UserBonusViewSet(viewsets.ModelViewSet):
-    queryset = UserBonus.objects.all()  # Agrega esta línea
+    queryset = UserBonus.objects.all()
     serializer_class = UserBonusSerializer
-    permission_classes = [IsAuthenticated]
-
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
+        if not self.request.user or not self.request.user.is_authenticated:
+            return UserBonus.objects.none()
         return UserBonus.objects.filter(user=self.request.user)
 
     @action(detail=False, methods=['get'])
@@ -68,16 +72,21 @@ class UserBonusViewSet(viewsets.ModelViewSet):
             )
 
 class UserStreakViewSet(viewsets.ModelViewSet):
-    queryset = UserStreak.objects.all()  # Agrega esta línea
+    queryset = UserStreak.objects.all()
     serializer_class = UserStreakSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
+        if not self.request.user or not self.request.user.is_authenticated:
+            return UserStreak.objects.none()
         return UserStreak.objects.filter(user=self.request.user)
 
     @action(detail=False, methods=['get'])
     def current(self, request):
         """Endpoint para obtener la racha actual del usuario"""
+        if not request.user or not request.user.is_authenticated:
+            return Response({'current_streak': 0, 'max_streak': 0})
+
         streak = self.get_queryset().first()
         if not streak:
             streak = UserStreak.objects.create(
@@ -90,6 +99,9 @@ class UserStreakViewSet(viewsets.ModelViewSet):
 
     @action(detail=False, methods=['post'])
     def update_streak(self, request):
+        if not request.user or not request.user.is_authenticated:
+            return Response({'detail': 'Authentication credentials were not provided.'}, status=status.HTTP_401_UNAUTHORIZED)
+
         streak, created = UserStreak.objects.get_or_create(
             user=request.user,
             defaults={'current_streak': 1, 'max_streak': 1}

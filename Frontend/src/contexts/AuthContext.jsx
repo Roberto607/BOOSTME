@@ -28,8 +28,10 @@ export const AuthProvider = ({ children }) => {
             storedUser = null;
         }
 
+        const hasStoredSession = Boolean(sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
+
         return {
-            isAuthenticated: Boolean(sessionStorage.getItem('accessToken')),
+            isAuthenticated: hasStoredSession,
             user: storedUser,
             accessToken: sessionStorage.getItem('accessToken'),
             loading: true
@@ -73,6 +75,18 @@ export const AuthProvider = ({ children }) => {
         });
     }, [updateAuthState]);
 
+    const buildAuthHeaders = useCallback((headers = {}) => {
+        const accessToken = sessionStorage.getItem('accessToken');
+        if (!accessToken) {
+            return headers;
+        }
+
+        return {
+            ...headers,
+            Authorization: `Bearer ${accessToken}`
+        };
+    }, []);
+
     // Helpers para exponer setters compatibles con componentes existentes
     const setUser = useCallback((user) => updateAuthState({ user }), [updateAuthState]);
     const setAccessToken = useCallback((accessToken) => updateAuthState({ accessToken }), [updateAuthState]);
@@ -83,6 +97,7 @@ export const AuthProvider = ({ children }) => {
             const response = await fetch(`${API_BASE_URL}/profile/`, {
                 method: 'PATCH',
                 credentials: 'include',
+                headers: buildAuthHeaders(),
                 body: formData
             });
 
@@ -127,9 +142,9 @@ export const AuthProvider = ({ children }) => {
             // Usar cookie HttpOnly: realizar llamada al endpoint de refresh con credentials
             const response = await fetch(`${API_BASE_URL}/token/refresh/`, {
                 method: 'POST',
-                headers: {
+                headers: buildAuthHeaders({
                     'Content-Type': 'application/json',
-                },
+                }),
                 credentials: 'include',
                 body: JSON.stringify({})
             });
@@ -234,7 +249,8 @@ export const AuthProvider = ({ children }) => {
 
                 let res = await fetch(`${API_BASE_URL}/status/`, {
                     method: 'GET',
-                    credentials: 'include'
+                    credentials: 'include',
+                    headers: buildAuthHeaders()
                 });
 
                 if (res.status === 401) {
@@ -242,7 +258,8 @@ export const AuthProvider = ({ children }) => {
                         await refreshToken();
                         res = await fetch(`${API_BASE_URL}/status/`, {
                             method: 'GET',
-                            credentials: 'include'
+                            credentials: 'include',
+                            headers: buildAuthHeaders()
                         });
                     } catch (refreshError) {
                         console.error('Refresh token failed during initialization:', refreshError);
@@ -250,19 +267,33 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 if (!res.ok) {
-                    clearAuthData();
+                    const storedUser = JSON.parse(sessionStorage.getItem('user') || 'null');
+                    const storedAccessToken = sessionStorage.getItem('accessToken');
+                    updateAuthState({
+                        loading: false,
+                        isAuthenticated: Boolean(storedAccessToken || storedUser),
+                        user: storedUser,
+                        accessToken: storedAccessToken
+                    });
                     return;
                 }
 
                 const data = await res.json();
                 updateAuthState({
                     isAuthenticated: true,
-                    user: data.user,
+                    user: data.user || JSON.parse(sessionStorage.getItem('user') || 'null'),
                     loading: false
                 });
             } catch (error) {
                 console.error("Error al inicializar autenticación:", error);
-                clearAuthData();
+                const storedUser = JSON.parse(sessionStorage.getItem('user') || 'null');
+                const storedAccessToken = sessionStorage.getItem('accessToken');
+                updateAuthState({
+                    loading: false,
+                    isAuthenticated: Boolean(storedAccessToken || storedUser),
+                    user: storedUser,
+                    accessToken: storedAccessToken
+                });
             }
         };
 
@@ -271,15 +302,27 @@ export const AuthProvider = ({ children }) => {
             '/login',
             '/register',
             '/revisar-correo',
-            '/forgot-password'
+            '/forgot-password',
+            '/contact',
+            '/plans',
+            '/about',
+            '/how-it-works',
+            '/help',
+            '/privacy-policy',
+            '/terms'
         ];
 
         const isPublicPath = publicPaths.includes(location.pathname) ||
             location.pathname.startsWith('/verify-email/') ||
-            location.pathname.startsWith('/reset-password/');
+            location.pathname.startsWith('/reset-password/') ||
+            location.pathname.startsWith('/contact') ||
+            location.pathname.startsWith('/plans') ||
+            location.pathname.startsWith('/about') ||
+            location.pathname.startsWith('/help') ||
+            location.pathname.startsWith('/how-it-works');
 
         if (isPublicPath) {
-            updateAuthState({ loading: false });
+            updateAuthState({ loading: false, isAuthenticated: false, user: null, accessToken: null });
             return;
         }
 

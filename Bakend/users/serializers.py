@@ -198,10 +198,22 @@ class LoginSerializer(serializers.Serializer):
 
 class WithdrawSerializer(serializers.Serializer):
     boost_amount = serializers.DecimalField(max_digits=12, decimal_places=2)
+    wallet_address = serializers.CharField(max_length=66, required=True)
 
     def validate_boost_amount(self, value):
         if value <= 0:
             raise serializers.ValidationError("El monto de retiro debe ser mayor a 0")
+        return value
+
+    def validate_wallet_address(self, value):
+        if not value.startswith('0x'):
+            raise serializers.ValidationError("La dirección debe comenzar con '0x'")
+        if len(value) != 42:
+            raise serializers.ValidationError("La dirección debe tener 42 caracteres")
+        try:
+            int(value[2:], 16)
+        except ValueError:
+            raise serializers.ValidationError("La dirección debe ser hexadecimal")
         return value
 
 class ActivatePlanSerializer(serializers.Serializer):

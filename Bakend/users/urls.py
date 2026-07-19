@@ -12,6 +12,7 @@ urlpatterns = [
     path('withdraw/', views.WithdrawView.as_view(), name='withdraw'),
     path('status/',views.UserStatusView.as_view(), name='user-status'),
     path('profile/', views.ProfileView.as_view(), name='profile'),
+    path('contact/', views.ContactView.as_view(), name='contact'),
 
     
     

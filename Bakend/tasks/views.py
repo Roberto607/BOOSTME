@@ -214,6 +214,117 @@ class TaskViewSet(viewsets.ModelViewSet):
                     )
 
             if task.complete_task(watched_seconds=watched_seconds):
+                if task.task_type == 'video' and isinstance(request.data, dict):
+                    cooldown_minutes = 3
+                    video_task = self.get_youtube_video_task(request.user, query='BoostMe tutorial') or {
+                        'task_type': 'video',
+                        'description': 'Tu siguiente video ya está listo; vuelve cuando termine el tiempo de espera.',
+                        'boost_reward': 4.00,
+                        'content_type': 'video',
+                        'content_url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                        'content_data': {
+                            'duration': 30,
+                            'video_id': 'dQw4w9WgXcQ',
+                            'available_at': (timezone.now() + timezone.timedelta(minutes=cooldown_minutes)).isoformat()
+                        },
+                        'action_type': 'watch',
+                        'action_url': 'https://www.youtube.com/watch?v=dQw4w9WgXcQ',
+                        'simulated_action': 'video',
+                        'simulated_content': 'Video de seguimiento.'
+                    }
+                    scheduled_at = timezone.now() + timezone.timedelta(minutes=cooldown_minutes)
+                    content_data = dict(video_task.get('content_data', {}) or {})
+                    content_data['available_at'] = scheduled_at.isoformat()
+                    Task.objects.create(
+                        user=request.user,
+                        task_type='video',
+                        boost_reward=video_task['boost_reward'],
+                        description=video_task['description'],
+                        content_type=video_task.get('content_type'),
+                        content_url=video_task.get('content_url'),
+                        content_data=content_data,
+                        action_type=video_task.get('action_type', video_task.get('simulated_action', 'video')),
+                        action_url=video_task.get('action_url', video_task.get('content_url')),
+                        simulated_action=video_task.get('simulated_action', ''),
+                        simulated_content=video_task.get('simulated_content', ''),
+                        expires_at=scheduled_at + timezone.timedelta(hours=24)
+                    )
+
+                if task.task_type == 'survey' and isinstance(request.data, dict):
+                    survey_responses = request.data.get('survey_responses') or {}
+                    if survey_responses:
+                        preferred_task_types = []
+                        response_values = [str(value).strip().lower() for value in survey_responses.values() if value]
+                        for value in response_values:
+                            if 'video' in value:
+                                preferred_task_types.append('video')
+                            if 'recompensa' in value or 'reward' in value:
+                                preferred_task_types.append('reward')
+                            if 'referid' in value:
+                                preferred_task_types.append('referral')
+                            if 'objetivo' in value or 'meta' in value or 'progreso' in value:
+                                preferred_task_types.append('goal')
+                            if 'encuesta' in value or 'preferencia' in value or 'feedback' in value:
+                                preferred_task_types.append('survey')
+                        if preferred_task_types:
+                            request.user.task_preferences = {
+                                'preferred_task_types': list(dict.fromkeys(preferred_task_types))
+                            }
+                            request.user.save(update_fields=['task_preferences'])
+
+                    cooldown_minutes = 5
+                    survey_task = self.get_platform_survey_task(request.user) or {
+                        'task_type': 'survey',
+                        'description': 'Tu siguiente encuesta ya está lista; responde cuando llegue el momento programado.',
+                        'boost_reward': 6.00,
+                        'content_type': 'survey',
+                        'content_url': None,
+                        'content_data': {
+                            'survey_title': 'Encuesta de seguimiento BoostMe',
+                            'questions': [
+                                {
+                                    'id': 'q1',
+                                    'question': '¿Qué te gustaría ver a continuación en BoostMe?',
+                                    'type': 'single_choice',
+                                    'options': ['Más videos', 'Más recompensas', 'Más referidos', 'Más metas']
+                                },
+                                {
+                                    'id': 'q2',
+                                    'question': '¿Qué te parece el ritmo actual de tareas?',
+                                    'type': 'single_choice',
+                                    'options': ['Muy bien', 'Bien', 'Regular', 'Mejorable']
+                                },
+                                {
+                                    'id': 'q3',
+                                    'question': '¿Tienes alguna sugerencia adicional?',
+                                    'type': 'text',
+                                    'options': []
+                                }
+                            ]
+                        },
+                        'action_type': 'survey',
+                        'action_url': None,
+                        'simulated_action': 'survey',
+                        'simulated_content': 'Encuesta de seguimiento.'
+                    }
+                    scheduled_at = timezone.now() + timezone.timedelta(minutes=cooldown_minutes)
+                    content_data = dict(survey_task.get('content_data', {}) or {})
+                    content_data['available_at'] = scheduled_at.isoformat()
+                    Task.objects.create(
+                        user=request.user,
+                        task_type='survey',
+                        boost_reward=survey_task['boost_reward'],
+                        description=survey_task['description'],
+                        content_type=survey_task.get('content_type'),
+                        content_url=survey_task.get('content_url'),
+                        content_data=content_data,
+                        action_type=survey_task.get('action_type', survey_task.get('simulated_action', 'survey')),
+                        action_url=survey_task.get('action_url', survey_task.get('content_url')),
+                        simulated_action=survey_task.get('simulated_action', ''),
+                        simulated_content=survey_task.get('simulated_content', ''),
+                        expires_at=scheduled_at + timezone.timedelta(hours=24)
+                    )
+
                 if hasattr(request.user, 'plan_name') and request.user.plan_name == 'Free':
                     pending_count = request.user.tasks.filter(status='pending').count()
                     if pending_count < 2:
@@ -264,6 +375,13 @@ class TaskViewSet(viewsets.ModelViewSet):
                     user=request.user,
                     status='pending',
                     task_type='dashboard'
+                ).delete()
+
+            if self.user_profile_is_complete(request.user):
+                Task.objects.filter(
+                    user=request.user,
+                    status='pending',
+                    task_type='profile'
                 ).delete()
 
             pending_tasks = request.user.tasks.filter(status='pending')
@@ -456,6 +574,28 @@ class TaskViewSet(viewsets.ModelViewSet):
                 status=status.HTTP_400_BAD_REQUEST
             )
 
+    def user_profile_is_complete(self, user):
+        """Determina si el usuario ya tiene información útil en su perfil."""
+        profile_fields = [
+            getattr(user, 'bio', None),
+            getattr(user, 'country', None),
+            getattr(user, 'city', None),
+            getattr(user, 'phone', None),
+            getattr(user, 'photo', None),
+        ]
+        for field in profile_fields:
+            if field is None:
+                continue
+            if isinstance(field, str):
+                if field.strip():
+                    return True
+            elif hasattr(field, 'name'):
+                if getattr(field, 'name', None):
+                    return True
+            elif field:
+                return True
+        return False
+
     def generate_free_tasks(self, user):
         """Genera tareas de onboarding y demo para el plan Free.
 
@@ -464,6 +604,9 @@ class TaskViewSet(viewsets.ModelViewSet):
         """
         try:
             pending_types = set(user.tasks.filter(status='pending').values_list('task_type', flat=True))
+            used_types = set(user.tasks.filter(status__in=['completed', 'expired']).values_list('task_type', flat=True))
+            preferences = getattr(user, 'task_preferences', {}) or {}
+            preferred_task_types = set(preferences.get('preferred_task_types', []))
 
             video_task = self.get_youtube_video_task(user, query='BoostMe tutorial') or {
                 'task_type': 'video',
@@ -511,8 +654,9 @@ class TaskViewSet(viewsets.ModelViewSet):
                 'simulated_content': 'Encuesta de preferencias.'
             }
 
-            free_tasks = [
-                {
+            base_tasks = []
+            if not self.user_profile_is_complete(user):
+                base_tasks.append({
                     'task_type': 'profile',
                     'description': 'Completa tu perfil para activar tu cuenta en BoostMe.',
                     'boost_reward': 3.00,
@@ -520,7 +664,9 @@ class TaskViewSet(viewsets.ModelViewSet):
                     'content_url': 'https://boostme.test/profile',
                     'simulated_action': 'profile',
                     'simulated_content': 'Completa tu perfil y prepara tu primer progreso.'
-                },
+                })
+
+            base_tasks.extend([
                 {
                     'task_type': 'referral',
                     'description': 'Invita a 5 personas con tu enlace de referidos y gana 8 Boost cuando lo completes.',
@@ -534,6 +680,15 @@ class TaskViewSet(viewsets.ModelViewSet):
                 video_task,
                 survey_task,
                 {
+                    'task_type': 'dashboard',
+                    'description': 'Explora tu panel para ver tu progreso y activar tu siguiente meta.',
+                    'boost_reward': 4.00,
+                    'content_type': 'text',
+                    'content_url': None,
+                    'simulated_action': 'dashboard',
+                    'simulated_content': 'Explora tu panel para ver tus avances.'
+                },
+                {
                     'task_type': 'review',
                     'description': 'Activa tu primer objetivo y marca tu primera meta.',
                     'boost_reward': 8.00,
@@ -542,12 +697,36 @@ class TaskViewSet(viewsets.ModelViewSet):
                     'simulated_action': 'goal',
                     'simulated_content': 'Activa un objetivo para empezar a acumular Boost.'
                 }
-            ]
+            ])
 
-            for task_data in free_tasks:
-                if task_data['task_type'] in pending_types:
+            free_tasks = []
+            for task in base_tasks:
+                if task['task_type'] in used_types:
                     continue
-                Task.objects.create(
+                free_tasks.append(task)
+
+            if preferred_task_types:
+                preferred_order = []
+                if 'video' in preferred_task_types:
+                    preferred_order.append(video_task)
+                if 'survey' in preferred_task_types:
+                    preferred_order.append(survey_task)
+                if 'referral' in preferred_task_types:
+                    preferred_order.append(next(task for task in free_tasks if task['task_type'] == 'referral'))
+                if 'goal' in preferred_task_types:
+                    preferred_order.append(next(task for task in free_tasks if task['task_type'] == 'review'))
+
+                if preferred_order:
+                    free_tasks = [task for task in preferred_order if task] + [task for task in free_tasks if task not in preferred_order]
+
+            if survey_task is None:
+                free_tasks = [task for task in free_tasks if task['task_type'] != 'survey']
+
+            created_tasks = []
+            for task_data in free_tasks:
+                if task_data['task_type'] in pending_types or task_data['task_type'] in used_types:
+                    continue
+                task = Task.objects.create(
                     user=user,
                     task_type=task_data['task_type'],
                     boost_reward=task_data['boost_reward'],
@@ -561,6 +740,33 @@ class TaskViewSet(viewsets.ModelViewSet):
                     simulated_content=task_data.get('simulated_content', ''),
                     expires_at=timezone.now() + timezone.timedelta(hours=24)
                 )
+                created_tasks.append(task)
+
+            if len(created_tasks) < 10:
+                for task_type in ['profile', 'referral', 'video', 'survey', 'dashboard', 'review']:
+                    if task_type == 'profile' and self.user_profile_is_complete(user):
+                        continue
+                    if task_type in used_types or task_type in pending_types:
+                        continue
+                    if any(existing.task_type == task_type for existing in created_tasks):
+                        continue
+                    fallback_task = Task.objects.create(
+                        user=user,
+                        task_type=task_type,
+                        boost_reward=4.00 if task_type == 'dashboard' else 6.00 if task_type == 'survey' else 3.00 if task_type == 'profile' else 8.00 if task_type == 'review' else 4.00,
+                        description='Tarea de rotación gratuita para mantener el feed activo.',
+                        content_type='text',
+                        content_url=None,
+                        content_data={},
+                        action_type=task_type,
+                        action_url=None,
+                        simulated_action=task_type,
+                        simulated_content='Tarea de rotación gratuita.',
+                        expires_at=timezone.now() + timezone.timedelta(hours=24)
+                    )
+                    created_tasks.append(fallback_task)
+                    if len(created_tasks) >= 10:
+                        break
         except Exception as e:
             raise e
 
@@ -651,32 +857,17 @@ class TaskViewSet(viewsets.ModelViewSet):
                 'content_type': 'survey',
                 'content_url': None,
                 'content_data': {
-                    'survey_title': 'Encuesta interna de BoostMe',
+                    'survey_title': 'Encuesta 01 - BoostMe',
                     'questions': [
-                        {
-                            'id': 'q1',
-                            'question': '¿Con qué frecuencia usas BoostMe?',
-                            'type': 'single_choice',
-                            'options': ['Todos los días', 'Varias veces a la semana', 'Una vez a la semana', 'Menos de una vez a la semana']
-                        },
-                        {
-                            'id': 'q2',
-                            'question': '¿Qué característica de BoostMe valoras más?',
-                            'type': 'single_choice',
-                            'options': ['Tareas', 'Recompensas', 'Referidos', 'Progreso']
-                        },
-                        {
-                            'id': 'q3',
-                            'question': '¿Qué mejorarías en BoostMe?',
-                            'type': 'text',
-                            'options': []
-                        }
+                        {'id': 'q1', 'question': '¿Con qué frecuencia usas BoostMe?', 'type': 'single_choice', 'options': ['Todos los días', 'Varias veces a la semana', 'Una vez a la semana', 'Menos de una vez a la semana']},
+                        {'id': 'q2', 'question': '¿Qué característica de BoostMe valoras más?', 'type': 'single_choice', 'options': ['Tareas', 'Recompensas', 'Referidos', 'Progreso']},
+                        {'id': 'q3', 'question': '¿Qué mejorarías en BoostMe?', 'type': 'text', 'options': []}
                     ]
                 },
                 'action_type': 'survey',
                 'action_url': None,
                 'simulated_action': 'survey',
-                'simulated_content': 'Encuesta de la plataforma'
+                'simulated_content': 'Encuesta 01'
             },
             {
                 'task_type': 'survey',
@@ -685,32 +876,17 @@ class TaskViewSet(viewsets.ModelViewSet):
                 'content_type': 'survey',
                 'content_url': None,
                 'content_data': {
-                    'survey_title': 'Encuesta de satisfacción BoostMe',
+                    'survey_title': 'Encuesta 02 - Satisfacción',
                     'questions': [
-                        {
-                            'id': 'q1',
-                            'question': '¿Qué tan fácil te resulta usar BoostMe?',
-                            'type': 'single_choice',
-                            'options': ['Muy fácil', 'Fácil', 'Regular', 'Difícil']
-                        },
-                        {
-                            'id': 'q2',
-                            'question': '¿Qué contenido te gustaría ver más?',
-                            'type': 'single_choice',
-                            'options': ['Tareas', 'Videos', 'Recompensas', 'Referidos']
-                        },
-                        {
-                            'id': 'q3',
-                            'question': '¿Alguna sugerencia adicional?',
-                            'type': 'text',
-                            'options': []
-                        }
+                        {'id': 'q1', 'question': '¿Qué tan fácil te resulta usar BoostMe?', 'type': 'single_choice', 'options': ['Muy fácil', 'Fácil', 'Regular', 'Difícil']},
+                        {'id': 'q2', 'question': '¿Qué contenido te gustaría ver más?', 'type': 'single_choice', 'options': ['Tareas', 'Videos', 'Recompensas', 'Referidos']},
+                        {'id': 'q3', 'question': '¿Alguna sugerencia adicional?', 'type': 'text', 'options': []}
                     ]
                 },
                 'action_type': 'survey',
                 'action_url': None,
                 'simulated_action': 'survey',
-                'simulated_content': 'Encuesta de satisfacción.'
+                'simulated_content': 'Encuesta 02'
             },
             {
                 'task_type': 'survey',
@@ -719,43 +895,168 @@ class TaskViewSet(viewsets.ModelViewSet):
                 'content_type': 'survey',
                 'content_url': None,
                 'content_data': {
-                    'survey_title': 'Encuesta de feedback BoostMe',
+                    'survey_title': 'Encuesta 03 - Feedback',
                     'questions': [
-                        {
-                            'id': 'q1',
-                            'question': '¿Qué te motiva a usar BoostMe?',
-                            'type': 'single_choice',
-                            'options': ['Recompensas', 'Progreso', 'Retos', 'Referidos']
-                        },
-                        {
-                            'id': 'q2',
-                            'question': '¿Qué mejorarías primero?',
-                            'type': 'single_choice',
-                            'options': ['Interfaz', 'Tareas', 'Recompensas', 'Soporte']
-                        },
-                        {
-                            'id': 'q3',
-                            'question': 'Describe tu experiencia en una frase.',
-                            'type': 'text',
-                            'options': []
-                        }
+                        {'id': 'q1', 'question': '¿Qué te motiva a usar BoostMe?', 'type': 'single_choice', 'options': ['Recompensas', 'Progreso', 'Retos', 'Referidos']},
+                        {'id': 'q2', 'question': '¿Qué mejorarías primero?', 'type': 'single_choice', 'options': ['Interfaz', 'Tareas', 'Recompensas', 'Soporte']},
+                        {'id': 'q3', 'question': 'Describe tu experiencia en una frase.', 'type': 'text', 'options': []}
                     ]
                 },
                 'action_type': 'survey',
                 'action_url': None,
                 'simulated_action': 'survey',
-                'simulated_content': 'Encuesta de feedback.'
+                'simulated_content': 'Encuesta 03'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Ayúdanos a entender mejor tus intereses.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta 04 - Intereses',
+                    'questions': [
+                        {'id': 'q1', 'question': '¿Qué tipo de contenido prefieres?', 'type': 'single_choice', 'options': ['Videos', 'Tutoriales', 'Retos', 'Recompensas']},
+                        {'id': 'q2', 'question': '¿Qué te gustaría lograr con BoostMe?', 'type': 'single_choice', 'options': ['Ganancias', 'Progreso', 'Métricas', 'Recompensas']},
+                        {'id': 'q3', 'question': '¿Qué te falta hoy?', 'type': 'text', 'options': []}
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta 04'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Tu opinión nos ayuda a mejorar la experiencia.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta 05 - Experiencia',
+                    'questions': [
+                        {'id': 'q1', 'question': '¿Qué tan claro te parece el panel?', 'type': 'single_choice', 'options': ['Muy claro', 'Claro', 'Regular', 'Confuso']},
+                        {'id': 'q2', 'question': '¿Qué mejora priorizarías?', 'type': 'single_choice', 'options': ['Diseño', 'Rapidez', 'Tareas', 'Soporte']},
+                        {'id': 'q3', 'question': '¿Qué destacarías de BoostMe?', 'type': 'text', 'options': []}
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta 05'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Ayúdanos a elegir nuevas mejoras para BoostMe.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta 06 - Mejoras',
+                    'questions': [
+                        {'id': 'q1', 'question': '¿Qué te gustaría ver mejorado?', 'type': 'single_choice', 'options': ['Interfaz', 'Recompensas', 'Retos', 'Reportes']},
+                        {'id': 'q2', 'question': '¿Qué haría BoostMe más útil para ti?', 'type': 'single_choice', 'options': ['Más retos', 'Más videos', 'Más recompensas', 'Más métricas']},
+                        {'id': 'q3', 'question': '¿Hay algo que quieras compartir?', 'type': 'text', 'options': []}
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta 06'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Comparte tu opinión para mantener BoostMe relevante.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta 07 - Relevancia',
+                    'questions': [
+                        {'id': 'q1', 'question': '¿Cuánto te aporta BoostMe?', 'type': 'single_choice', 'options': ['Mucho', 'Algo', 'Poco', 'Nada']},
+                        {'id': 'q2', 'question': '¿Qué te hace volver?', 'type': 'single_choice', 'options': ['Recompensas', 'Progreso', 'Retos', 'Referidos']},
+                        {'id': 'q3', 'question': '¿Qué cambiarías para volver más?', 'type': 'text', 'options': []}
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta 07'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Ayúdanos a entender tu ritmo de uso.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta 08 - Ritmo',
+                    'questions': [
+                        {'id': 'q1', 'question': '¿Con qué frecuencia vuelves a BoostMe?', 'type': 'single_choice', 'options': ['Diario', 'Varias veces por semana', 'Semanal', 'Rara vez']},
+                        {'id': 'q2', 'question': '¿Qué te frena a usarlo más?', 'type': 'single_choice', 'options': ['Tiempo', 'Motivación', 'Interfaz', 'Falta de recompensas']},
+                        {'id': 'q3', 'question': '¿Qué te gustaría que cambiara?', 'type': 'text', 'options': []}
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta 08'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Ayúdanos a descubrir qué te motiva más.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta 09 - Motivación',
+                    'questions': [
+                        {'id': 'q1', 'question': '¿Qué te motiva más?', 'type': 'single_choice', 'options': ['Recompensas', 'Retos', 'Progreso', 'Referidos']},
+                        {'id': 'q2', 'question': '¿Qué te haría usarla más?', 'type': 'single_choice', 'options': ['Nuevos retos', 'Más recompensas', 'Más feedback', 'Mejor interfaz']},
+                        {'id': 'q3', 'question': '¿Qué te gustaría recibir más?', 'type': 'text', 'options': []}
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta 09'
+            },
+            {
+                'task_type': 'survey',
+                'description': 'Cierra esta ronda con una última opinión breve.',
+                'boost_reward': 6.00,
+                'content_type': 'survey',
+                'content_url': None,
+                'content_data': {
+                    'survey_title': 'Encuesta 10 - Cierre',
+                    'questions': [
+                        {'id': 'q1', 'question': '¿Qué tan satisfecho estás con BoostMe?', 'type': 'single_choice', 'options': ['Muy satisfecho', 'Satisfecho', 'Neutral', 'Insatisfecho']},
+                        {'id': 'q2', 'question': '¿Qué deberíamos mejorar?', 'type': 'single_choice', 'options': ['Nada', 'Tareas', 'Recompensas', 'Soporte']},
+                        {'id': 'q3', 'question': '¿Tienes algún mensaje final?', 'type': 'text', 'options': []}
+                    ]
+                },
+                'action_type': 'survey',
+                'action_url': None,
+                'simulated_action': 'survey',
+                'simulated_content': 'Encuesta 10'
             }
         ]
-        existing_survey_titles = set(
+        existing_survey_titles = [
             task.content_data.get('survey_title')
             for task in Task.objects.filter(user=user, task_type='survey')
             if task.content_data and isinstance(task.content_data, dict) and task.content_data.get('survey_title')
-        )
-        available_surveys = [survey for survey in surveys if survey['content_data']['survey_title'] not in existing_survey_titles]
+        ]
+
+        seen_titles = set(existing_survey_titles)
+        available_surveys = [
+            survey for survey in surveys
+            if survey['content_data']['survey_title'] not in seen_titles
+        ]
+
         if available_surveys:
             return random.choice(available_surveys)
-        return random.choice(surveys)
+
+        return None
 
 class TaskCompletionViewSet(viewsets.ReadOnlyModelViewSet):
     """

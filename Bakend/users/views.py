@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate, get_user_model
 from django.utils import timezone
 from django.conf import settings
 from django.shortcuts import redirect
-from django.core.mail import send_mail, EmailMessage
+from django.core.mail import EmailMultiAlternatives, EmailMessage
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -29,6 +29,27 @@ from .serializers import UserSerializer, RegisterSerializer, ActivatePlanSeriali
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
+
+
+def _send_html_mail(subject, message, recipient_list, text_content=None, from_email=None):
+    try:
+        email_message = EmailMultiAlternatives(
+            subject,
+            text_content or 'Activa tu cuenta en BoostMe.',
+            from_email or settings.DEFAULT_FROM_EMAIL,
+            recipient_list,
+        )
+        email_message.attach_alternative(message, 'text/html')
+        email_message.extra_headers['List-Unsubscribe'] = '<mailto:donotreply@boostme.app>'
+        email_message.extra_headers['Auto-Submitted'] = 'auto-generated'
+        email_message.extra_headers['Precedence'] = 'bulk'
+        email_message.extra_headers['X-Auto-Response-Suppress'] = 'OOF, DR, RN, NRN'
+        sent_count = email_message.send()
+        logger.info("Email send attempt completed. Sent=%s recipients=%s", sent_count, recipient_list)
+        return True, None
+    except Exception as exc:
+        logger.exception("Error sending email")
+        return False, f"{type(exc).__name__}: {exc}"
 
 
 def _sanitize_for_json(obj):
@@ -211,6 +232,43 @@ class SurveyMonkeyCallbackView(APIView):
         return redirect(redirect_path)
 
 @method_decorator(csrf_exempt, name='dispatch')
+class ContactView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            name = (request.data.get('name') or '').strip()
+            email = (request.data.get('email') or '').strip()
+            message = (request.data.get('message') or '').strip()
+
+            if not all([name, email, message]):
+                return Response({"error": "Todos los campos son requeridos"}, status=status.HTTP_400_BAD_REQUEST)
+
+            subject = f"Solicitud de contacto desde BoostMe - {name}"
+            body = (
+                f"Nombre: {name}\n"
+                f"Correo: {email}\n\n"
+                f"Mensaje:\n{message}"
+            )
+
+            sent, error = _send_html_mail(
+                subject,
+                f"<p><strong>Nombre:</strong> {name}<br/><strong>Correo:</strong> {email}</p><p>{message}</p>",
+                [settings.EMAIL_HOST_USER],
+                text_content=body,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+            )
+
+            if not sent:
+                logger.error("No se pudo enviar el mensaje de contacto: %s", error)
+                return Response({"error": "No se pudo enviar el mensaje"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            return Response({"message": "Tu mensaje fue enviado correctamente"}, status=status.HTTP_200_OK)
+        except Exception as exc:
+            logger.exception("Error en contacto")
+            return Response({"error": str(exc)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [UserRateThrottle]
@@ -286,26 +344,23 @@ class RegisterView(APIView):
                 message = render_to_string('users/acc_active_email.html', {
                     'user': user,
                     'verification_link': verification_link,
+                    'uidb64': uidb64,
+                    'token': token,
                     'domain': settings.FRONTEND_URL,
                     'protocol': 'https' if not settings.DEBUG else 'http',
                 })
+                plain_text = (
+                    f"Hola {user.username},\n\n"
+                    f"Gracias por registrarte en BoostMe. Confirma tu correo aquí: {verification_link}\n\n"
+                    "Si no creaste esta cuenta, puedes ignorar este mensaje."
+                )
 
-                def _send_verification():
-                    try:
-                        send_mail(
-                            mail_subject,
-                            '',
-                            settings.DEFAULT_FROM_EMAIL,
-                            [email],
-                            fail_silently=False,
-                            html_message=message,
-                        )
-                    except Exception:
-                        logger.exception("Error sending verification email")
+                email_sent, email_error = _send_html_mail(mail_subject, message, [email], text_content=plain_text)
 
-                Thread(target=_send_verification).start()
-
-                logger.info(f"Email de verificación enviado a {email}")
+                if email_sent:
+                    logger.info(f"Email de verificación enviado a {email}")
+                else:
+                    logger.error(f"No se pudo enviar el email de verificación a {email}: {email_error}")
 
                 # Serializar el usuario completo
                 user_data = UserSerializer(user, context={'request': request}).data
@@ -318,6 +373,13 @@ class RegisterView(APIView):
                     "refresh": str(refresh),
                     "next_step": "verify_email"
                 }
+
+                response_data["verification_link"] = verification_link
+
+                if not email_sent:
+                    response_data["message"] = "Registro creado, pero no se pudo enviar el email de verificación. Contacta al soporte o intenta más tarde."
+                    response_data["warning"] = "email_not_sent"
+                    response_data["detail"] = email_error or 'No se pudo enviar el email'
 
                 resp = Response(response_data, status=status.HTTP_201_CREATED)
                 # Setear cookies para sesión segura
@@ -991,6 +1053,7 @@ class WithdrawView(APIView):
             serializer = WithdrawSerializer(data=request.data)
             serializer.is_valid(raise_exception=True)
             boost_amount = serializer.validated_data['boost_amount']
+            wallet_address = serializer.validated_data['wallet_address']
 
             user = request.user
             if not user.can_withdraw:
@@ -1021,13 +1084,14 @@ class WithdrawView(APIView):
                 user=user,
                 transaction_type='withdrawal',
                 boost_amount=boost_amount,
+                user_wallet_address=wallet_address,
                 status='pending',
                 description='Solicitud de retiro BOOST a USDT'
             )
 
             if not transaction.complete_withdrawal():
                 return Response({
-                    'error': 'No se pudo procesar el retiro',
+                    'error': transaction.description or 'No se pudo procesar el retiro',
                     'code': 'withdrawal_failed'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
@@ -1040,7 +1104,8 @@ class WithdrawView(APIView):
                         f"Hola {user.username},\n\n"
                         f"Tu solicitud de retiro de {boost_amount} BOOST ha sido procesada. "
                         f"El monto convertido corresponde a {transaction.usdt_amount} USDT y será acreditado en tu wallet. "
-                        "Por favor espera hasta 32 horas como máximo para la ejecución y confirmación del retiro.\n\n"
+                        f"Hash de transacción: {transaction.tx_hash}\n"
+                        "Por favor espera hasta 2-5 minutos para la confirmación de tu retiro en Polygon.\n\n"
                         "Gracias por usar BoostMe.\n"
                     )
 
@@ -1048,7 +1113,8 @@ class WithdrawView(APIView):
                         'user': user,
                         'boost_amount': boost_amount,
                         'usdt_amount': transaction.usdt_amount,
-                        'wait_hours': 32,
+                        'tx_hash': transaction.tx_hash,
+                        'wait_minutes': 5,
                         'domain': settings.FRONTEND_URL,
                         'protocol': 'https' if not settings.DEBUG else 'http',
                         'now': timezone.now(),
@@ -1071,6 +1137,7 @@ class WithdrawView(APIView):
                 'message': 'Retiro procesado correctamente',
                 'withdrawn_boost': float(boost_amount),
                 'received_usdt': float(transaction.usdt_amount),
+                'tx_hash': transaction.tx_hash,
                 'wallet_balance_usdt': float(user.balance),
                 'current_week_withdrawn': float(user.current_week_withdrawn)
             }, status=status.HTTP_200_OK)

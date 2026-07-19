@@ -5,6 +5,11 @@ const fetchWithAuth = async (url, options = {}) => {
         ...options.headers
     };
 
+    const accessToken = sessionStorage.getItem('accessToken');
+    if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+    }
+
     // Si no es FormData, agregar Content-Type
     if (!(options.body instanceof FormData)) {
         headers['Content-Type'] = 'application/json';
@@ -44,11 +49,14 @@ export const profileService = {
         }
     },
 
-    withdrawBoost: async (boostAmount) => {
+    withdrawBoost: async (boostAmount, walletAddress) => {
         try {
             const response = await fetchWithAuth(`${API_BASE_URL}/withdraw/`, {
                 method: 'POST',
-                body: JSON.stringify({ boost_amount: boostAmount })
+                body: JSON.stringify({ 
+                    boost_amount: boostAmount,
+                    wallet_address: walletAddress 
+                })
             });
 
             return response.json();

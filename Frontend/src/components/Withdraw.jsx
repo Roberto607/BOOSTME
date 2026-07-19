@@ -8,12 +8,14 @@ const Withdraw = () => {
   const { user, setUser, isAuthenticated, loading } = useAuth();
   const navigate = useNavigate();
   const [boostAmount, setBoostAmount] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
+    const hasStoredSession = Boolean(sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
+    if (!loading && !isAuthenticated && !hasStoredSession) {
       navigate('/login');
     }
   }, [loading, isAuthenticated, navigate]);
@@ -27,10 +29,23 @@ const Withdraw = () => {
   const remainingToLimit = Math.max(0, weeklyLimit - currentWeekWithdrawn);
   const maxWithdrawAllowed = Math.min(availableBoost, remainingToLimit);
 
+  // Validar dirección Ethereum
+  const isValidWallet = walletAddress.startsWith('0x') && walletAddress.length === 42 && /^0x[a-fA-F0-9]{40}$/.test(walletAddress);
+
   const handleSubmit = async (event) => {
     event.preventDefault();
     setError(null);
     setSuccess(null);
+
+    if (!walletAddress) {
+      setError('Por favor ingresa una dirección de wallet.');
+      return;
+    }
+
+    if (!isValidWallet) {
+      setError('Dirección de wallet inválida. Debe ser un formato Ethereum válido (0x...)');
+      return;
+    }
 
     const amount = Number(boostAmount);
     if (!amount || amount <= 0) {
@@ -50,9 +65,10 @@ const Withdraw = () => {
 
     setIsProcessing(true);
     try {
-      const result = await profileService.withdrawBoost(amount);
-      setSuccess(`Retiro de ${amount} BOOST procesado. Recibiste ${result.received_usdt} USDT en wallet.`);
+      const result = await profileService.withdrawBoost(amount, walletAddress);
+      setSuccess(`✅ Retiro procesado. Recibirás ${result.received_usdt} USDT en tu wallet. TX: ${result.tx_hash?.slice(0, 10)}...`);
       setBoostAmount('');
+      setWalletAddress('');
 
       const updatedUser = {
         ...user,
@@ -124,6 +140,27 @@ const Withdraw = () => {
 
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             <label className="block text-sm font-semibold text-slate-700">
+              Dirección de Wallet (Ethereum/Polygon)
+              <input
+                type="text"
+                value={walletAddress}
+                onChange={(e) => {
+                  setError(null);
+                  setWalletAddress(e.target.value);
+                }}
+                placeholder="0x..."
+                disabled={isProcessing}
+                className="mt-2 w-full rounded-3xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
+              />
+              {walletAddress && !isValidWallet && (
+                <p className="mt-1 text-xs text-rose-600">Dirección inválida. Debe ser un formato Ethereum válido.</p>
+              )}
+              {isValidWallet && (
+                <p className="mt-1 text-xs text-emerald-600">✓ Dirección válida</p>
+              )}
+            </label>
+
+            <label className="block text-sm font-semibold text-slate-700">
               BOOST a retirar
               <input
                 type="number"
@@ -158,7 +195,7 @@ const Withdraw = () => {
 
             <button
               type="submit"
-              disabled={!canWithdraw || isProcessing || !boostAmount || Number(boostAmount) <= 0 || Number(boostAmount) > maxWithdrawAllowed}
+              disabled={!canWithdraw || isProcessing || !boostAmount || !walletAddress || Number(boostAmount) <= 0 || Number(boostAmount) > maxWithdrawAllowed || !isValidWallet}
               className="w-full rounded-full bg-slate-900 px-6 py-3 text-sm font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {isProcessing ? 'Procesando...' : 'Confirmar retiro'}

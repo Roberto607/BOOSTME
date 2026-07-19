@@ -1,7 +1,7 @@
-from django.test import TestCase
+from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.core.files.uploadedfile import SimpleUploadedFile
-from rest_framework.test import APIRequestFactory, force_authenticate
+from rest_framework.test import APIRequestFactory, APIClient, force_authenticate
 
 from users.views import ProfileView
 
@@ -30,3 +30,20 @@ class ProfilePhotoTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.data['photo_url'].startswith('http://testserver/'))
+
+
+class RegisterVerificationLinkTests(TestCase):
+    @override_settings(DEBUG=False, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_register_returns_verification_link_as_fallback(self):
+        client = APIClient()
+
+        response = client.post('/api/users/register/', {
+            'username': 'manualverify1',
+            'email': 'manualverify1@example.com',
+            'password': 'Password123!',
+            'password2': 'Password123!',
+        }, format='json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertIn('verification_link', response.data)
+        self.assertTrue(response.data['verification_link'].startswith('http'))
