@@ -257,6 +257,17 @@ if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
+elif IS_RENDER:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
+            'USER': os.getenv('POSTGRES_USER', 'boostme'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
+            'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        }
+    }
 elif any([
     os.getenv('POSTGRES_DB'),
     os.getenv('POSTGRES_USER'),
@@ -277,12 +288,8 @@ elif any([
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'boostme_db',
-            'USER': 'boostme',
-            'PASSWORD': '2025',
-            'HOST': 'db',
-            'PORT': '5432',
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
