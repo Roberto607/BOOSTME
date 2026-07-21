@@ -65,12 +65,16 @@ if DEBUG:
     )
 else:
     # Para producción
-    FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://tudominio.com')
-    BACKEND_URL = os.getenv('BACKEND_URL', 'https://tudominio.com')
-    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://tudominio.com,https://www.tudominio.com')
+    FRONTEND_URL = os.getenv('FRONTEND_URL', '')
+    BACKEND_URL = os.getenv('BACKEND_URL', '')
+    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 
 if render_hostname:
-    default_csrf_origins = f"{default_csrf_origins},https://{render_hostname},https://www.{render_hostname}" if default_csrf_origins else f"https://{render_hostname},https://www.{render_hostname}"
+    render_origins = f"https://{render_hostname},https://www.{render_hostname}"
+    default_csrf_origins = ",".join([origin for origin in [default_csrf_origins, render_origins] if origin])
+
+if FRONTEND_URL:
+    default_csrf_origins = ",".join([origin for origin in [default_csrf_origins, FRONTEND_URL] if origin])
 
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in default_csrf_origins.split(',') if origin.strip()]
 
@@ -149,11 +153,9 @@ SIMPLE_JWT = {
 }
 
 
+cors_default = 'http://localhost:5173,http://127.0.0.1:5173' if DEBUG else ''
 CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.getenv(
-        'CORS_ALLOWED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173'
-    ).split(',') if origin.strip()
+    origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', cors_default).split(',') if origin.strip()
 ]
 
 CORS_ALLOW_CREDENTIALS = True
