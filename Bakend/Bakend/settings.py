@@ -153,9 +153,9 @@ SIMPLE_JWT = {
 }
 
 
-cors_default = 'http://localhost:5173,http://127.0.0.1:5173' if DEBUG else ''
+cors_default = 'http://localhost:5173,http://127.0.0.1:5173' if DEBUG else FRONTEND_URL
 CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', cors_default).split(',') if origin.strip()
+    origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', cors_default or '').split(',') if origin.strip()
 ]
 
 CORS_ALLOW_CREDENTIALS = True
