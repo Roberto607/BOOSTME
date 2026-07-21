@@ -57,12 +57,9 @@ if render_hostname:
 ALLOWED_HOSTS = allowed_hosts
 
 if DEBUG:
-    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-    BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000')
-    default_csrf_origins = os.getenv(
-        'CSRF_TRUSTED_ORIGINS',
-        'http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174'
-    )
+    FRONTEND_URL = os.getenv('FRONTEND_URL', '')
+    BACKEND_URL = os.getenv('BACKEND_URL', '')
+    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
 else:
     # Para producción
     FRONTEND_URL = os.getenv('FRONTEND_URL', '')
