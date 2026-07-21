@@ -23,3 +23,7 @@ Thumbs.db # Windows
 # Posibles secretos o variables de entorno locales
 .env
 .env.local
+
+# Django local database y archivos estáticos generados
+Bakend/db.sqlite3
+Bakend/staticfiles/
