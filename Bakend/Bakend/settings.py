@@ -1,18 +1,11 @@
 import os
 from pathlib import Path
 import dj_database_url
-import environ
-
-
-
-# Cargar variables de entorno
-env = environ.Env()
-environ.Env.read_env(os.path.join(os.path.dirname(__file__), '.env'))
 
 # Configuración base
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Configuración de seguridad
+# Cargar variables de entorno directamente
 SECRET_KEY = os.environ.get('SECRET_KEY', 'tu_clave_secreta_aqui')
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
 ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
@@ -28,7 +21,6 @@ INSTALLED_APPS = [
     'rest_framework',
     'corsheaders',
     'users',
-    'crontab',  # Solo si lo necesitas
     'django_cleanup',  # Agregado para limpieza automática
 ]
 
@@ -69,11 +61,11 @@ WSGI_APPLICATION = 'Bakend.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT'),
+        'NAME': os.environ.get('DB_NAME'),
+        'USER': os.environ.get('DB_USER'),
+        'PASSWORD': os.environ.get('DB_PASSWORD'),
+        'HOST': os.environ.get('DB_HOST'),
+        'PORT': os.environ.get('DB_PORT'),
     }
 }
 
