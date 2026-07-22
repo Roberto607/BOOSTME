@@ -1063,6 +1063,106 @@ class EmailVerificationView(APIView):
                 "error": "Error al verificar el email"
             }, status=status.HTTP_400_BAD_REQUEST)
 
+@method_decorator(csrf_exempt, name='dispatch')
+class ResendVerificationView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            email = request.data.get('email', '').strip().lower()
+            if not email:
+                return Response({
+                    'error': 'Email es requerido',
+                    'code': 'missing_email'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            try:
+                user = User.objects.get(email=email)
+
+                # Solo permitir reenviar si el usuario no ha verificado su email
+                if user.is_email_verified:
+                    return Response({
+                        'error': 'El email ya ha sido verificado',
+                        'code': 'email_already_verified'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
+                # Generar token de verificación
+                token = account_activation_token.make_token(user)
+                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+
+                # Crear link de verificación
+                frontend_url = settings.FRONTEND_URL.rstrip('/')
+                verification_link = urljoin(
+                    frontend_url,
+                    f"/verify-email/{uidb64}/{token}/"
+                )
+
+                # Construir mensaje de email
+                mail_subject = 'Activa tu cuenta en BoostMe'
+
+                # Verificar si existe el template de email
+                try:
+                    message = render_to_string('users/acc_active_email.html', {
+                        'user': user,
+                        'verification_link': verification_link,
+                        'uidb64': uidb64,
+                        'token': token,
+                        'domain': frontend_url,
+                        'protocol': 'https' if not settings.DEBUG else 'http',
+                    })
+                except Exception as template_error:
+                    logger.error(f"Error al renderizar el template de email: {template_error}")
+                    # Crear un mensaje simple si el template falla
+                    message = f"""
+                    <h2>Bienvenido a BoostMe, {user.username}!</h2>
+                    <p>Gracias por registrarte. Para activar tu cuenta, por favor haz clic en el siguiente enlace:</p>
+                    <p><a href="{verification_link}">Verificar mi cuenta</a></p>
+                    <p>Si no puedes hacer clic en el enlace, copia y pega la siguiente URL en tu navegador:</p>
+                    <p>{verification_link}</p>
+                    <p>Si no creaste esta cuenta, puedes ignorar este mensaje.</p>
+                    """
+
+                plain_text = (
+                    f"Hola {user.username},
+
+"
+                    f"Gracias por registrarte en BoostMe. Confirma tu correo aquí: {verification_link}
+
+"
+                    "Si no creaste esta cuenta, puedes ignorar este mensaje."
+                )
+
+                # Intentar enviar el email
+                email_sent, email_error = _send_html_mail(mail_subject, message, [email], text_content=plain_text)
+
+                if email_sent:
+                    logger.info(f"Email de verificación reenviado a {email}")
+                    return Response({
+                        'message': 'Email de verificación reenviado correctamente. Revisa tu correo.',
+                        'email': email
+                    }, status=status.HTTP_200_OK)
+                else:
+                    logger.error(f"No se pudo reenviar el email de verificación a {email}: {email_error}")
+                    return Response({
+                        'error': 'No se pudo enviar el email de verificación',
+                        'code': 'email_not_sent',
+                        'detail': email_error or 'No se pudo enviar el email'
+                    }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+            except User.DoesNotExist:
+                return Response({
+                    'error': 'No existe una cuenta con este email',
+                    'code': 'user_not_found'
+                }, status=status.HTTP_404_NOT_FOUND)
+
+        except Exception as e:
+            logger.error(f"Error en ResendVerificationView: {str(e)}", exc_info=True)
+            return Response({
+                'error': 'Error interno del servidor',
+                'code': 'server_error',
+                'detail': str(e) if settings.DEBUG else None
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
