@@ -15,6 +15,11 @@ from pathlib import Path
 import dj_database_url
 
 try:
+    from django_crontab import crontab
+except ImportError:
+    crontab = None
+
+try:
     from dotenv import load_dotenv
 except ModuleNotFoundError:
     def load_dotenv(*_args, **_kwargs):
@@ -418,7 +423,7 @@ CELERY_TIMEZONE = TIME_ZONE
 CELERY_BEAT_SCHEDULE = {
     'cleanup-expired-tokens': {
         'task': 'users.tasks.cleanup_expired_tokens',
-        'schedule': crontab(minute=0, hour='*/2'),
+        'schedule': crontab(minute=0, hour='*/2') if crontab else 7200,  # 2 horas en segundos si crontab no está disponible
     },
 }
 
