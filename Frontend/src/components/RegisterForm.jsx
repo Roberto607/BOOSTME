@@ -46,10 +46,38 @@ const RegisterForm = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
 
-        if (!email || !username || !password) return setError("Todos los campos son requeridos");
-        if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) return setError("Formato de email inválido");
-        if (password.length < 8) return setError("La contraseña debe tener al menos 8 caracteres");
-        if (password !== confirmPassword) return setError("Las contraseñas no coinciden");
+        // Validaciones mejoradas para coincidir con el backend
+        if (!email || !username || !password) {
+            return setError("Todos los campos son requeridos");
+        }
+        
+        if (!/^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/.test(email)) {
+            return setError("Formato de email inválido");
+        }
+        
+        if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
+            return setError("El nombre de usuario debe tener entre 3 y 20 caracteres y solo puede contener letras, números y guiones bajos");
+        }
+        
+        if (password.length < 8) {
+            return setError("La contraseña debe tener al menos 8 caracteres");
+        }
+        
+        if (!/[A-Z]/.test(password)) {
+            return setError("La contraseña debe contener al menos una letra mayúscula");
+        }
+        
+        if (!/[a-z]/.test(password)) {
+            return setError("La contraseña debe contener al menos una letra minúscula");
+        }
+        
+        if (!/[0-9]/.test(password)) {
+            return setError("La contraseña debe contener al menos un número");
+        }
+        
+        if (password !== confirmPassword) {
+            return setError("Las contraseñas no coinciden");
+        }
 
         try {
             setError("");
@@ -64,6 +92,7 @@ const RegisterForm = () => {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({ username: username.trim(), email: email.trim().toLowerCase(), password }),
+                credentials: 'include' // Importante para manejar cookies
             });
 
             let data = null;
@@ -86,34 +115,67 @@ const RegisterForm = () => {
             if (response.ok) {
                 const userData = data?.user || null;
                 const token = data?.access || null;
+                const refreshToken = data?.refresh || null;
 
                 setUser(userData);
                 setAccessToken(token);
                 setIsAuthenticated(Boolean(token));
 
+                // Guardar tokens en sessionStorage para persistencia
                 if (token) {
                     sessionStorage.setItem('accessToken', token);
                 }
+                
+                if (refreshToken) {
+                    sessionStorage.setItem('refreshToken', refreshToken);
+                }
+                
                 if (userData) {
                     sessionStorage.setItem('user', JSON.stringify(userData));
                 }
 
+                // Manejar caso especial cuando el email no se envía
                 if (data?.warning === 'email_not_sent') {
-                    setError(data?.message || "No se pudo enviar el email de verificación.");
+                    setError(data?.message || "No se pudo enviar el email de verificación. Contacta al soporte.");
                     setSuccess("");
                 } else {
-                    setSuccess(data?.message || "Registro exitoso. Revisa tu correo.");
+                    setSuccess(data?.message || "Registro exitoso. Revisa tu correo para verificar tu cuenta.");
+                }
+                
+                // Si el registro fue exitoso y el email se envió, redirigir después de un breve delay
+                if (!data?.warning) {
+                    setTimeout(() => {
+                        if (!user?.is_email_verified) {
+                            setShowEmailNotice(true);
+                        }
+                    }, 1500);
                 }
             } else {
+                // Manejar códigos de error específicos del backend
                 switch (data?.code) {
                     case "missing_fields":
                         setError("Todos los campos son requeridos");
                         break;
+                    case "invalid_content_type":
+                        setError("Error en el formato de la solicitud");
+                        break;
                     case "invalid_email":
                         setError("Formato de email inválido");
                         break;
+                    case "invalid_username":
+                        setError("El nombre de usuario debe tener entre 3 y 20 caracteres y solo puede contener letras, números y guiones bajos");
+                        break;
                     case "password_too_short":
                         setError("La contraseña debe tener al menos 8 caracteres");
+                        break;
+                    case "password_missing_uppercase":
+                        setError("La contraseña debe contener al menos una letra mayúscula");
+                        break;
+                    case "password_missing_lowercase":
+                        setError("La contraseña debe contener al menos una letra minúscula");
+                        break;
+                    case "password_missing_number":
+                        setError("La contraseña debe contener al menos un número");
                         break;
                     case "email_exists":
                         setError("Ya existe una cuenta con este email");
@@ -127,7 +189,11 @@ const RegisterForm = () => {
             }
         } catch (err) {
             console.error("Error en el registro:", err);
-            setError("Error de conexión. Intenta más tarde.");
+            if (err.name === 'TypeError' && err.message.includes('Failed to fetch')) {
+                setError("No se pudo conectar con el servidor. Verifica tu conexión o intenta más tarde.");
+            } else {
+                setError("Error de conexión. Intenta más tarde.");
+            }
         }
 
         setLoading(false);
@@ -135,7 +201,7 @@ const RegisterForm = () => {
 
     return (
         <div className="flex items-center justify-center min-h-screen p-5 bg-gray-100">
-            <form 
+            <form
                 onSubmit={handleSubmit}
                 className="bg-white rounded-2xl shadow-xl p-8 md:p-10 w-full max-w-md animate-fadeIn flex flex-col"
             >
@@ -169,6 +235,7 @@ const RegisterForm = () => {
                     required
                     disabled={loading}
                     minLength={3}
+                    maxLength={20}
                     className="w-full p-3 mb-4 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition"
                 />
 
@@ -190,7 +257,7 @@ const RegisterForm = () => {
                     name="password"
                     type="password"
                     autoComplete="new-password"
-                    placeholder="Contraseña (mínimo 8 caracteres)"
+                    placeholder="Contraseña (mínimo 8 caracteres, mayúscula, minúscula y número)"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     required
@@ -222,8 +289,8 @@ const RegisterForm = () => {
                 </button>
 
                 <div className="text-center mt-4 text-gray-600 text-sm">
-                    ¿Ya tienes una cuenta? 
-                    <button 
+                    ¿Ya tienes una cuenta?
+                    <button
                         type="button"
                         onClick={() => navigate("/login")}
                         className="ml-2 text-blue-600 font-medium hover:underline"

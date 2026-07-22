@@ -25,7 +25,6 @@ except ModuleNotFoundError:
 
 
 
-
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -54,17 +53,27 @@ if render_hostname:
     allowed_hosts.append(render_hostname)
     allowed_hosts.append(f'www.{render_hostname}')
 
+# Configurar hosts permitidos para Render
+if not DEBUG:
+    allowed_hosts = [
+        'boostme-alpd.onrender.com',
+        'www.boostme-alpd.onrender.com',
+        'localhost',
+        '127.0.0.1'
+    ]
+
 ALLOWED_HOSTS = allowed_hosts
 
+# Configuración de URLs
 if DEBUG:
-    FRONTEND_URL = os.getenv('FRONTEND_URL', '')
-    BACKEND_URL = os.getenv('BACKEND_URL', '')
-    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:3000')
+    BACKEND_URL = os.getenv('BACKEND_URL', 'http://localhost:8000')
+    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', 'http://localhost:3000')
 else:
-    # Para producción
-    FRONTEND_URL = os.getenv('FRONTEND_URL', '')
-    BACKEND_URL = os.getenv('BACKEND_URL', '')
-    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
+    # Para producción en Render
+    FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://boostme-frontend.onrender.com')
+    BACKEND_URL = os.getenv('BACKEND_URL', 'https://boostme-alpd.onrender.com')
+    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', 'https://boostme-frontend.onrender.com')
 
 if render_hostname:
     render_origins = f"https://{render_hostname},https://www.{render_hostname}"
@@ -75,88 +84,22 @@ if FRONTEND_URL:
 
 CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in default_csrf_origins.split(',') if origin.strip()]
 
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'users.authentication.CookieJWTAuthentication',
-    ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20
-}
-
-import logging
-import warnings
-
-logging.basicConfig(
-    level=logging.ERROR,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
-warnings.filterwarnings(
-    'ignore',
-    message='.*first seen with mtime.*',
-    category=RuntimeWarning,
-    module='rest_framework_simplejwt'
-)
-
-warnings.filterwarnings(
-    'ignore',
-    message=r'File .*django\.mo first seen with mtime.*',
-    category=RuntimeWarning
-)
-
-from datetime import timedelta
-
-# Para desarrollo local con proxy Vite y frontend en localhost,
-# usamos cookies de sesión same-site seguras en HTTP.
-# En producción, usamos SameSite=None y Secure=True para permitir envíos cross-site.
-if DEBUG:
-    auth_cookie_samesite = 'Lax'
-    auth_cookie_secure = False
-    refresh_cookie_samesite = 'Lax'
-    refresh_cookie_secure = False
-else:
-    auth_cookie_samesite = 'None'
-    auth_cookie_secure = True
-    refresh_cookie_samesite = 'None'
-    refresh_cookie_secure = True
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'UPDATE_LAST_LOGIN': True,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_COOKIE': 'access',  # Nombre de la cookie de acceso JWT
-    'REFRESH_COOKIE': 'refresh',  # Nombre de la cookie de refresh JWT
-    'AUTH_COOKIE_DOMAIN': None,  # Especifica el dominio si es necesario
-    'AUTH_COOKIE_SECURE': auth_cookie_secure,
-    'AUTH_COOKIE_HTTP_ONLY': True,  # No accesible desde JavaScript
-    'AUTH_COOKIE_PATH': '/',
-    'AUTH_COOKIE_SAMESITE': auth_cookie_samesite,
-    'AUTH_COOKIE_REFRESH_TOKEN_PATH': '/',
-    'AUTH_COOKIE_REFRESH_TOKEN_SECURE': refresh_cookie_secure,
-    'AUTH_COOKIE_REFRESH_TOKEN_HTTP_ONLY': True,
-    'AUTH_COOKIE_REFRESH_TOKEN_SAMESITE': refresh_cookie_samesite,
-}
-
-
-cors_default = 'http://localhost:5173,http://127.0.0.1:5173' if DEBUG else FRONTEND_URL
+# Configuración de CORS
 CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', cors_default or '').split(',') if origin.strip()
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
+# Añadir URLs de producción si no estamos en modo debug
+if not DEBUG:
+    CORS_ALLOWED_ORIGINS.extend([
+        "https://boostme-frontend.onrender.com",
+        "https://www.boostme-frontend.onrender.com"
+    ])
+
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # Más seguro que CORS_ALLOWED_ORIGINS
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -175,13 +118,113 @@ CORS_ALLOW_METHODS = [
     'DELETE',
     'OPTIONS',
 ]
-CORS_EXPOSE_HEADERS = [
-    'Content-Type',
-    'X-CSRFToken',
-]
 
+# Configuración de REST Framework
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.SessionAuthentication',
+        'rest_framework.authentication.BasicAuthentication',
+        'users.authentication.CookieJWTAuthentication',
+    ],
+    'DEFAULT_RENDERER_CLASSES': [
+        'rest_framework.renderers.JSONRenderer',
+    ],
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
+    'PAGE_SIZE': 20,
+    'DEFAULT_THROTTLE_CLASSES': [
+        'rest_framework.throttling.AnonRateThrottle',
+        'rest_framework.throttling.UserRateThrottle'
+    ],
+    'DEFAULT_THROTTLE_RATES': {
+        'anon': '100/hour',
+        'user': '1000/hour'
+    }
+}
 
-# Application definition
+# Configuración de JWT
+from datetime import timedelta
+
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(minutes=60),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=1),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUDIENCE': None,
+    'ISSUER': None,
+    'JWK_URL': None,
+    'LEEWAY': 0,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+    'AUTH_TOKEN_CLASSES': ('rest_framework_simplejwt.tokens.AccessToken',),
+    'TOKEN_TYPE_CLAIM': 'token_type',
+    'TOKEN_USER_CLASS': 'rest_framework_simplejwt.models.TokenUser',
+    'JTI_CLAIM': 'jti',
+    'SLIDING_TOKEN_REFRESH_EXP_CLAIM': 'refresh_exp',
+    'SLIDING_TOKEN_LIFETIME': timedelta(minutes=5),
+    'SLIDING_TOKEN_REFRESH_LIFETIME': timedelta(days=1),
+    'AUTH_COOKIE': 'access_token',
+    'AUTH_COOKIE_DOMAIN': None,
+    'AUTH_COOKIE_SECURE': not DEBUG,
+    'AUTH_COOKIE_HTTP_ONLY': True,
+    'AUTH_COOKIE_PATH': '/',
+    'AUTH_COOKIE_SAMESITE': 'Lax',
+    'AUTH_COOKIE_REFRESH': 'refresh_token',
+    'AUTH_COOKIE_REFRESH_DOMAIN': None,
+    'AUTH_COOKIE_REFRESH_SECURE': not DEBUG,
+    'AUTH_COOKIE_REFRESH_HTTP_ONLY': True,
+    'AUTH_COOKIE_REFRESH_PATH': '/',
+    'AUTH_COOKIE_REFRESH_SAMESITE': 'Lax',
+}
+
+# Configuración de sesiones
+SESSION_ENGINE = "django.contrib.sessions.backends.cache"
+SESSION_CACHE_ALIAS = "default"
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 3600  # 1 hora
+SESSION_SAVE_EVERY_REQUEST = True
+
+# Configuración de base de datos
+DATABASES = {
+    'default': dj_database_url.config(
+        default=f'postgres://postgres:postgres@localhost:5432/{os.getenv("DB_NAME", "boostme_db")}',
+        conn_max_age=600,
+        ssl_require=True
+    )
+}
+
+# Configuración de caché
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Configuración de Email
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
+EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('true', '1', 'yes')
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
+DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
+
+# Configuración de archivos estáticos y multimedia
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+MEDIA_URL = '/media/'
+MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
+
+# Configuración de aplicaciones
 INSTALLED_APPS = [
     'django.contrib.admin',
     'django.contrib.auth',
@@ -189,19 +232,19 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'users',
     'rest_framework',
-    'corsheaders',
     'rest_framework_simplejwt',
-    'plan',
+    'corsheaders',
+    'users',
     'tasks',
     'referrals',
     'bonuses',
+    'plan',
+    'django_cleanup',
 ]
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
-    'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -209,27 +252,7 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'django.middleware.gzip.GZipMiddleware',
 ]
-# Configuración de seguridad adicional
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-
-# Configuración de sesión segura
-SESSION_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_AGE = 3600  # 1 hora
-CSRF_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Lax'
-
 
 ROOT_URLCONF = 'Bakend.urls'
 
@@ -240,6 +263,7 @@ TEMPLATES = [
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
@@ -248,76 +272,82 @@ TEMPLATES = [
     },
 ]
 
+# Configuración de WSGI
 WSGI_APPLICATION = 'Bakend.wsgi.application'
 
-# Database
-DATABASE_URL = os.getenv('DATABASE_URL')
+# Configuración de internacionalización
+LANGUAGE_CODE = 'es-es'
+TIME_ZONE = 'America/Mexico_City'
+USE_I18N = True
+USE_TZ = True
 
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
-    }
-elif IS_RENDER:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
-            'USER': os.getenv('POSTGRES_USER', 'boostme'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
-            'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-            'PORT': os.getenv('POSTGRES_PORT', '5432'),
-        }
-    }
-elif any([
-    os.getenv('POSTGRES_DB'),
-    os.getenv('POSTGRES_USER'),
-    os.getenv('POSTGRES_PASSWORD'),
-    os.getenv('POSTGRES_HOST'),
-    os.getenv('POSTGRES_PORT'),
-]):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
-            'USER': os.getenv('POSTGRES_USER', 'boostme'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
-            'HOST': os.getenv('POSTGRES_HOST', 'db'),
-            'PORT': os.getenv('POSTGRES_PORT', '5432'),
-        }
-    }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
-        }
-    }
+# Configuración de logging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+            'formatter': 'verbose',
+        },
+        'file': {
+            'level': 'ERROR',
+            'class': 'logging.FileHandler',
+            'filename': os.path.join(BASE_DIR, 'logs', 'error.log'),
+            'formatter': 'verbose',
+        },
+    },
+    'root': {
+        'handlers': ['console', 'file'],
+        'level': 'INFO',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'users': {
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+    },
+}
 
-YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
+# Crear directorio de logs si no existe
+os.makedirs(os.path.join(BASE_DIR, 'logs'), exist_ok=True)
 
-SURVEYMONKEY_CLIENT_ID = os.getenv('SURVEYMONKEY_CLIENT_ID', '')
-SURVEYMONKEY_CLIENT_SECRET = os.getenv('SURVEYMONKEY_CLIENT_SECRET', '')
-SURVEYMONKEY_SCOPES = os.getenv(
-    'SURVEYMONKEY_SCOPES',
-    'view_users view_surveys view_responses create_modify_collectors view_collectors'
-)
-SURVEYMONKEY_OAUTH_BASE_URL = os.getenv('SURVEYMONKEY_OAUTH_BASE_URL', 'https://api.surveymonkey.com/oauth/authorize')
-SURVEYMONKEY_OAUTH_REDIRECT_URI = os.getenv(
-    'SURVEYMONKEY_OAUTH_REDIRECT_URI',
-    f"{BACKEND_URL}/api/users/surveymonkey/callback/"
-)
-SURVEYMONKEY_API_BASE_URL = os.getenv('SURVEYMONKEY_API_BASE_URL', 'https://api.surveymonkey.com')
+# Configuración de seguridad
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000 if not DEBUG else 0
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True if not DEBUG else False
+SECURE_HSTS_PRELOAD = True if not DEBUG else False
+SECURE_SSL_REDIRECT = not DEBUG
 
-# Email configuration
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
-EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes', 'on')
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
-DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '')
+# Configuración de depuración
+if DEBUG:
+    INTERNAL_IPS = [
+        '127.0.0.1',
+    ]
 
-# Password validation
+# Configuración de envío de emails
+EMAIL_USE_TLS = True
+EMAIL_TIMEOUT = 30
+
+# Configuración de autenticación
 AUTH_PASSWORD_VALIDATORS = [
     {
         'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
@@ -333,61 +363,120 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
-LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'America/Mexico_City'
-USE_I18N = True
-USE_TZ = True
-
-LANGUAGE = [
-    ('es', 'Español'),
-    ('en', 'English'),
-]
-LOCALE_PATHS = [
-    BASE_DIR / 'locale',
-]
-
-
-
-# Default primary key field type
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+# Configuración de usuarios personalizados
 AUTH_USER_MODEL = 'users.User'
 
-# Logging configuration
-LOGGING = {
-    'version': 1,
-    'disable_existing_loggers': False,
-    'handlers': {
-        'file': {
-            'level': 'ERROR',
-            'class': 'logging.FileHandler',
-            'filename': 'django.log',
-        },
-        'console': {
-            'level': 'ERROR',
-            'class': 'logging.StreamHandler',
-        },
-    },
-    'loggers': {
-        'django': {
-            'handlers': ['file', 'console'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-        'rest_framework_simplejwt': {
-            'handlers': ['file', 'console'],
-            'level': 'ERROR',
-            'propagate': True,
-        },
-    },
-}
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STORAGES = {
+# Configuración de filtros
+AUTHENTICATION_BACKENDS = [
+    'django.contrib.auth.backends.ModelBackend',
+    'users.authentication.CookieJWTAuthentication',
+]
+
+# Configuración de depuración de plantillas
+TEMPLATES_DEBUG = DEBUG
+
+# Configuración de caché de plantillas
+TEMPLATES[0]['OPTIONS']['loaders'] = [
+    ('django.template.loaders.filesystem.Loader', 
+     'django.template.loaders.app_directories.Loader'),
+]
+
+# Configuración de almacenamiento de archivos
+DEFAULT_FILE_STORAGE = 'django.core.files.storage.FileSystemStorage'
+
+# Configuración de compresión de archivos
+COMPRESS_ENABLED = not DEBUG
+COMPRESS_CSS_FILTERS = ['r-cssmin.rCSSMin']
+COMPRESS_JS_FILTERS = ['rjsmin.rjsmin']
+
+# Configuración de caché de consultas
+CACHES = {
     'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-snowflake',
+    }
+}
+
+# Configuración de depuración de consultas
+if DEBUG:
+    LOGGING['handlers']['console']['formatter'] = 'simple'
+    LOGGING['loggers']['django.db.backends'] = {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+        'propagate': False,
+    }
+
+# Configuración de trabajo en segundo plano
+CELERY_BROKER_URL = 'redis://localhost:6379/0'
+CELERY_RESULT_BACKEND = 'redis://localhost:6379/0'
+CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TASK_SERIALIZER = 'json'
+CELERY_RESULT_SERIALIZER = 'json'
+CELERY_TIMEZONE = TIME_ZONE
+
+# Configuración de tareas programadas
+CELERY_BEAT_SCHEDULE = {
+    'cleanup-expired-tokens': {
+        'task': 'users.tasks.cleanup_expired_tokens',
+        'schedule': crontab(minute=0, hour='*/2'),
     },
 }
+
+# Configuración de seguridad de tokens
+PASSWORD_HASHERS = [
+    'django.contrib.auth.hashers.PBKDF2PasswordHasher',
+    'django.contrib.auth.hashers.PBKDF2SHA1PasswordHasher',
+    'django.contrib.auth.hashers.Argon2PasswordHasher',
+    'django.contrib.auth.hashers.BCryptSHA256PasswordHasher',
+]
+
+# Configuración de seguridad de contraseñas
+PASSWORD_RESET_TIMEOUT = 3600  # 1 hora
+PASSWORD_RESET_EMAIL_TIMEOUT = 3600  # 1 hora
+
+# Configuración de seguridad de sesión
+SESSION_COOKIE_SECURE = not DEBUG
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Configuración de seguridad de CSRF
+CSRF_COOKIE_SECURE = not DEBUG
+CSRF_COOKIE_HTTPONLY = True
+CSRF_COOKIE_SAMESITE = 'Lax'
+
+# Configuración de seguridad de X-Content-Type-Options
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Configuración de seguridad de X-Frame-Options
+X_FRAME_OPTIONS = 'DENY'
+
+# Configuración de seguridad de Referrer-Policy
+SECURE_REFERRER_POLICY = 'strict-origin-when-cross-origin'
+
+# Configuración de seguridad de Content-Security-Policy
+SECURE_CONTENT_TYPE_NOSNIFF = True
+
+# Configuración de seguridad de Strict-Transport-Security
+if not DEBUG:
+    SECURE_HSTS_SECONDS = 31536000  # 1 año
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+    SECURE_HSTS_PRELOAD = True
+
+# Configuración de depuración de plantillas
+TEMPLATES[0]['OPTIONS']['debug'] = DEBUG
+
+# Configuración de depuración de caché
+if DEBUG:
+    CACHES['default'] = {
+        'BACKEND': 'django.core.cache.backends.dummy.DummyCache',
+    }
+
+# Configuración de depuración de base de datos
+if DEBUG:
+    DATABASES['default']['ENGINE'] = 'django.db.backends.sqlite3'
+    DATABASES['default']['NAME'] = BASE_DIR / 'db.sqlite3'
+
+# Configuración de depuración de archivos estáticos
+if DEBUG:
+    STATIC_ROOT = None
+    MEDIA_ROOT = None

@@ -272,368 +272,215 @@ class ContactView(APIView):
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     throttle_classes = [UserRateThrottle]
-
+    
     def post(self, request):
         try:
             logger.info(f"Intento de registro desde IP: {request.META.get('REMOTE_ADDR')}")
-
+            
+            # Validar que el content type sea application/json
+            if request.content_type != 'application/json':
+                return Response({
+                    "error": "Content-Type debe ser application/json",
+                    "code": "invalid_content_type"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
             # Datos básicos
             email = request.data.get('email', '').strip().lower()
             username = request.data.get('username', '').strip()
             password = request.data.get('password', '')
-
+            
             # Validaciones básicas
             if not all([email, username, password]):
                 return Response({
                     "error": "Todos los campos son requeridos",
                     "code": "missing_fields"
                 }, status=status.HTTP_400_BAD_REQUEST)
-
-            if not re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email):
+            
+            # Validar formato de email
+            if not re.match(r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$', email):
                 return Response({
                     "error": "Formato de email inválido",
                     "code": "invalid_email"
                 }, status=status.HTTP_400_BAD_REQUEST)
-
+            
+            # Validar username
+            if not re.match(r'^[a-zA-Z0-9_]{3,20}$', username):
+                return Response({
+                    "error": "El nombre de usuario debe tener entre 3 y 20 caracteres y solo puede contener letras, números y guiones bajos",
+                    "code": "invalid_username"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Validar contraseña
             if len(password) < 8:
                 return Response({
                     "error": "La contraseña debe tener al menos 8 caracteres",
                     "code": "password_too_short"
                 }, status=status.HTTP_400_BAD_REQUEST)
-
+            
+            if not re.search(r'[A-Z]', password):
+                return Response({
+                    "error": "La contraseña debe contener al menos una letra mayúscula",
+                    "code": "password_missing_uppercase"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not re.search(r'[a-z]', password):
+                return Response({
+                    "error": "La contraseña debe contener al menos una letra minúscula",
+                    "code": "password_missing_lowercase"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            if not re.search(r'[0-9]', password):
+                return Response({
+                    "error": "La contraseña debe contener al menos un número",
+                    "code": "password_missing_number"
+                }, status=status.HTTP_400_BAD_REQUEST)
+            
+            # Verificar si el email ya existe
             if User.objects.filter(email=email).exists():
                 return Response({
                     "error": "Ya existe una cuenta con este email",
                     "code": "email_exists"
                 }, status=status.HTTP_400_BAD_REQUEST)
-
+            
+            # Verificar si el username ya existe
             if User.objects.filter(username=username).exists():
                 return Response({
                     "error": "El nombre de usuario ya está en uso",
                     "code": "username_exists"
                 }, status=status.HTTP_400_BAD_REQUEST)
-
+            
             # Crear usuario
             with transaction.atomic():
-                # Usar create directo y set_password para evitar recursión con create_user
-                user = User.objects.create(
-                    username=username,
-                    email=email,
-                    is_active=False,
-                    is_email_verified=False,
-                    has_financial_activation=False
-                )
-                user.set_password(password)
-                user.save()
-
-                # Generar tokens JWT
-                refresh = RefreshToken.for_user(user)
-                
-                # Generar token de verificación
-                token = account_activation_token.make_token(user)
-                uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-
-                # Crear link de verificación
-                verification_link = urljoin(
-                    settings.FRONTEND_URL,
-                    f"/verify-email/{uidb64}/{token}/"
-                )
-
-                # Construir mensaje de email
-                mail_subject = 'Activa tu cuenta en BoostMe'
-                message = render_to_string('users/acc_active_email.html', {
-                    'user': user,
-                    'verification_link': verification_link,
-                    'uidb64': uidb64,
-                    'token': token,
-                    'domain': settings.FRONTEND_URL,
-                    'protocol': 'https' if not settings.DEBUG else 'http',
-                })
-                plain_text = (
-                    f"Hola {user.username},\n\n"
-                    f"Gracias por registrarte en BoostMe. Confirma tu correo aquí: {verification_link}\n\n"
-                    "Si no creaste esta cuenta, puedes ignorar este mensaje."
-                )
-
-                email_sent, email_error = _send_html_mail(mail_subject, message, [email], text_content=plain_text)
-
-                if email_sent:
-                    logger.info(f"Email de verificación enviado a {email}")
-                else:
-                    logger.error(f"No se pudo enviar el email de verificación a {email}: {email_error}")
-
-                # Serializar el usuario completo
-                user_data = UserSerializer(user, context={'request': request}).data
-
-                # Devolver respuesta completa con usuario serializado
-                response_data = {
-                    "message": "Registro exitoso. Revisa tu email para verificar tu cuenta.",
-                    "user": user_data,
-                    "access": str(refresh.access_token),
-                    "refresh": str(refresh),
-                    "next_step": "verify_email"
-                }
-
-                response_data["verification_link"] = verification_link
-
-                if not email_sent:
-                    response_data["message"] = "Registro creado, pero no se pudo enviar el email de verificación. Contacta al soporte o intenta más tarde."
-                    response_data["warning"] = "email_not_sent"
-                    response_data["detail"] = email_error or 'No se pudo enviar el email'
-
-                resp = Response(response_data, status=status.HTTP_201_CREATED)
-                # Setear cookies para sesión segura
-                access_token = str(refresh.access_token)
-                refresh_token = str(refresh)
-                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
-                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
-
-                resp.set_cookie('access', access_token, httponly=True, secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG), samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'), max_age=access_max_age, path='/')
-                resp.set_cookie('refresh', refresh_token, httponly=True, secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG), samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'), max_age=refresh_max_age, path='/')
-
-                return resp
-
+                try:
+                    # Usar create_user para asegurar que se utilicen todos los métodos necesarios
+                    user = User.objects.create_user(
+                        username=username,
+                        email=email,
+                        password=password,
+                        is_active=False,
+                        is_email_verified=False,
+                        has_financial_activation=False
+                    )
+                    
+                    # Generar tokens JWT
+                    refresh = RefreshToken.for_user(user)
+                    access_token = refresh.access_token
+                    
+                    # Generar token de verificación
+                    token = account_activation_token.make_token(user)
+                    uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                    
+                    # Crear link de verificación
+                    # Asegurarse de que no haya barras dobles al final de la URL
+                    frontend_url = settings.FRONTEND_URL.rstrip('/')
+                    verification_link = urljoin(
+                        frontend_url,
+                        f"/verify-email/{uidb64}/{token}/"
+                    )
+                    
+                    # Construir mensaje de email
+                    mail_subject = 'Activa tu cuenta en BoostMe'
+                    
+                    # Verificar si existe el template de email
+                    try:
+                        message = render_to_string('users/acc_active_email.html', {
+                            'user': user,
+                            'verification_link': verification_link,
+                            'uidb64': uidb64,
+                            'token': token,
+                            'domain': frontend_url,
+                            'protocol': 'https' if not settings.DEBUG else 'http',
+                        })
+                    except Exception as template_error:
+                        logger.error(f"Error al renderizar el template de email: {template_error}")
+                        # Crear un mensaje simple si el template falla
+                        message = f"""
+                        <h2>Bienvenido a BoostMe, {user.username}!</h2>
+                        <p>Gracias por registrarte. Para activar tu cuenta, por favor haz clic en el siguiente enlace:</p>
+                        <p><a href="{verification_link}">Verificar mi cuenta</a></p>
+                        <p>Si no puedes hacer clic en el enlace, copia y pega la siguiente URL en tu navegador:</p>
+                        <p>{verification_link}</p>
+                        <p>Si no creaste esta cuenta, puedes ignorar este mensaje.</p>
+                        """
+                    
+                    plain_text = (
+                        f"Hola {user.username},\n\n"
+                        f"Gracias por registrarte en BoostMe. Confirma tu correo aquí: {verification_link}\n\n"
+                        "Si no creaste esta cuenta, puedes ignorar este mensaje."
+                    )
+                    
+                    # Intentar enviar el email
+                    email_sent, email_error = _send_html_mail(mail_subject, message, [email], text_content=plain_text)
+                    
+                    if email_sent:
+                        logger.info(f"Email de verificación enviado a {email}")
+                    else:
+                        logger.error(f"No se pudo enviar el email de verificación a {email}: {email_error}")
+                    
+                    # Serializar el usuario completo
+                    user_data = UserSerializer(user, context={'request': request}).data
+                    
+                    # Devolver respuesta completa con usuario serializado
+                    response_data = {
+                        "message": "Registro exitoso. Revisa tu email para verificar tu cuenta.",
+                        "user": user_data,
+                        "access": str(access_token),
+                        "refresh": str(refresh),
+                        "next_step": "verify_email"
+                    }
+                    
+                    response_data["verification_link"] = verification_link
+                    
+                    if not email_sent:
+                        response_data["message"] = "Registro creado, pero no se pudo enviar el email de verificación. Contacta al soporte o intenta más tarde."
+                        response_data["warning"] = "email_not_sent"
+                        response_data["detail"] = email_error or 'No se pudo enviar el email'
+                    
+                    # Crear respuesta y configurar cookies
+                    resp = Response(response_data, status=status.HTTP_201_CREATED)
+                    
+                    # Configurar cookies de JWT
+                    access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+                    refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+                    
+                    # Configurar cookies según el entorno
+                    secure_setting = settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG)
+                    samesite_setting = settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax')
+                    refresh_samesite_setting = settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax')
+                    refresh_secure_setting = settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG)
+                    
+                    # Configurar cookie de acceso
+                    resp.set_cookie(
+                        'access', 
+                        access_token, 
+                        httponly=True, 
+                        secure=secure_setting,
+                        samesite=samesite_setting,
+                        max_age=access_max_age,
+                        path='/'
+                    )
+                    
+                    # Configurar cookie de refresh
+                    resp.set_cookie(
+                        'refresh', 
+                        refresh_token, 
+                        httponly=True, 
+                        secure=refresh_secure_setting,
+                        samesite=refresh_samesite_setting,
+                        max_age=refresh_max_age,
+                        path='/'
+                    )
+                    
+                    return resp
+                    
+                except Exception as user_error:
+                    logger.error(f"Error al crear el usuario: {user_error}", exc_info=True)
+                    raise Exception(f"Error al crear la cuenta: {str(user_error)}")
+                    
         except Exception as e:
             logger.error(f"Error en el registro: {str(e)}", exc_info=True)
             return Response({
                 "error": "Error interno del servidor",
-                "detail": str(e) if settings.DEBUG else None
-            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class EmailVerificationView(APIView):
-    permission_classes = [AllowAny]
-
-    def get(self, request, uidb64, token):
-        try:
-            uid = force_str(urlsafe_base64_decode(uidb64))
-            user = User.objects.get(pk=uid)
-
-            if user.is_email_verified:
-                refresh = RefreshToken.for_user(user)
-                access_token = str(refresh.access_token)
-                refresh_token = str(refresh)
-                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
-                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
-
-                resp = Response({
-                    "message": "Correo ya verificado. Puedes proceder con tu depósito.",
-                    "user": UserSerializer(user, context={'request': request}).data,
-                    "next_step": "deposit"
-                }, status=200)
-
-                resp.set_cookie('access', access_token,
-                                httponly=True,
-                                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
-                                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
-                                max_age=access_max_age,
-                                path='/')
-                resp.set_cookie('refresh', refresh_token,
-                                httponly=True,
-                                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
-                                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
-                                max_age=refresh_max_age,
-                                path='/')
-
-                return resp
-
-            if account_activation_token.check_token(user, token):
-                user.is_email_verified = True
-                user.is_active = True
-                user.save(update_fields=['is_email_verified', 'is_active'])
-
-                refresh = RefreshToken.for_user(user)
-                access_token = str(refresh.access_token)
-                refresh_token = str(refresh)
-                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
-                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
-
-                resp = Response({
-                    "message": "Correo verificado correctamente. Ahora puedes realizar tu depósito.",
-                    "user": UserSerializer(user, context={'request': request}).data,
-                    "next_step": "deposit"
-                }, status=200)
-
-                resp.set_cookie('access', access_token,
-                                httponly=True,
-                                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
-                                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
-                                max_age=access_max_age,
-                                path='/')
-                resp.set_cookie('refresh', refresh_token,
-                                httponly=True,
-                                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
-                                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
-                                max_age=refresh_max_age,
-                                path='/')
-
-                return resp
-            else:
-                return Response({
-                    "error": "El enlace de verificación es inválido o ha expirado",
-                    "code": "invalid_token"
-                }, status=400)
-
-        except Exception as e:
-            return Response({
-                "error": "Error al verificar email",
-                "code": "verification_error",
-                "detail": str(e) if settings.DEBUG else None
-            }, status=400)
-
-class ResendVerificationView(APIView):
-    permission_classes = [AllowAny]
-
-    def post(self, request):
-        email = request.data.get('email')
-        
-        if not email:
-            return Response({
-                "error": "Email requerido"
-            }, status=status.HTTP_400_BAD_REQUEST)
-
-        try:
-            user = User.objects.get(email=email)
-            
-            if user.is_email_verified:
-                return Response({
-                    "message": "Este email ya está verificado"
-                }, status=status.HTTP_200_OK)
-
-            # Generar nuevo token
-            token = account_activation_token.make_token(user)
-            uid = urlsafe_base64_encode(force_bytes(user.pk))
-            
-            # Construir URL de verificación
-            verification_url = f"{settings.FRONTEND_URL}/verify-email/{uid}/{token}/"
-
-            # Enviar email
-            mail_subject = 'Activa tu cuenta'
-            message = render_to_string('users/acc_active_email.html', {
-                'user': user,
-                'verification_link': verification_url,
-            })
-            
-            email_msg = EmailMessage(
-                subject=mail_subject,
-                body=message,
-                from_email=settings.DEFAULT_FROM_EMAIL,
-                to=[email]
-            )
-            email_msg.content_subtype = "html"
-            Thread(target=lambda: email_msg.send()).start()
-
-            return Response({
-                "message": "Email de verificación reenviado"
-            }, status=status.HTTP_200_OK)
-
-        except User.DoesNotExist:
-            return Response({
-                "error": "No existe una cuenta con este email"
-            }, status=status.HTTP_404_NOT_FOUND)
-
-@method_decorator(csrf_exempt, name='dispatch')
-class LoginView(APIView):
-    permission_classes = [AllowAny]
-    throttle_classes = [UserRateThrottle]
-
-    def post(self, request):
-        try:
-            logger.info(f"Intento de login desde IP: {request.META.get('REMOTE_ADDR')}")
-
-            username = request.data.get("username", "").strip()
-            password = request.data.get("password", "")
-            remember_me = request.data.get("remember_me", False)
-
-            if not username or not password:
-                return Response({
-                    "error": "Usuario y contraseña son requeridos",
-                    "code": "missing_credentials"
-                }, status=status.HTTP_400_BAD_REQUEST)
-
-            # Intentar autenticar con username o email
-            user = None
-            user_obj = None
-
-            if '@' in username:
-                try:
-                    user_obj = User.objects.get(email=username.lower())
-                except User.DoesNotExist:
-                    user_obj = None
-            else:
-                user_obj = User.objects.filter(username=username).first()
-
-            if user_obj is not None:
-                if not getattr(user_obj, 'is_active', False) or not getattr(user_obj, 'is_email_verified', False):
-                    return Response({
-                        "error": "Debes verificar tu email antes de iniciar sesión",
-                        "code": "email_not_verified",
-                        "requires_verification": True,
-                        "email": user_obj.email
-                    }, status=status.HTTP_401_UNAUTHORIZED)
-
-                user = authenticate(username=user_obj.username, password=password)
-
-            if user is None:
-                logger.warning(f"Fallo de autenticación para: {username}")
-                return Response({
-                    "error": "Credenciales inválidas",
-                    "code": "invalid_credentials"
-                }, status=status.HTTP_401_UNAUTHORIZED)
-
-            # Generar tokens y actualizar último login
-            with transaction.atomic():
-                refresh = RefreshToken.for_user(user)
-                user.last_login = timezone.now()
-                user.save(update_fields=['last_login'])
-
-                if remember_me:
-                    refresh.set_exp(lifetime=timezone.timedelta(days=30))
-                else:
-                    refresh.set_exp(lifetime=timezone.timedelta(hours=24))
-
-                # Respuesta completa con UserSerializer
-                access_token = str(refresh.access_token)
-                refresh_token = str(refresh)
-
-                response_data = {
-                    "access": access_token,
-                    "refresh": refresh_token,
-                    "user": UserSerializer(user, context={'request': request}).data,
-                    "token_type": "Bearer"
-                }
-
-                logger.info(f"Login exitoso para usuario: {user.username}")
-                resp = Response(response_data, status=status.HTTP_200_OK)
-
-                # Setear cookies HttpOnly para access y refresh
-                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
-                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
-
-                resp.set_cookie(
-                    'access', access_token,
-                    httponly=True,
-                    secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
-                    samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
-                    max_age=access_max_age,
-                    path='/'
-                )
-                resp.set_cookie(
-                    'refresh', refresh_token,
-                    httponly=True,
-                    secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
-                    samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
-                    max_age=refresh_max_age,
-                    path='/'
-                )
-
-                return resp
-
-        except Exception as e:
-            logger.error(f"Error en el login: {str(e)}", exc_info=True)
-            return Response({
-                "error": "Error interno del servidor",
-                "code": "server_error",
                 "detail": str(e) if settings.DEBUG else None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
