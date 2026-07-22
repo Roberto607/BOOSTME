@@ -998,6 +998,71 @@ class WithdrawView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
+@method_decorator(csrf_exempt, name='dispatch')
+class EmailVerificationView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, uidb64, token):
+        try:
+            # Decodificar el uidb64
+            uid = force_str(urlsafe_base64_decode(uidb64))
+            user = User.objects.get(pk=uid)
+
+            # Verificar el token
+            if account_activation_token.check_token(user, token):
+                # Activar el usuario
+                user.is_active = True
+                user.is_email_verified = True
+                user.save()
+
+                # Generar tokens JWT
+                refresh = RefreshToken.for_user(user)
+                access_token = refresh.access_token
+
+                # Serializar el usuario
+                user_data = UserSerializer(user, context={'request': request}).data
+
+                response_data = {
+                    "message": "Email verificado exitosamente",
+                    "user": user_data,
+                    "access": str(access_token),
+                    "refresh": str(refresh)
+                }
+
+                # Configurar cookies
+                resp = Response(response_data, status=status.HTTP_200_OK)
+                access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+                refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+                resp.set_cookie(
+                    'access', access_token,
+                    httponly=True,
+                    secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+                    samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+                    max_age=access_max_age,
+                    path='/'
+                )
+                resp.set_cookie(
+                    'refresh', refresh,
+                    httponly=True,
+                    secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
+                    samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
+                    max_age=refresh_max_age,
+                    path='/'
+                )
+
+                return resp
+            else:
+                return Response({
+                    "error": "Token de verificación inválido o expirado"
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        except Exception as e:
+            logger.error(f"Error en EmailVerificationView: {str(e)}", exc_info=True)
+            return Response({
+                "error": "Error al verificar el email"
+            }, status=status.HTTP_400_BAD_REQUEST)
+
 class ProfileView(APIView):
     permission_classes = [IsAuthenticated]
 
