@@ -8,7 +8,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Cargar variables de entorno directamente
 SECRET_KEY = os.environ.get('SECRET_KEY', 'tu_clave_secreta_aqui')
 DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',') + ['boostme-alpd.onrender.com']
 
 # Configuración de aplicaciones
 INSTALLED_APPS = [

@@ -1123,12 +1123,8 @@ class ResendVerificationView(APIView):
                     """
 
                 plain_text = (
-                    f"Hola {user.username},
-
-"
-                    f"Gracias por registrarte en BoostMe. Confirma tu correo aquí: {verification_link}
-
-"
+                    f"Hola {user.username},\n\n"
+                    f"Gracias por registrarte en BoostMe. Confirma tu correo aquí: {verification_link}\n\n"
                     "Si no creaste esta cuenta, puedes ignorar este mensaje."
                 )
 
