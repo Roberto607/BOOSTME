@@ -11,9 +11,9 @@ environ.Env.read_env(os.path.join(os.path.dirname(__file__), '.env'))
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Configuración de seguridad
-SECRET_KEY = env('SECRET_KEY')
-DEBUG = False  # Cambiar a False en producción
-ALLOWED_HOSTS = ['*']  # En producción, especifica los dominios permitidos
+SECRET_KEY = os.environ.get('SECRET_KEY', 'tu_clave_secreta_aqui')
+DEBUG = os.environ.get('DEBUG', 'False').lower() == 'true'
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '*').split(',')
 
 # Configuración de aplicaciones
 INSTALLED_APPS = [
