@@ -49,8 +49,6 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
             ],
-            # Eliminamos los loaders para evitar el conflicto con app_dirs
-            'loaders': [],
         },
     },
 ]
