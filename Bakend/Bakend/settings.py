@@ -14,12 +14,8 @@ from pathlib import Path
 
 import dj_database_url
 
-try:
-    from django_crontab import crontab
-    CRONTAB_AVAILABLE = True
-except ImportError:
-    CRONTAB_AVAILABLE = False
-    crontab = None
+# django-crontab está disponible solo si está instalado
+CRONTAB_AVAILABLE = False
 
 try:
     from dotenv import load_dotenv
@@ -422,20 +418,14 @@ CELERY_RESULT_SERIALIZER = 'json'
 CELERY_TIMEZONE = TIME_ZONE
 
 # Configuración de tareas programadas
-if CRONTAB_AVAILABLE:
-    CELERY_BEAT_SCHEDULE = {
-        'cleanup-expired-tokens': {
-            'task': 'users.tasks.cleanup_expired_tokens',
-            'schedule': crontab(minute=0, hour='*/2'),
-        },
-    }
-else:
-    CELERY_BEAT_SCHEDULE = {
-        'cleanup-expired-tokens': {
-            'task': 'users.tasks.cleanup_expired_tokens',
-            'schedule': 7200,  # 2 horas en segundos
-        },
-    }
+# Configuración de tareas programadas
+# Usamos intervalo en segundos en lugar de crontab para evitar errores de importación
+CELERY_BEAT_SCHEDULE = {
+    'cleanup-expired-tokens': {
+        'task': 'users.tasks.cleanup_expired_tokens',
+        'schedule': 7200,  # 2 horas en segundos
+    },
+}
 
 # Configuración de seguridad de tokens
 PASSWORD_HASHERS = [
