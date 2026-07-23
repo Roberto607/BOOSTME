@@ -1,5 +1,5 @@
 // src/services/adRewardsService.js
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+import { API_BASE_URL } from '../Base';
 
 export const adRewardsService = {
     registrarRecompensa: async (rewardData) => {

@@ -2,9 +2,11 @@
 
 const rawApiBaseUrl = import.meta.env.VITE_API_URL?.trim();
 
+const fallbackApiBaseUrl = "https://boostme-alpd.onrender.com/api";
+
 export const API_BASE_URL = rawApiBaseUrl
   ? `${rawApiBaseUrl.replace(/\/$/, "")}/api`
-  : "https://boostme-alpd.onrender.com/api";
+  : fallbackApiBaseUrl;
 
 export const TASKS_API_BASE_URL = "/api/tasks";
 export const REFERRALS_API_BASE_URL = "/api/referrals";
