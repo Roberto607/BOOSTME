@@ -11,6 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
 from pathlib import Path
+from urllib.parse import urlparse
 
 import dj_database_url
 
@@ -19,6 +20,47 @@ try:
 except ModuleNotFoundError:
     def load_dotenv(*_args, **_kwargs):
         return False
+
+
+def build_cors_allowed_origins(frontend_url=None, raw_value=None, is_render=False):
+    """Build CORS origins for local development and Render deployments."""
+    origins = []
+    seen = set()
+
+    def add(origin):
+        if not origin:
+            return
+        normalized = origin.strip()
+        if normalized and normalized not in seen:
+            seen.add(normalized)
+            origins.append(normalized)
+
+    if raw_value:
+        for origin in raw_value.split(','):
+            add(origin)
+
+    if frontend_url:
+        add(frontend_url)
+        parsed = urlparse(frontend_url)
+        if parsed.scheme and parsed.netloc:
+            add(f"{parsed.scheme}://{parsed.netloc}")
+            host = parsed.netloc.split(':', 1)[0]
+            if host.endswith('.onrender.com'):
+                add(f"https://{host}")
+                add(f"https://www.{host}")
+            add('https://*.onrender.com')
+        render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+        if render_hostname:
+            add(f"https://{render_hostname}")
+            add(f"https://www.{render_hostname}")
+            add(f"https://*.{render_hostname}")
+
+    add('http://localhost:5173')
+    add('http://127.0.0.1:5173')
+    add('http://localhost:3000')
+    add('http://127.0.0.1:3000')
+
+    return origins
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -80,7 +122,20 @@ BACKEND_URL = default_backend_url
 if FRONTEND_URL:
     default_csrf_origins = ",".join([origin for origin in [default_csrf_origins, FRONTEND_URL] if origin])
 
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in default_csrf_origins.split(',') if origin.strip()]
+csfr_origins = []
+for origin in default_csrf_origins.split(','):
+    origin = origin.strip()
+    if origin:
+        csfr_origins.append(origin)
+
+if FRONTEND_URL:
+    parsed_frontend = urlparse(FRONTEND_URL)
+    if parsed_frontend.netloc:
+        host = parsed_frontend.netloc.split(':', 1)[0]
+        if host.endswith('.onrender.com'):
+            csfr_origins.extend([f"https://{host}", f"https://www.{host}"])
+
+CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csfr_origins if origin.strip()]
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [
@@ -158,9 +213,11 @@ SIMPLE_JWT = {
 
 
 cors_default = 'http://localhost:5173,http://127.0.0.1:5173' if DEBUG else FRONTEND_URL
-CORS_ALLOWED_ORIGINS = [
-    origin.strip() for origin in os.getenv('CORS_ALLOWED_ORIGINS', cors_default or '').split(',') if origin.strip()
-]
+CORS_ALLOWED_ORIGINS = build_cors_allowed_origins(
+    frontend_url=FRONTEND_URL,
+    raw_value=os.getenv('CORS_ALLOWED_ORIGINS', cors_default or ''),
+    is_render=IS_RENDER,
+)
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = False  # Más seguro que CORS_ALLOWED_ORIGINS

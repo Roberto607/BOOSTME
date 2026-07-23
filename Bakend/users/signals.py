@@ -10,20 +10,26 @@ User = get_user_model()
 @receiver(post_save, sender=User)
 def create_user_plan(sender, instance, created, **kwargs):
     """Crea un plan Free automáticamente cuando un usuario se registra."""
-    if created:
+    if not created:
+        return
+
+    try:
         plan = UserPlan.objects.create(
             user=instance,
             plan_name='Free',
             is_active=True
         )
-        # Establecer periodo de prueba de 30 días para usuarios Free
-        try:
-            expiry = timezone.now() + timedelta(days=30)
-            plan.user.plan_expiry_date = expiry
-            plan.user.save(update_fields=['plan_expiry_date'])
-        except Exception:
-            # No fallar el registro por un problema menor en la fecha
-            pass
+    except Exception:
+        return
+
+    # Establecer periodo de prueba de 30 días para usuarios Free
+    try:
+        expiry = timezone.now() + timedelta(days=30)
+        instance.plan_expiry_date = expiry
+        instance.save(update_fields=['plan_expiry_date'])
+    except Exception:
+        # No fallar el registro por un problema menor en la fecha
+        pass
 
 @receiver(post_save, sender=UserPlan)
 def activate_user_plan(sender, instance, created, **kwargs):
@@ -36,4 +42,7 @@ def activate_user_plan(sender, instance, created, **kwargs):
     # Sólo ejecutar la activación automáticamente cuando el UserPlan
     # se crea inicialmente y viene marcado como activo.
     if created and instance.is_active:
-        instance.activate_plan()
+        try:
+            instance.activate_plan()
+        except Exception:
+            return
