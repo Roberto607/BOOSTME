@@ -23,7 +23,6 @@ class UserSerializer(serializers.ModelSerializer):
     total_boost = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
-    survey_monkey_connected = serializers.SerializerMethodField()
     join_date = serializers.DateTimeField(format='%Y-%m-%d', read_only=True)
 
     class Meta:

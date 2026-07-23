@@ -47,3 +47,26 @@ class RegisterVerificationLinkTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn('verification_link', response.data)
         self.assertTrue(response.data['verification_link'].startswith('http'))
+
+
+class LoginViewTests(TestCase):
+    def test_login_returns_access_and_refresh_tokens_for_verified_user(self):
+        User = get_user_model()
+        user = User.objects.create_user(
+            username='loginuser',
+            email='loginuser@example.com',
+            password='Password123!',
+            is_active=True,
+            is_email_verified=True,
+        )
+
+        client = APIClient()
+        response = client.post('/api/users/login/', {
+            'username': 'loginuser',
+            'password': 'Password123!',
+        }, format='json')
+
+        self.assertEqual(response.status_code, 200)
+        self.assertIn('access', response.data)
+        self.assertIn('refresh', response.data)
+        self.assertEqual(response.data['user']['email'], user.email)

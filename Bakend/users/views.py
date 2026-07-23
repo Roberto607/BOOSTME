@@ -227,7 +227,8 @@ class RegisterView(APIView):
                     
                     # Generar tokens JWT
                     refresh = RefreshToken.for_user(user)
-                    access_token = refresh.access_token
+                    access_token = str(refresh.access_token)
+                    refresh_token = str(refresh)
                     
                     # Generar token de verificación
                     token = account_activation_token.make_token(user)
@@ -345,6 +346,77 @@ class RegisterView(APIView):
             return Response({
                 "error": "Error interno del servidor",
                 "detail": str(e) if settings.DEBUG else None
+            }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+@method_decorator(csrf_exempt, name='dispatch')
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        try:
+            username = (request.data.get('username') or '').strip()
+            password = request.data.get('password') or ''
+
+            if not username or not password:
+                return Response({
+                    'error': 'Usuario y contraseña son requeridos',
+                    'code': 'missing_credentials'
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+            user = authenticate(username=username, password=password)
+            if not user:
+                return Response({
+                    'error': 'Credenciales inválidas',
+                    'code': 'invalid_credentials'
+                }, status=status.HTTP_401_UNAUTHORIZED)
+
+            if not user.is_email_verified:
+                return Response({
+                    'error': 'Debes verificar tu email antes de iniciar sesión',
+                    'code': 'email_not_verified'
+                }, status=status.HTTP_403_FORBIDDEN)
+
+            refresh = RefreshToken.for_user(user)
+            access_token = str(refresh.access_token)
+            refresh_token = str(refresh)
+
+            user_data = UserSerializer(user, context={'request': request}).data
+            response_payload = {
+                'access': access_token,
+                'refresh': refresh_token,
+                'token_type': 'Bearer',
+                'expires_in': int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds()),
+                'user': user_data,
+            }
+
+            resp = Response(response_payload, status=status.HTTP_200_OK)
+            access_max_age = int(settings.SIMPLE_JWT['ACCESS_TOKEN_LIFETIME'].total_seconds())
+            refresh_max_age = int(settings.SIMPLE_JWT['REFRESH_TOKEN_LIFETIME'].total_seconds())
+
+            resp.set_cookie(
+                'access', access_token,
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', not settings.DEBUG),
+                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_SAMESITE', 'Lax'),
+                max_age=access_max_age,
+                path='/'
+            )
+            resp.set_cookie(
+                'refresh', refresh_token,
+                httponly=True,
+                secure=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', not settings.DEBUG),
+                samesite=settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SAMESITE', 'Lax'),
+                max_age=refresh_max_age,
+                path='/'
+            )
+
+            return resp
+        except Exception as exc:
+            logger.error('Error en LoginView: %s', exc, exc_info=True)
+            return Response({
+                'error': 'Error al iniciar sesión',
+                'code': 'login_error',
+                'detail': str(exc) if settings.DEBUG else None
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @method_decorator(csrf_exempt, name='dispatch')
