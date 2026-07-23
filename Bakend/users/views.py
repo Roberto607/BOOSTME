@@ -273,13 +273,19 @@ class RegisterView(APIView):
                         "Si no creaste esta cuenta, puedes ignorar este mensaje."
                     )
                     
-                    # Intentar enviar el email
-                    email_sent, email_error = _send_html_mail(mail_subject, message, [email], text_content=plain_text)
-                    
+                    # Intentar enviar el email, pero no bloquear el registro si falla SMTP
+                    email_sent = False
+                    email_error = None
+                    try:
+                        email_sent, email_error = _send_html_mail(mail_subject, message, [email], text_content=plain_text)
+                    except Exception as mail_exc:
+                        email_sent = False
+                        email_error = str(mail_exc)
+
                     if email_sent:
                         logger.info(f"Email de verificación enviado a {email}")
                     else:
-                        logger.error(f"No se pudo enviar el email de verificación a {email}: {email_error}")
+                        logger.warning(f"No se pudo enviar el email de verificación a {email}: {email_error}")
                     
                     # Serializar el usuario completo
                     user_data = UserSerializer(user, context={'request': request}).data
@@ -296,7 +302,7 @@ class RegisterView(APIView):
                     response_data["verification_link"] = verification_link
                     
                     if not email_sent:
-                        response_data["message"] = "Registro creado, pero no se pudo enviar el email de verificación. Contacta al soporte o intenta más tarde."
+                        response_data["message"] = "Registro creado, pero no se pudo enviar el email de verificación. Puedes continuar y reintentar más tarde."
                         response_data["warning"] = "email_not_sent"
                         response_data["detail"] = email_error or 'No se pudo enviar el email'
                     
