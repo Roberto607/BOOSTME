@@ -65,6 +65,20 @@ class RegistrationFailureHandlingTests(TestCase):
 
 class RegisterVerificationLinkTests(TestCase):
     @override_settings(DEBUG=False, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
+    def test_register_returns_201_when_serializer_fails(self):
+        client = APIClient()
+
+        with patch('users.views.UserSerializer') as serializer_cls:
+            serializer_cls.side_effect = Exception('serializer-failed')
+            response = client.post('/api/users/register/', {
+                'username': 'serializerfailuser',
+                'email': 'serializerfailuser@example.com',
+                'password': 'Password123!',
+            }, format='json')
+
+        self.assertEqual(response.status_code, 201)
+
+    @override_settings(DEBUG=False, EMAIL_BACKEND='django.core.mail.backends.locmem.EmailBackend')
     def test_register_returns_verification_link_as_fallback(self):
         client = APIClient()
 

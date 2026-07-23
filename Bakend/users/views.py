@@ -7,7 +7,7 @@ from django.contrib.auth import authenticate, get_user_model
 from django.utils import timezone
 from django.conf import settings
 from django.shortcuts import redirect
-from django.core.mail import EmailMultiAlternatives, EmailMessage
+from django.core.mail import EmailMultiAlternatives, EmailMessage, send_mail
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes, force_str
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
@@ -93,6 +93,23 @@ def _attach_jwt_cookies(resp, access_token, refresh_token, access_max_age, refre
         path='/'
     )
     return resp
+
+
+def _resolve_frontend_base_url(request):
+    configured = (getattr(settings, 'FRONTEND_URL', '') or '').strip()
+    if configured:
+        return configured.rstrip('/')
+
+    origin = (request.headers.get('Origin') or '').strip()
+    if origin:
+        return origin.rstrip('/')
+
+    forwarded_proto = request.headers.get('X-Forwarded-Proto', request.scheme)
+    forwarded_host = request.headers.get('X-Forwarded-Host', request.get_host())
+    if forwarded_host:
+        return f"{forwarded_proto}://{forwarded_host}".rstrip('/')
+
+    return 'http://localhost:5173'
 
 @method_decorator(csrf_exempt, name='dispatch')
 class ContactView(APIView):
@@ -213,6 +230,7 @@ class RegisterView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
             
             # Crear usuario
+            user = None
             with transaction.atomic():
                 try:
                     # Usar create_user para asegurar que se utilicen todos los métodos necesarios
@@ -235,8 +253,7 @@ class RegisterView(APIView):
                     uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
                     
                     # Crear link de verificación
-                    # Asegurarse de que no haya barras dobles al final de la URL
-                    frontend_url = settings.FRONTEND_URL.rstrip('/')
+                    frontend_url = _resolve_frontend_base_url(request)
                     verification_link = urljoin(
                         frontend_url,
                         f"/verify-email/{uidb64}/{token}/"
@@ -288,7 +305,18 @@ class RegisterView(APIView):
                         logger.warning(f"No se pudo enviar el email de verificación a {email}: {email_error}")
                     
                     # Serializar el usuario completo
-                    user_data = UserSerializer(user, context={'request': request}).data
+                    try:
+                        user_data = UserSerializer(user, context={'request': request}).data
+                    except Exception as serializer_error:
+                        logger.warning("No se pudo serializar el usuario tras el registro: %s", serializer_error)
+                        user_data = {
+                            "id": user.id,
+                            "username": user.username,
+                            "email": user.email,
+                            "is_email_verified": user.is_email_verified,
+                            "has_financial_activation": user.has_financial_activation,
+                            "is_active": user.is_active,
+                        }
                     
                     # Devolver respuesta completa con usuario serializado
                     response_data = {
@@ -349,6 +377,13 @@ class RegisterView(APIView):
                     
         except Exception as e:
             logger.error(f"Error en el registro: {str(e)}", exc_info=True)
+            if user is not None:
+                return Response({
+                    "message": "Registro creado, pero el proceso finalizó con una advertencia. Revisa tu correo o intenta más tarde.",
+                    "warning": "registration_completed_with_warning",
+                    "detail": str(e) if settings.DEBUG else None
+                }, status=status.HTTP_201_CREATED)
+
             return Response({
                 "error": "Error interno del servidor",
                 "detail": str(e) if settings.DEBUG else None
