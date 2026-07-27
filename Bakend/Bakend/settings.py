@@ -10,6 +10,7 @@ For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 import os
+import re
 from pathlib import Path
 from urllib.parse import urlparse
 
@@ -48,12 +49,10 @@ def build_cors_allowed_origins(frontend_url=None, raw_value=None, is_render=Fals
             if host.endswith('.onrender.com'):
                 add(f"https://{host}")
                 add(f"https://www.{host}")
-            add('https://*.onrender.com')
         render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
         if render_hostname:
             add(f"https://{render_hostname}")
             add(f"https://www.{render_hostname}")
-            add(f"https://*.{render_hostname}")
 
     add('http://localhost:5173')
     add('http://127.0.0.1:5173')
@@ -61,6 +60,36 @@ def build_cors_allowed_origins(frontend_url=None, raw_value=None, is_render=Fals
     add('http://127.0.0.1:3000')
 
     return origins
+
+
+def build_cors_allowed_origin_regexes(frontend_url=None, raw_value=None, is_render=False):
+    """Build safe CORS origin regexes for Render and local development."""
+    regexes = []
+    seen = set()
+
+    def add(pattern):
+        if not pattern:
+            return
+        if pattern not in seen:
+            seen.add(pattern)
+            regexes.append(pattern)
+
+    if frontend_url:
+        parsed = urlparse(frontend_url)
+        if parsed.netloc:
+            host = parsed.netloc.split(':', 1)[0]
+            if host.endswith('.onrender.com'):
+                add(rf"^https://([a-z0-9-]+\.)?{re.escape(host)}$")
+                add(rf"^https://([a-z0-9-]+\.)?www\.{re.escape(host)}$")
+
+    render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
+    if render_hostname:
+        add(rf"^https://([a-z0-9-]+\.)?{re.escape(render_hostname)}$")
+
+    add(r'^http://localhost(:\d+)?$')
+    add(r'^http://127\.0\.0\.1(:\d+)?$')
+
+    return regexes
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
@@ -214,6 +243,11 @@ SIMPLE_JWT = {
 
 cors_default = 'http://localhost:5173,http://127.0.0.1:5173' if DEBUG else FRONTEND_URL
 CORS_ALLOWED_ORIGINS = build_cors_allowed_origins(
+    frontend_url=FRONTEND_URL,
+    raw_value=os.getenv('CORS_ALLOWED_ORIGINS', cors_default or ''),
+    is_render=IS_RENDER,
+)
+CORS_ALLOWED_ORIGIN_REGEXES = build_cors_allowed_origin_regexes(
     frontend_url=FRONTEND_URL,
     raw_value=os.getenv('CORS_ALLOWED_ORIGINS', cors_default or ''),
     is_render=IS_RENDER,

@@ -2,11 +2,15 @@
 
 const normalizeBaseUrl = (value) => value?.trim().replace(/\/$/, "");
 
+const explicitApiBaseUrl = normalizeBaseUrl(
+  import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL
+);
+
 const defaultApiBaseUrl = import.meta.env.PROD
-  ? "https://boostme-alpd.onrender.com"
+  ? (explicitApiBaseUrl || "https://boostme-alpd.onrender.com")
   : "http://localhost:8000";
 
-const resolvedApiBaseUrl = normalizeBaseUrl(import.meta.env.VITE_API_URL) || defaultApiBaseUrl;
+const resolvedApiBaseUrl = explicitApiBaseUrl || defaultApiBaseUrl;
 
 export const API_BASE_URL = `${resolvedApiBaseUrl}/api/users`;
 export const TASKS_API_BASE_URL = `${resolvedApiBaseUrl}/api/tasks`;

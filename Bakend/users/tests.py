@@ -35,7 +35,7 @@ class ProfilePhotoTests(TestCase):
 
 
 class RenderOriginSettingsTests(TestCase):
-    def test_build_cors_allowed_origins_adds_render_pattern_when_missing(self):
+    def test_build_cors_allowed_origins_adds_render_hostnames_when_missing(self):
         origins = backend_settings.build_cors_allowed_origins(
             frontend_url='https://frontend.onrender.com',
             raw_value='',
@@ -43,7 +43,17 @@ class RenderOriginSettingsTests(TestCase):
         )
 
         self.assertIn('https://frontend.onrender.com', origins)
-        self.assertIn('https://*.onrender.com', origins)
+        self.assertIn('https://www.frontend.onrender.com', origins)
+        self.assertNotIn('https://*.onrender.com', origins)
+
+    def test_build_cors_allowed_origin_regexes_supports_render_hosts(self):
+        regexes = backend_settings.build_cors_allowed_origin_regexes(
+            frontend_url='https://frontend.onrender.com',
+            raw_value='',
+            is_render=True,
+        )
+
+        self.assertTrue(any('frontend\.onrender\.com' in regex for regex in regexes))
 
 
 class RegistrationFailureHandlingTests(TestCase):
