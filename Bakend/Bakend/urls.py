@@ -31,12 +31,12 @@ urlpatterns = [
     path('api/plans/', include('plan.urls')),
 ]
 
-if settings.DEBUG:
-    urlpatterns += [re_path(r'^.*$', home)]
-else:
-    urlpatterns += [re_path(r'^.*$', home)]
+#if settings.DEBUG:
+ #   urlpatterns += [re_path(r'^.*$', home)]
+#else:
+ #   urlpatterns += [re_path(r'^.*$', home)]
 
-handler404 = custom_not_found
+#handler404 = custom_not_found
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
