@@ -22,86 +22,6 @@ except ModuleNotFoundError:
     def load_dotenv(*_args, **_kwargs):
         return False
 
-
-def build_cors_allowed_origins(frontend_url=None, raw_value=None, is_render=False):
-    """Build CORS origins for local development and Render deployments."""
-    origins = []
-    seen = set()
-
-    def add(origin):
-        if not origin:
-            return
-        normalized = origin.strip()
-        if normalized and normalized not in seen:
-            seen.add(normalized)
-            origins.append(normalized)
-
-    if raw_value:
-        for origin in raw_value.split(','):
-            add(origin)
-
-    if frontend_url:
-        add(frontend_url)
-        parsed = urlparse(frontend_url)
-        if parsed.scheme and parsed.netloc:
-            add(f"{parsed.scheme}://{parsed.netloc}")
-            host = parsed.netloc.split(':', 1)[0]
-            if host.endswith('.onrender.com'):
-                add(f"https://{host}")
-                add(f"https://www.{host}")
-        render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
-        if render_hostname:
-            add(f"https://{render_hostname}")
-            add(f"https://www.{render_hostname}")
-
-    add('http://localhost:5173')
-    add('http://127.0.0.1:5173')
-    add('http://localhost:3000')
-    add('http://127.0.0.1:3000')
-
-    return origins
-
-
-def build_cors_allowed_origin_regexes(frontend_url=None, raw_value=None, is_render=False):
-    """Build safe CORS origin regexes for Render and local development."""
-    regexes = []
-    seen = set()
-
-    def add(pattern):
-        if not pattern:
-            return
-        if pattern not in seen:
-            seen.add(pattern)
-            regexes.append(pattern)
-
-    if frontend_url:
-        parsed = urlparse(frontend_url)
-        if parsed.netloc:
-            host = parsed.netloc.split(':', 1)[0]
-            if host.endswith('.onrender.com'):
-                add(rf"^https://([a-z0-9-]+\.)?{re.escape(host)}$")
-                add(rf"^https://([a-z0-9-]+\.)?www\.{re.escape(host)}$")
-
-    render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
-    if render_hostname:
-        add(rf"^https://([a-z0-9-]+\.)?{re.escape(render_hostname)}$")
-
-    add(r'^http://localhost(:\d+)?$')
-    add(r'^http://127\.0\.0\.1(:\d+)?$')
-
-    return regexes
-
-# Static files (CSS, JavaScript, Images)
-# https://docs.djangoproject.com/en/5.2/howto/static-files/
-
-
-
-
-# Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Quick-start development settings - unsuitable for production
-# See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 # Detectar si estamos en Docker
 IS_DOCKER = os.path.exists('/.dockerenv')
 IS_RENDER = bool(os.getenv('RENDER')) or bool(os.getenv('RENDER_EXTERNAL_HOSTNAME')) or bool(os.getenv('DYNO'))
@@ -113,148 +33,30 @@ if not IS_RENDER:
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-g1ytl#g@05!1(j7n8u(@i^lx^ez$!)133308&j*xd1_90p1gol')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False' if IS_RENDER else 'True').strip().lower() in ('1', 'true', 'yes', 'on')
+DEBUG = False
 
-DEFAULT_ALLOWED_HOSTS = 'localhost,127.0.0.1,0.0.0.0,testserver,backend,backend:8000'
-allowed_hosts = [
-    host.strip() for host in os.getenv('ALLOWED_HOSTS', DEFAULT_ALLOWED_HOSTS).split(',') if host.strip()
+# Configuración de ALLOWED_HOSTS
+ALLOWED_HOSTS = [
+    '172.86.114.124',  # IP de tu VPS
+    'localhost',
+    '127.0.0.1',
+    'backend',  # Nombre del servicio en docker-compose
 ]
 
-render_hostname = os.getenv('RENDER_EXTERNAL_HOSTNAME')
-if render_hostname:
-    allowed_hosts.append(render_hostname)
-    allowed_hosts.append(f'www.{render_hostname}')
-
-ALLOWED_HOSTS = allowed_hosts
-
-if DEBUG:
-    default_frontend_url = os.getenv('FRONTEND_URL', 'http://localhost:5173')
-    default_backend_url = os.getenv('BACKEND_URL', 'http://localhost:8000')
-    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-else:
-    # Para producción
-    default_frontend_url = os.getenv('FRONTEND_URL', '')
-    default_backend_url = os.getenv('BACKEND_URL', '')
-    default_csrf_origins = os.getenv('CSRF_TRUSTED_ORIGINS', '')
-
-if render_hostname:
-    if not default_frontend_url:
-        default_frontend_url = f"https://{render_hostname}"
-    if not default_backend_url:
-        default_backend_url = f"https://{render_hostname}"
-    render_origins = f"https://{render_hostname},https://www.{render_hostname}"
-    default_csrf_origins = ",".join([origin for origin in [default_csrf_origins, render_origins] if origin])
-
-FRONTEND_URL = default_frontend_url
-BACKEND_URL = default_backend_url
-
-if FRONTEND_URL:
-    default_csrf_origins = ",".join([origin for origin in [default_csrf_origins, FRONTEND_URL] if origin])
-
-csfr_origins = []
-for origin in default_csrf_origins.split(','):
-    origin = origin.strip()
-    if origin:
-        csfr_origins.append(origin)
-
-if FRONTEND_URL:
-    parsed_frontend = urlparse(FRONTEND_URL)
-    if parsed_frontend.netloc:
-        host = parsed_frontend.netloc.split(':', 1)[0]
-        if host.endswith('.onrender.com'):
-            csfr_origins.extend([f"https://{host}", f"https://www.{host}"])
-
-CSRF_TRUSTED_ORIGINS = [origin.strip() for origin in csfr_origins if origin.strip()]
-
-REST_FRAMEWORK = {
-    'DEFAULT_AUTHENTICATION_CLASSES': [
-        'users.authentication.CookieJWTAuthentication',
-    ],
-    'DEFAULT_RENDERER_CLASSES': [
-        'rest_framework.renderers.JSONRenderer',
-    ],
-    'DEFAULT_PERMISSION_CLASSES': [
-        'rest_framework.permissions.IsAuthenticated',
-    ],
-    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 20
-}
-
-import logging
-import warnings
-
-logging.basicConfig(
-    level=logging.ERROR,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-
-warnings.filterwarnings(
-    'ignore',
-    message='.*first seen with mtime.*',
-    category=RuntimeWarning,
-    module='rest_framework_simplejwt'
-)
-
-warnings.filterwarnings(
-    'ignore',
-    message=r'File .*django\.mo first seen with mtime.*',
-    category=RuntimeWarning
-)
-
-from datetime import timedelta
-
-# Para desarrollo local con proxy Vite y frontend en localhost,
-# usamos cookies de sesión same-site seguras en HTTP.
-# En producción, usamos SameSite=None y Secure=True para permitir envíos cross-site.
-if DEBUG:
-    auth_cookie_samesite = 'Lax'
-    auth_cookie_secure = False
-    refresh_cookie_samesite = 'Lax'
-    refresh_cookie_secure = False
-else:
-    auth_cookie_samesite = 'None'
-    auth_cookie_secure = True
-    refresh_cookie_samesite = 'None'
-    refresh_cookie_secure = True
-
-SIMPLE_JWT = {
-    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
-    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
-    'ROTATE_REFRESH_TOKENS': True,
-    'BLACKLIST_AFTER_ROTATION': True,
-    'UPDATE_LAST_LOGIN': True,
-    'ALGORITHM': 'HS256',
-    'SIGNING_KEY': SECRET_KEY,
-    'VERIFYING_KEY': None,
-    'AUTH_HEADER_TYPES': ('Bearer',),
-    'AUTH_COOKIE': 'access',  # Nombre de la cookie de acceso JWT
-    'REFRESH_COOKIE': 'refresh',  # Nombre de la cookie de refresh JWT
-    'AUTH_COOKIE_DOMAIN': None,  # Especifica el dominio si es necesario
-    'AUTH_COOKIE_SECURE': auth_cookie_secure,
-    'AUTH_COOKIE_HTTP_ONLY': True,  # No accesible desde JavaScript
-    'AUTH_COOKIE_PATH': '/',
-    'AUTH_COOKIE_SAMESITE': auth_cookie_samesite,
-    'AUTH_COOKIE_REFRESH_TOKEN_PATH': '/',
-    'AUTH_COOKIE_REFRESH_TOKEN_SECURE': refresh_cookie_secure,
-    'AUTH_COOKIE_REFRESH_TOKEN_HTTP_ONLY': True,
-    'AUTH_COOKIE_REFRESH_TOKEN_SAMESITE': refresh_cookie_samesite,
-}
-
-
-cors_default = 'http://localhost:5173,http://127.0.0.1:5173' if DEBUG else FRONTEND_URL
-CORS_ALLOWED_ORIGINS = build_cors_allowed_origins(
-    frontend_url=FRONTEND_URL,
-    raw_value=os.getenv('CORS_ALLOWED_ORIGINS', cors_default or ''),
-    is_render=IS_RENDER,
-)
-CORS_ALLOWED_ORIGIN_REGEXES = build_cors_allowed_origin_regexes(
-    frontend_url=FRONTEND_URL,
-    raw_value=os.getenv('CORS_ALLOWED_ORIGINS', cors_default or ''),
-    is_render=IS_RENDER,
-)
-
+# Configuración de CORS
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://172.86.114.124')
+CORS_ALLOWED_ORIGINS = [
+    'https://172.86.114.124',
+    'http://localhost:5173',
+    'http://127.0.0.1:5173'
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r'^https://localhost(:\d+)?$',
+    r'^https://127\.0\.0\.1(:\d+)?$',
+    r'^https://172\.86\.114\.124(:\d+)?$'
+]
 CORS_ALLOW_CREDENTIALS = True
-CORS_ALLOW_ALL_ORIGINS = False  # Más seguro que CORS_ALLOWED_ORIGINS
+CORS_ALLOW_ALL_ORIGINS = False
 CORS_ALLOW_HEADERS = [
     'accept',
     'accept-encoding',
@@ -278,6 +80,52 @@ CORS_EXPOSE_HEADERS = [
     'X-CSRFToken',
 ]
 
+# Configuración de seguridad
+SECURE_BROWSER_XSS_FILTER = True
+SECURE_CONTENT_TYPE_NOSNIFF = True
+X_FRAME_OPTIONS = 'DENY'
+SECURE_HSTS_SECONDS = 31536000
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+USE_X_FORWARDED_HOST = True
+
+# Configuración de cookies
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_HTTPONLY = True
+CSRF_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+CSRF_COOKIE_SAMESITE = 'Lax'
+SESSION_COOKIE_AGE = 3600  # 1 hora
+
+# Configuración de JWT
+from datetime import timedelta
+SIMPLE_JWT = {
+    'ACCESS_TOKEN_LIFETIME': timedelta(hours=12),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=30),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'ALGORITHM': 'HS256',
+    'SIGNING_KEY': SECRET_KEY,
+    'VERIFYING_KEY': None,
+    'AUTH_HEADER_TYPES': ('Bearer',),
+    'AUTH_COOKIE': 'access',
+    'REFRESH_COOKIE': 'refresh',
+    'AUTH_COOKIE_DOMAIN': '172.86.114.124',
+    'AUTH_COOKIE_SECURE': True,
+    'AUTH_COOKIE_HTTP_ONLY': True,
+    'AUTH_COOKIE_PATH': '/',
+    'AUTH_COOKIE_SAMESITE': 'None',
+    'AUTH_COOKIE_REFRESH_TOKEN_PATH': '/',
+    'AUTH_COOKIE_REFRESH_TOKEN_SECURE': True,
+    'AUTH_COOKIE_REFRESH_TOKEN_HTTP_ONLY': True,
+    'AUTH_COOKIE_REFRESH_TOKEN_SAMESITE': 'None',
+}
+
+# Build paths inside the project like this: BASE_DIR / 'subdir'.
+BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Application definition
 INSTALLED_APPS = [
@@ -309,25 +157,6 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'django.middleware.gzip.GZipMiddleware',
 ]
-# Configuración de seguridad adicional
-SECURE_BROWSER_XSS_FILTER = True
-SECURE_CONTENT_TYPE_NOSNIFF = True
-X_FRAME_OPTIONS = 'DENY'
-SECURE_HSTS_SECONDS = 31536000
-SECURE_HSTS_INCLUDE_SUBDOMAINS = True
-SECURE_HSTS_PRELOAD = True
-SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
-USE_X_FORWARDED_HOST = True
-
-# Configuración de sesión segura
-SESSION_COOKIE_SECURE = not DEBUG
-SESSION_COOKIE_HTTPONLY = True
-SESSION_COOKIE_SAMESITE = 'Lax'
-SESSION_COOKIE_AGE = 3600  # 1 hora
-CSRF_COOKIE_SECURE = not DEBUG
-CSRF_COOKIE_HTTPONLY = True
-CSRF_COOKIE_SAMESITE = 'Lax'
-
 
 ROOT_URLCONF = 'Bakend.urls'
 
@@ -350,75 +179,28 @@ WSGI_APPLICATION = 'Bakend.wsgi.application'
 
 # Database
 DATABASE_URL = os.getenv('DATABASE_URL')
-
 if DATABASE_URL:
     DATABASES = {
         'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
     }
-elif IS_RENDER:
-    postgres_db = os.getenv('POSTGRES_DB', '').strip()
-    postgres_user = os.getenv('POSTGRES_USER', '').strip()
-    postgres_password = os.getenv('POSTGRES_PASSWORD', '').strip()
-    postgres_host = os.getenv('POSTGRES_HOST', '').strip()
-    postgres_port = os.getenv('POSTGRES_PORT', '5432').strip()
-
-    missing = [
-        name for name, value in {
-            'POSTGRES_DB': postgres_db,
-            'POSTGRES_USER': postgres_user,
-            'POSTGRES_PASSWORD': postgres_password,
-            'POSTGRES_HOST': postgres_host,
-        }.items() if not value
-    ]
-
-    if missing:
-        raise RuntimeError(
-            'Render deployment is missing required database environment variables: '
-            + ', '.join(missing)
-        )
-
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': postgres_db,
-            'USER': postgres_user,
-            'PASSWORD': postgres_password,
-            'HOST': postgres_host,
-            'PORT': postgres_port,
-        }
-    }
-elif any([
-    os.getenv('POSTGRES_DB'),
-    os.getenv('POSTGRES_USER'),
-    os.getenv('POSTGRES_PASSWORD'),
-    os.getenv('POSTGRES_HOST'),
-    os.getenv('POSTGRES_PORT'),
-]):
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
-            'USER': os.getenv('POSTGRES_USER', 'boostme'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
-            'HOST': os.getenv('POSTGRES_HOST', 'localhost'),
-            'PORT': os.getenv('POSTGRES_PORT', '5432'),
-        }
-    }
 else:
+    # Configuración para base de datos local si no se usa Docker
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'tu_db',
+            'USER': 'tu_usuario',
+            'PASSWORD': 'tu_contraseña',
+            'HOST': 'localhost',
+            'PORT': '5432',
         }
     }
-
-YOUTUBE_API_KEY = os.getenv('YOUTUBE_API_KEY')
 
 # Email configuration
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = os.getenv('EMAIL_HOST', 'smtp.gmail.com')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', '587'))
-EMAIL_USE_TLS = os.getenv('EMAIL_USE_TLS', 'True').lower() in ('1', 'true', 'yes', 'on')
+EMAIL_USE_TLS = True
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', '')
 EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', '')
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '')
@@ -440,7 +222,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 # Internationalization
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'es-mx'
 TIME_ZONE = 'America/Mexico_City'
 USE_I18N = True
 USE_TZ = True
@@ -453,11 +235,21 @@ LOCALE_PATHS = [
     BASE_DIR / 'locale',
 ]
 
-
-
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 AUTH_USER_MODEL = 'users.User'
+
+# Static files (CSS, JavaScript, Images)
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / 'staticfiles'
+STORAGES = {
+    'default': {
+        'BACKEND': 'django.core.files.storage.FileSystemStorage',
+    },
+    'staticfiles': {
+        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
+    },
+}
 
 # Logging configuration
 LOGGING = {
@@ -485,15 +277,5 @@ LOGGING = {
             'level': 'ERROR',
             'propagate': True,
         },
-    },
-}
-STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
-STORAGES = {
-    'default': {
-        'BACKEND': 'django.core.files.storage.FileSystemStorage',
-    },
-    'staticfiles': {
-        'BACKEND': 'whitenoise.storage.CompressedManifestStaticFilesStorage',
     },
 }
