@@ -46,6 +46,10 @@ ALLOWED_HOSTS = [
     '127.0.0.1',
     'backend',
 ]
+CSRF_TRUSTED_ORIGINS = [
+    "http://172.86.114.124",
+    "https://172.86.114.124",
+]
 
 # -----------------------------
 # CORS
