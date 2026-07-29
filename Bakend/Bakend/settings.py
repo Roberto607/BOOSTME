@@ -200,23 +200,19 @@ WSGI_APPLICATION = 'Bakend.wsgi.application'
 # -----------------------------
 # Base de datos
 # -----------------------------
-DATABASE_URL = os.getenv('DATABASE_URL')
+import os
 
-if DATABASE_URL:
-    DATABASES = {
-        'default': dj_database_url.parse(DATABASE_URL, conn_max_age=600)
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
+        'USER': os.getenv('POSTGRES_USER', 'boostme'),
+        'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
+        'HOST': os.getenv('POSTGRES_HOST', 'db'),
+        'PORT': os.getenv('POSTGRES_PORT', '5432'),
     }
-else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'tu_db',
-            'USER': 'tu_usuario',
-            'PASSWORD': 'tu_contraseña',
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
+}
+
 
 # -----------------------------
 # Email
