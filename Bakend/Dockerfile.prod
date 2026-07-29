@@ -22,11 +22,10 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código de la aplicación
 COPY . .
 
-# Recopilar archivos estáticos
+# Recopilar archivos estáticos (solo construcción)
 RUN python manage.py collectstatic --noinput
 
 # Exponer el puerto 8000
 EXPOSE 8000
 
-# Comando para ejecutar la aplicación con Gunicorn
-CMD ["gunicorn", "--bind", "0.0.0.0:8000", "Bakend.wsgi:application"]
+
