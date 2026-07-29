@@ -35,7 +35,7 @@ services:
     ports:
       - "8000:8000"
     env_file:
-      - ./Bakend/.env
+     - /var/www/BOOSTME/Bakend/.env
     depends_on:
       db:
         condition: service_healthy
