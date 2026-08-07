@@ -60,6 +60,8 @@ ALLOWED_HOSTS = [
 ]
 
 FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip()
+if FRONTEND_URL:
+    ALLOWED_HOSTS.append(parse_host(FRONTEND_URL))
 
 CSRF_TRUSTED_ORIGINS = [
     f'https://{host}'
@@ -73,9 +75,12 @@ if FRONTEND_URL:
 # CORS
 # -----------------------------
 CORS_ALLOWED_ORIGINS = [
-    FRONTEND_URL,
-    'http://localhost:5173',
-    'http://127.0.0.1:5173',
+    origin for origin in [
+        FRONTEND_URL,
+        'http://localhost:5173',
+        'http://127.0.0.1:5173',
+    ]
+    if origin
 ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
@@ -147,7 +152,7 @@ SIMPLE_JWT = {
     'AUTH_HEADER_TYPES': ('Bearer',),
     'AUTH_COOKIE': 'access',
     'REFRESH_COOKIE': 'refresh',
-    'AUTH_COOKIE_DOMAIN': '172.86.114.124',
+    'AUTH_COOKIE_DOMAIN': os.getenv('AUTH_COOKIE_DOMAIN', ''),
     'AUTH_COOKIE_SECURE': True,
     'AUTH_COOKIE_HTTP_ONLY': True,
     'AUTH_COOKIE_PATH': '/',
