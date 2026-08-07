@@ -4,10 +4,9 @@ const explicitApiBaseUrl = normalizeBaseUrl(
   import.meta.env.VITE_API_URL || import.meta.env.VITE_BACKEND_URL
 );
 
-// Configuración para HTTPS
 const defaultApiBaseUrl = import.meta.env.PROD
-  ? (explicitApiBaseUrl || "https://172.86.114.124")
-  : "http://localhost:8000";
+  ? (explicitApiBaseUrl || "https://boostme-backend.onrender.com")
+  : (explicitApiBaseUrl || "http://localhost:8000");
 
 const resolvedApiBaseUrl = explicitApiBaseUrl || defaultApiBaseUrl;
 
