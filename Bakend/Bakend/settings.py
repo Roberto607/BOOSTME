@@ -53,13 +53,13 @@ ALLOWED_HOSTS = [
         parse_host(item)
         for item in os.getenv(
             'ALLOWED_HOSTS',
-            'boostme.onrender.com,localhost,127.0.0.1,backend'
+            'boostme-backend.onrender.com,boostme.onrender.com,localhost,127.0.0.1,backend'
         ).split(',')
     )
     if host
 ]
 
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://172.86.114.124')
+FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip()
 
 CSRF_TRUSTED_ORIGINS = [
     f'https://{host}'
