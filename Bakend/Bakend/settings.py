@@ -52,6 +52,7 @@ def parse_host(value: str) -> str:
 DEFAULT_ALLOWED_HOSTS = [
     'boostme-backend.onrender.com',
     'boostme.onrender.com',
+    'boostme-frontend-cpf1.onrender.com',
     'localhost',
     '127.0.0.1',
     'backend',
@@ -69,7 +70,7 @@ RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME', '').strip()
 if RENDER_EXTERNAL_HOSTNAME:
     ALLOWED_HOSTS.append(parse_host(RENDER_EXTERNAL_HOSTNAME))
 
-FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip()
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://boostme-frontend-cpf1.onrender.com').strip()
 if FRONTEND_URL:
     ALLOWED_HOSTS.append(parse_host(FRONTEND_URL))
 
@@ -87,6 +88,7 @@ if FRONTEND_URL:
 CORS_ALLOWED_ORIGINS = [
     origin for origin in [
         FRONTEND_URL,
+        'https://boostme-frontend-cpf1.onrender.com',
         'http://localhost:5173',
         'http://127.0.0.1:5173',
     ]
