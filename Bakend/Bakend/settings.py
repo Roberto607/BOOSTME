@@ -48,16 +48,25 @@ def parse_host(value: str) -> str:
     parsed = urlparse(value)
     return parsed.hostname or value
 
+DEFAULT_ALLOWED_HOSTS = [
+    'boostme-backend.onrender.com',
+    'boostme.onrender.com',
+    'localhost',
+    '127.0.0.1',
+    'backend',
+]
+
 ALLOWED_HOSTS = [
     host for host in (
         parse_host(item)
-        for item in os.getenv(
-            'ALLOWED_HOSTS',
-            'boostme-backend.onrender.com,boostme.onrender.com,localhost,127.0.0.1,backend'
-        ).split(',')
+        for item in os.getenv('ALLOWED_HOSTS', ','.join(DEFAULT_ALLOWED_HOSTS)).split(',')
     )
     if host
 ]
+
+RENDER_EXTERNAL_HOSTNAME = os.getenv('RENDER_EXTERNAL_HOSTNAME', '').strip()
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS.append(parse_host(RENDER_EXTERNAL_HOSTNAME))
 
 FRONTEND_URL = os.getenv('FRONTEND_URL', '').strip()
 if FRONTEND_URL:

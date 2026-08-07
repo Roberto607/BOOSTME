@@ -29,6 +29,6 @@ RUN python manage.py collectstatic --noinput
 EXPOSE 8000
 
 # Comando de inicio para que el contenedor no termine inmediatamente
-CMD ["gunicorn", "Bakend.wsgi:application", "--bind", "0.0.0.0:8000"]
+CMD ["sh", "-c", "python manage.py migrate --noinput && python scripts/create_superuser_no_signals.py && exec gunicorn Bakend.wsgi:application --bind 0.0.0.0:8000"]
 
 
