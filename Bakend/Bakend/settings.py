@@ -235,25 +235,92 @@ WSGI_APPLICATION = 'Bakend.wsgi.application'
 # -----------------------------
 # Base de datos
 # -----------------------------
-import os
 
-if os.getenv('DATABASE_URL'):
-    DATABASES = {
-        'default': dj_database_url.parse(
-            os.getenv('DATABASE_URL'),
-            conn_max_age=600,
-            ssl_require=False,
-        )
+def build_database_config():
+    db_url = os.getenv('DATABASE_URL', '').strip()
+    if db_url:
+        config = dj_database_url.parse(db_url, conn_max_age=600)
+        sslmode = (
+            os.getenv('DB_SSLMODE', '') or
+            os.getenv('POSTGRES_SSLMODE', '') or
+            os.getenv('PGSSLMODE', '')
+        ).strip()
+        if sslmode:
+            config.setdefault('OPTIONS', {})
+            config['OPTIONS']['sslmode'] = sslmode
+        return config
+
+    pg_config = {
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': (
+            os.getenv('POSTGRES_DB') or
+            os.getenv('PGDATABASE') or
+            os.getenv('DB_NAME') or
+            'boostme_db'
+        ),
+        'USER': (
+            os.getenv('POSTGRES_USER') or
+            os.getenv('PGUSER') or
+            os.getenv('DB_USER') or
+            'boostme'
+        ),
+        'PASSWORD': (
+            os.getenv('POSTGRES_PASSWORD') or
+            os.getenv('PGPASSWORD') or
+            os.getenv('DB_PASSWORD') or
+            '2025'
+        ),
+        'HOST': (
+            os.getenv('POSTGRES_HOST') or
+            os.getenv('PGHOST') or
+            os.getenv('DB_HOST') or
+            'db'
+        ),
+        'PORT': (
+            os.getenv('POSTGRES_PORT') or
+            os.getenv('PGPORT') or
+            os.getenv('DB_PORT') or
+            '5432'
+        ),
+        'OPTIONS': {},
     }
+
+    sslmode = (
+        os.getenv('DB_SSLMODE', '') or
+        os.getenv('POSTGRES_SSLMODE', '') or
+        os.getenv('PGSSLMODE', '')
+    ).strip()
+    if sslmode:
+        pg_config['OPTIONS']['sslmode'] = sslmode
+
+    return pg_config
+
+
+has_explicit_db_config = any([
+    os.getenv('DATABASE_URL'),
+    os.getenv('POSTGRES_DB'),
+    os.getenv('POSTGRES_USER'),
+    os.getenv('POSTGRES_PASSWORD'),
+    os.getenv('POSTGRES_HOST'),
+    os.getenv('PGDATABASE'),
+    os.getenv('PGUSER'),
+    os.getenv('PGPASSWORD'),
+    os.getenv('PGHOST'),
+    os.getenv('DB_NAME'),
+    os.getenv('DB_USER'),
+    os.getenv('DB_PASSWORD'),
+    os.getenv('DB_HOST'),
+])
+
+use_sqlite_fallback = os.getenv('USE_SQLITE_FALLBACK', 'true' if not IS_RENDER else 'false').lower() in ('true', '1', 'yes')
+
+if has_explicit_db_config or not use_sqlite_fallback:
+    DATABASES = {'default': build_database_config()}
 else:
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
-            'USER': os.getenv('POSTGRES_USER', 'boostme'),
-            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
-            'HOST': os.getenv('POSTGRES_HOST', 'db'),
-            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
         }
     }
 
