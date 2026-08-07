@@ -314,6 +314,11 @@ has_explicit_db_config = any([
 
 use_sqlite_fallback = os.getenv('USE_SQLITE_FALLBACK', 'true' if not IS_RENDER else 'false').lower() in ('true', '1', 'yes')
 
+if IS_RENDER and not has_explicit_db_config:
+    raise RuntimeError(
+        'Render requires a database connection. Set DATABASE_URL or the POSTGRES_* variables in the backend service.'
+    )
+
 if has_explicit_db_config or not use_sqlite_fallback:
     DATABASES = {'default': build_database_config()}
 else:
