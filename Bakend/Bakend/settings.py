@@ -237,8 +237,16 @@ WSGI_APPLICATION = 'Bakend.wsgi.application'
 # Base de datos
 # -----------------------------
 
+def get_database_url() -> str:
+    for key in ('DATABASE_URL', 'POSTGRES_URL', 'POSTGRESQL_URL', 'DB_URL', 'DATABASE_URL_NON_POOLING'):
+        value = os.getenv(key, '').strip()
+        if value:
+            return value
+    return ''
+
+
 def build_database_config():
-    db_url = os.getenv('DATABASE_URL', '').strip()
+    db_url = get_database_url()
     if db_url:
         config = dj_database_url.parse(db_url, conn_max_age=600)
         sslmode = (
@@ -298,7 +306,7 @@ def build_database_config():
 
 
 has_explicit_db_config = any([
-    os.getenv('DATABASE_URL'),
+    get_database_url(),
     os.getenv('POSTGRES_DB'),
     os.getenv('POSTGRES_USER'),
     os.getenv('POSTGRES_PASSWORD'),
@@ -318,8 +326,17 @@ use_sqlite_fallback = os.getenv('USE_SQLITE_FALLBACK', 'true' if not IS_RENDER e
 is_collectstatic_build = 'collectstatic' in sys.argv
 
 if IS_RENDER and not has_explicit_db_config and not is_collectstatic_build:
+    available_vars = {
+        key: bool(os.getenv(key))
+        for key in (
+            'DATABASE_URL', 'POSTGRES_URL', 'POSTGRESQL_URL', 'DB_URL', 'DATABASE_URL_NON_POOLING',
+            'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT',
+            'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGHOST', 'PGPORT'
+        )
+    }
     raise RuntimeError(
-        'Render requires a database connection. Set DATABASE_URL or the POSTGRES_* variables in the backend service.'
+        'Render requires a database connection. Set DATABASE_URL or the POSTGRES_* variables in the backend service. '
+        f'Available DB env vars: {available_vars}'
     )
 
 if has_explicit_db_config or not use_sqlite_fallback:
