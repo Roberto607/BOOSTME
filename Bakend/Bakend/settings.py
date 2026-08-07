@@ -38,34 +38,51 @@ if not IS_RENDER:
 # Seguridad
 # -----------------------------
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-g1ytl#g@05!1(j7n8u(@i^lx^ez$!)133308&j*xd1_90p1gol')
-DEBUG = False
+DEBUG = os.getenv('DEBUG', 'False').lower() in ('true', '1', 'yes')
+
+# Hostnames permitidos, incluidos los de Render.
+def parse_host(value: str) -> str:
+    value = value.strip()
+    if not value:
+        return ''
+    parsed = urlparse(value)
+    return parsed.hostname or value
 
 ALLOWED_HOSTS = [
-    '172.86.114.124',
-    'localhost',
-    '127.0.0.1',
-    'backend',
+    host for host in (
+        parse_host(item)
+        for item in os.getenv(
+            'ALLOWED_HOSTS',
+            'boostme.onrender.com,localhost,127.0.0.1,backend'
+        ).split(',')
+    )
+    if host
 ]
+
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://172.86.114.124')
+
 CSRF_TRUSTED_ORIGINS = [
-    "http://172.86.114.124",
-    "https://172.86.114.124",
+    f'https://{host}'
+    for host in ALLOWED_HOSTS
+    if host not in ('localhost', '127.0.0.1', 'backend')
 ]
+if FRONTEND_URL:
+    CSRF_TRUSTED_ORIGINS.append(FRONTEND_URL)
 
 # -----------------------------
 # CORS
 # -----------------------------
-FRONTEND_URL = os.getenv('FRONTEND_URL', 'https://172.86.114.124')
-
 CORS_ALLOWED_ORIGINS = [
-    'https://172.86.114.124',
+    FRONTEND_URL,
     'http://localhost:5173',
-    'http://127.0.0.1:5173'
+    'http://127.0.0.1:5173',
 ]
 
 CORS_ALLOWED_ORIGIN_REGEXES = [
     r'^https://localhost(:\d+)?$',
     r'^https://127\.0\.0\.1(:\d+)?$',
-    r'^https://172\.86\.114\.124(:\d+)?$'
+    r'^https://172\.86\.114\.124(:\d+)?$',
+    r'^https://.*\.onrender\.com$'
 ]
 
 CORS_ALLOW_CREDENTIALS = True
@@ -206,16 +223,25 @@ WSGI_APPLICATION = 'Bakend.wsgi.application'
 # -----------------------------
 import os
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
-        'USER': os.getenv('POSTGRES_USER', 'boostme'),
-        'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
-        'HOST': os.getenv('POSTGRES_HOST', 'db'),
-        'PORT': os.getenv('POSTGRES_PORT', '5432'),
+if os.getenv('DATABASE_URL'):
+    DATABASES = {
+        'default': dj_database_url.parse(
+            os.getenv('DATABASE_URL'),
+            conn_max_age=600,
+            ssl_require=False,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': os.getenv('POSTGRES_DB', 'boostme_db'),
+            'USER': os.getenv('POSTGRES_USER', 'boostme'),
+            'PASSWORD': os.getenv('POSTGRES_PASSWORD', '2025'),
+            'HOST': os.getenv('POSTGRES_HOST', 'db'),
+            'PORT': os.getenv('POSTGRES_PORT', '5432'),
+        }
+    }
 
 
 # -----------------------------
