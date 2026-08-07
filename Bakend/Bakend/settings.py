@@ -321,33 +321,31 @@ has_explicit_db_config = any([
     os.getenv('DB_HOST'),
 ])
 
-use_sqlite_fallback = os.getenv('USE_SQLITE_FALLBACK', 'true' if not IS_RENDER else 'false').lower() in ('true', '1', 'yes')
+use_sqlite_fallback = os.getenv('USE_SQLITE_FALLBACK', 'true').lower() in ('true', '1', 'yes')
 
-is_collectstatic_build = 'collectstatic' in sys.argv
-
-if IS_RENDER and not has_explicit_db_config and not is_collectstatic_build:
-    available_vars = {
-        key: bool(os.getenv(key))
-        for key in (
-            'DATABASE_URL', 'POSTGRES_URL', 'POSTGRESQL_URL', 'DB_URL', 'DATABASE_URL_NON_POOLING',
-            'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT',
-            'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGHOST', 'PGPORT'
-        )
-    }
-    raise RuntimeError(
-        'Render requires a database connection. Set DATABASE_URL or the POSTGRES_* variables in the backend service. '
-        f'Available DB env vars: {available_vars}'
-    )
-
-if has_explicit_db_config or not use_sqlite_fallback:
+if has_explicit_db_config:
     DATABASES = {'default': build_database_config()}
 else:
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.sqlite3',
-            'NAME': BASE_DIR / 'db.sqlite3',
+    if use_sqlite_fallback:
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.sqlite3',
+                'NAME': BASE_DIR / 'db.sqlite3',
+            }
         }
-    }
+    else:
+        available_vars = {
+            key: bool(os.getenv(key))
+            for key in (
+                'DATABASE_URL', 'POSTGRES_URL', 'POSTGRESQL_URL', 'DB_URL', 'DATABASE_URL_NON_POOLING',
+                'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT',
+                'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGHOST', 'PGPORT'
+            )
+        }
+        raise RuntimeError(
+            'Render requires a database connection. Set DATABASE_URL or the POSTGRES_* variables in the backend service. '
+            f'Available DB env vars: {available_vars}'
+        )
 
 
 # -----------------------------
