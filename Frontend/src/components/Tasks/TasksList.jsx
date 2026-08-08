@@ -305,6 +305,8 @@ const TasksList = () => {
 
       setTasks(normalizedTasks);
 
+      console.log('Loaded tasks (normalized):', normalizedTasks);
+
       const planData = {
         name: response?.plan_info?.name || user?.plan_name || 'Free',
         dailyTasks: response?.plan_info?.daily_tasks || (user?.plan_name === 'Starter' ? 5 : user?.plan_name === 'Pro' ? 10 : user?.plan_name === 'Elite' ? 20 : 6),
