@@ -5,6 +5,11 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm install
 
+# Ensure Browserslist data is up-to-date to avoid the caniuse-lite warning during build.
+# This updates the local DB used by tooling like Vite/Autoprefixer. Allow failure so build
+# continues even if the update cannot run in the environment.
+RUN npx update-browserslist-db@latest --update-db --allow-root || true
+
 COPY . .
 RUN npm run build
 
