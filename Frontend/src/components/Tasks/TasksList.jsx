@@ -14,7 +14,12 @@ import {
   Target,
   TrendingUp,
   Award,
-  Crown
+  Crown,
+  Sparkles,
+  ShieldCheck,
+  Users,
+  BarChart3,
+  ClipboardCheck
 } from 'lucide-react';
 import { tasksService } from '../../services/tasksService';
 
@@ -29,6 +34,19 @@ const taskTypeLabelMap = {
   follow: 'Seguir cuenta',
   video: 'Ver video',
   review: 'Activar objetivo'
+};
+
+const featureIconMap = {
+  'Más tareas diarias': Sparkles,
+  'Bonos mejorados': TrendingUp,
+  'Acceso prioritario a bonos': ShieldCheck,
+  'Límite de retiros semanal mayor': DollarSign,
+  'Tareas especiales extra': Star,
+  'Soporte preferente': Users,
+  'Comisiones por referidos': Gift,
+  'Guías y tutoriales premium': PlayCircle,
+  'Visibilidad de rendimiento': BarChart3,
+  'Desafíos exclusivos': ClipboardCheck,
 };
 
 // Map task_type to icons so frontend doesn't force template titles/descriptions
@@ -564,6 +582,30 @@ const TasksList = () => {
     }
   };
 
+  const getTaskTypeBadgeIcon = (type) => {
+    switch (type) {
+      case 'profile':
+        return <Target className="h-3.5 w-3.5 text-slate-600" />;
+      case 'referral':
+      case 'social':
+        return <Gift className="h-3.5 w-3.5 text-slate-600" />;
+      case 'welcome':
+      case 'video':
+        return <PlayCircle className="h-3.5 w-3.5 text-slate-600" />;
+      case 'survey':
+        return <TrendingUp className="h-3.5 w-3.5 text-slate-600" />;
+      case 'goal':
+      case 'review':
+        return <Award className="h-3.5 w-3.5 text-slate-600" />;
+      case 'dashboard':
+        return <Zap className="h-3.5 w-3.5 text-slate-600" />;
+      case 'follow':
+        return <Users className="h-3.5 w-3.5 text-slate-600" />;
+      default:
+        return <Zap className="h-3.5 w-3.5 text-slate-600" />;
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -634,12 +676,15 @@ const TasksList = () => {
                   <div className="mt-6 rounded-3xl bg-slate-50 p-4">
                     <h4 className="text-lg font-semibold text-slate-900">Características del plan</h4>
                     <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                      {planInfo.features.map((feature, index) => (
-                        <div key={index} className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
-                          <CheckCircle2 className="mt-1 h-4 w-4 text-emerald-500" />
-                          <span>{feature}</span>
-                        </div>
-                      ))}
+                      {planInfo.features.map((feature, index) => {
+                        const FeatureIcon = featureIconMap[feature] || CheckCircle2;
+                        return (
+                          <div key={index} className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                            <FeatureIcon className="mt-1 h-4 w-4 text-slate-700" />
+                            <span>{feature}</span>
+                          </div>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -714,8 +759,13 @@ const TasksList = () => {
                       <Icon className="h-6 w-6" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <h3 className="truncate text-lg font-semibold text-slate-900 md:text-xl">{task.title}</h3>
-                      <p className="mt-2 text-sm leading-6 text-slate-600 md:text-base">{task.description}</p>
+                        <div className="flex items-center justify-between gap-3">
+                          <h3 className="truncate text-lg font-semibold text-slate-900 md:text-xl">{task.title}</h3>
+                          <span className="inline-flex items-center gap-1 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-700">
+                            {getTaskTypeBadgeIcon(task.taskType)}
+                            {taskTypeLabelMap[task.taskType] || task.taskType || 'Tarea'}
+                          </span>
+                        </div>
                       {surveyCountdown && (
                         <p className="mt-2 text-xs font-medium text-amber-600">{surveyCountdown}</p>
                       )}
