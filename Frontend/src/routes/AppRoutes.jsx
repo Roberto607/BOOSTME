@@ -1,5 +1,6 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import RegisterForm from "../components/RegisterForm";
+import VerifyWallet from "../components/VerifyWallet";
 import Home from '../components/Home';
 import AccountActivation from '../components/AccountActivation';
 import RevisarCorreo from "../components/RevisarCorreo";
@@ -39,6 +40,7 @@ const AppRoutes = () => {
     <Routes>
       <Route path="/" element={<Home />} />
       <Route path="/register" element={<RegisterForm />} />
+      <Route path="/verify-wallet" element={<VerifyWallet />} />
       <Route path="/verify-email/:uidb64/:token" element={<AccountActivation />} />
       <Route path="/revisar-correo" element={<RevisarCorreo />} />
       <Route path="/login" element={<Login />} />
