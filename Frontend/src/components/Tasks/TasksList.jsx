@@ -1,6 +1,77 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useNavigate } from 'react-router-dom';
+import { tasksService } from '../../services/tasksService';
+
+const taskTypeLabelMap = {
+const TasksList = () => {
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const completeVideoTask = async () => {
+    if (!activeVideoTask || isCompletingVideo) return;
+
+    let watchedSeconds = watchedSecondsRef.current;
+    if (watchedSeconds < videoRequiredSeconds) {
+      setVideoWatchedSeconds(watchedSeconds);
+      setVideoError(`Necesitas ver el video al menos ${videoRequiredSeconds} segundos para completar la tarea.`);
+      return;
+    }
+
+    setVideoError(null);
+    setIsCompletingVideo(true);
+    try {
+      console.log('Completing video task', { id: activeVideoTask?.id, watchedSeconds, videoRequiredSeconds });
+      const response = await tasksService.completeTask(activeVideoTask.id, { watched_seconds: watchedSeconds });
+      if (response?.message) {
+        setTasks((prev) => prev.map((item) => item.id === activeVideoTask.id ? { ...item, status: 'completed', progress: 1 } : item));
+        setActiveVideoTask(null);
+      }
+    } catch (error) {
+      console.error('Error completing video task:', error);
+      setVideoError(error.message || 'Error al completar la tarea de video.');
+    } finally {
+      setIsCompletingVideo(false);
+    }
+  };
+  const handleTaskClick = async (task) => {
+    const isProfileTask = task?.taskType === 'profile' || (typeof task?.id === 'string' && task.id.startsWith('profile'));
+    if (isProfileTask) {
+      window.location.assign('/Profile');
+      return;
+    }
+    if (task?.taskType === 'video') {
+      const taskUrl = task?.url || task?.actionUrl || null;
+      if (taskUrl) {
+  const isLocalVideo = taskUrl.startsWith('/') || taskUrl.endsWith('.mp4');
+  const isYouTube = isYouTubeUrl(taskUrl);
+  if (isLocalVideo || isYouTube) {
+          const requiredSeconds = Number(task.contentData?.duration || 30);
+          watchedSecondsRef.current = 0;
+          lastTrackedPlaybackTimeRef.current = 0;
+          console.log('Opening video task:', { id: task.id, url: taskUrl, requiredSeconds });
+          setActiveVideoTask({ ...task, url: taskUrl });
+          setIsYouTubeVideo(isYouTube);
+          setVideoWatchedSeconds(0);
+          setVideoRequiredSeconds(requiredSeconds);
+          setVideoError(null);
+          return;
+        }
+      }
+      window.open(taskUrl, '_blank', 'noopener,noreferrer');
+      return;
+    }
+    const videoId = getYouTubeVideoId(activeVideoTask.url);
+    if (!videoId) {
+      console.error('YouTube video id not found for url:', activeVideoTask?.url);
+      setVideoError('URL de YouTube inválida.');
+      return;
+    }
+    ensureYouTubeIframeApiLoaded()
+      .then(() => createYouTubePlayer(videoId))
+      .catch((error) => setVideoError(error.message));
+import React, { useState, useEffect, useRef } from 'react';
+import { useAuth } from '../../contexts/AuthContext';
+import { useNavigate } from 'react-router-dom';
 import { 
   Clock,
   DollarSign,
