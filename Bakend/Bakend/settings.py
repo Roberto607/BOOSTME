@@ -341,30 +341,30 @@ has_explicit_db_config = any([
 ])
 
 use_sqlite_fallback = os.getenv('USE_SQLITE_FALLBACK', 'false').lower() in ('true', '1', 'yes')
+running_collectstatic = os.getenv('RUNNING_COLLECTSTATIC', 'false').lower() in ('true', '1', 'yes')
 
 if has_explicit_db_config:
     DATABASES = {'default': build_database_config()}
+elif running_collectstatic or use_sqlite_fallback:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 else:
-    if use_sqlite_fallback:
-        DATABASES = {
-            'default': {
-                'ENGINE': 'django.db.backends.sqlite3',
-                'NAME': BASE_DIR / 'db.sqlite3',
-            }
-        }
-    else:
-        available_vars = {
-            key: bool(os.getenv(key))
-            for key in (
-                'DATABASE_URL', 'POSTGRES_URL', 'POSTGRESQL_URL', 'DB_URL', 'DATABASE_URL_NON_POOLING',
-                'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT',
-                'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGHOST', 'PGPORT'
-            )
-        }
-        raise RuntimeError(
-            'Render requires a database connection. Set DATABASE_URL or the POSTGRES_* variables in the backend service. '
-            f'Available DB env vars: {available_vars}'
+    available_vars = {
+        key: bool(os.getenv(key))
+        for key in (
+            'DATABASE_URL', 'POSTGRES_URL', 'POSTGRESQL_URL', 'DB_URL', 'DATABASE_URL_NON_POOLING',
+            'POSTGRES_DB', 'POSTGRES_USER', 'POSTGRES_PASSWORD', 'POSTGRES_HOST', 'POSTGRES_PORT',
+            'PGDATABASE', 'PGUSER', 'PGPASSWORD', 'PGHOST', 'PGPORT'
         )
+    }
+    raise RuntimeError(
+        'Render requires a database connection. Set DATABASE_URL or the POSTGRES_* variables in the backend service. '
+        f'Available DB env vars: {available_vars}'
+    )
 
 
 # -----------------------------

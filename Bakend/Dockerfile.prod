@@ -22,9 +22,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copiar el código de la aplicación
 COPY . .
 
-# Permitir un fallback temporal a SQLite solo durante la construcción
-ARG USE_SQLITE_FALLBACK=true
-RUN USE_SQLITE_FALLBACK=${USE_SQLITE_FALLBACK} python manage.py collectstatic --noinput
+# Recopilar archivos estáticos para la imagen de producción
+# Permitir fallback a SQLite solo durante este paso de build si no hay DB disponible.
+RUN RUNNING_COLLECTSTATIC=true python manage.py collectstatic --noinput
 
 # Exponer el puerto 8000
 EXPOSE 8000
