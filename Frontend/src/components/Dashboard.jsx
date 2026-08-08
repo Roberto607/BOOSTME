@@ -154,7 +154,9 @@ const Dashboard = () => {
           </button>
 
           <div className="user-info hidden md:flex">
-            <span className="plan-badge">Plan {userPlan.name}</span>
+            {(user?.has_financial_activation || userPlan.name !== 'Free') && (
+              <span className="plan-badge">Plan {userPlan.name}</span>
+            )}
             <button onClick={handleLogout} className="logout-button">
               Cerrar Sesión
             </button>
