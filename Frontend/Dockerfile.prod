@@ -3,12 +3,17 @@ FROM node:22-alpine AS build
 WORKDIR /app
 
 COPY package*.json ./
-RUN npm install
+# Prefer `npm ci` in CI environments for reproducible installs; fall back to `npm install`
+# with legacy peer deps if `ci` is not possible (e.g., no package-lock present).
+RUN npm ci --silent || npm install --legacy-peer-deps --silent
 
-# Ensure Browserslist data is up-to-date to avoid the caniuse-lite warning during build.
-# This updates the local DB used by tooling like Vite/Autoprefixer. Allow failure so build
-# continues even if the update cannot run in the environment.
+# Avoid failing builds due to an old caniuse-lite DB in restricted environments (Render free).
+# Also attempt to update the DB during the image build; allow failure.
+ENV BROWSERSLIST_IGNORE_OLD_DATA=1
 RUN npx update-browserslist-db@latest --update-db --allow-root || true
+
+# Hint to Node/Vite that this is a production build
+ENV NODE_ENV=production
 
 COPY . .
 RUN npm run build
