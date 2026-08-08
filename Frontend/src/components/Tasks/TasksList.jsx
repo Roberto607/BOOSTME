@@ -400,12 +400,17 @@ const TasksList = () => {
     if (task?.taskType === 'video') {
       watchedSecondsRef.current = 0;
       lastTrackedPlaybackTimeRef.current = 0;
-      console.log('Opening video task (no-url fallback):', { id: task.id, url: task.url });
-      setActiveVideoTask({ ...task, url: task.url });
-      setIsYouTubeVideo(isYouTubeUrl(task.url));
+      const defaultUrl = 'https://www.youtube.com/watch?v=dQw4w9WgXcQ';
+      const useUrl = task.url || task.actionUrl || defaultUrl;
+      if (!task.url && !task.actionUrl) {
+        console.warn('Video task missing URL; using default fallback video', { id: task.id });
+      }
+      console.log('Opening video task (fallback if needed):', { id: task.id, url: useUrl });
+      setActiveVideoTask({ ...task, url: useUrl });
+      setIsYouTubeVideo(isYouTubeUrl(useUrl));
       setVideoWatchedSeconds(0);
       setVideoRequiredSeconds(Number(task.contentData?.duration || 30));
-      setVideoError(task.url ? null : 'Video no disponible.');
+      setVideoError(null);
       return;
     }
 
