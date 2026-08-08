@@ -411,6 +411,7 @@ class TaskViewSet(viewsets.ModelViewSet):
             serializer = self.get_serializer(tasks, many=True)
 
             plan_features = []
+            plan_task_types = []
             plan_definition = PlanDefinition.objects.filter(name=user_plan.plan_name, is_active=True).first()
             if plan_definition:
                 raw_features = plan_definition.features or ''
@@ -419,6 +420,12 @@ class TaskViewSet(viewsets.ModelViewSet):
                 elif isinstance(raw_features, (list, tuple)):
                     plan_features = [str(item).strip() for item in raw_features if str(item).strip()]
 
+                raw_task_types = plan_definition.task_types or ''
+                if isinstance(raw_task_types, str):
+                    plan_task_types = [line.strip() for line in raw_task_types.splitlines() if line.strip()]
+                elif isinstance(raw_task_types, (list, tuple)):
+                    plan_task_types = [str(item).strip() for item in raw_task_types if str(item).strip()]
+
             return Response({
                 'tasks': serializer.data,
                 'plan_info': {
@@ -426,7 +433,8 @@ class TaskViewSet(viewsets.ModelViewSet):
                     'daily_tasks': user_plan.daily_tasks,
                     'bonus_percentage': user_plan.bonus_percentage,
                     'weekly_withdrawal_limit': user_plan.weekly_withdrawal_limit,
-                    'features': plan_features
+                    'features': plan_features,
+                    'task_types': plan_task_types
                 }
             })
         except Exception as e:
@@ -570,13 +578,23 @@ class TaskViewSet(viewsets.ModelViewSet):
             
             offers = self.get_external_offers(user_plan.plan_name)
 
+            plan_task_types = []
+            plan_definition = PlanDefinition.objects.filter(name=user_plan.plan_name, is_active=True).first()
+            if plan_definition:
+                raw_task_types = plan_definition.task_types or ''
+                if isinstance(raw_task_types, str):
+                    plan_task_types = [line.strip() for line in raw_task_types.splitlines() if line.strip()]
+                elif isinstance(raw_task_types, (list, tuple)):
+                    plan_task_types = [str(item).strip() for item in raw_task_types if str(item).strip()]
+
             return Response({
                 'tasks': adgate_tasks,
                 'offers': offers,
                 'plan_info': {
                     'name': user_plan.plan_name,
                     'daily_limit': self.get_adgate_tasks(user_plan.plan_name).__len__() if user_plan.plan_name != 'Elite' else 'Ilimitadas',
-                    'categories': self.get_adgate_tasks(user_plan.plan_name)[0]['category'] if adgate_tasks else []
+                    'categories': self.get_adgate_tasks(user_plan.plan_name)[0]['category'] if adgate_tasks else [],
+                    'task_types': plan_task_types
                 }
             })
         except Exception as e:

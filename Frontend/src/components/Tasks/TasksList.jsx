@@ -18,82 +18,17 @@ import {
 } from 'lucide-react';
 import { tasksService } from '../../services/tasksService';
 
-const freeTaskTemplates = [
-  {
-    id: 'profile',
-    title: 'Completa tu perfil',
-    description: 'Activa tu perfil para empezar a crecer en BoostMe.',
-    reward: 3,
-    icon: Target,
-    type: 'daily'
-  },
-  {
-    id: 'referral',
-    title: 'Invita a un colega',
-    description: 'Comparte tu enlace de referidos y gana Boost por cada registro válido.',
-    reward: 5,
-    icon: Gift,
-    type: 'daily'
-  },
-  {
-    id: 'welcome',
-    title: 'Mira la guía de bienvenida',
-    description: 'Entiende cómo funciona el panel y tus primeras metas.',
-    reward: 4,
-    icon: PlayCircle,
-    type: 'daily'
-  },
-  {
-    id: 'survey',
-    title: 'Completa una encuesta breve',
-    description: 'Responde una encuesta corta para desbloquear más contenido.',
-    reward: 6,
-    icon: TrendingUp,
-    type: 'daily'
-  },
-  {
-    id: 'goal',
-    title: 'Activa tu primer objetivo',
-    description: 'Marca una meta inicial y empieza a acumular Boost.',
-    reward: 8,
-    icon: Award,
-    type: 'daily'
-  },
-  {
-    id: 'dashboard',
-    title: 'Explora tu panel',
-    description: 'Revisa tu progreso para ver cómo crece tu saldo.',
-    reward: 4,
-    icon: Zap,
-    type: 'daily'
-  }
-];
-
-const getTaskTemplateMeta = (taskType, description = '') => {
-  const normalizedText = `${taskType || ''} ${description || ''}`.toLowerCase();
-
-  if (taskType === 'dashboard' || normalizedText.includes('panel') || normalizedText.includes('progreso')) {
-    return freeTaskTemplates[5];
-  }
-
-  switch (taskType) {
-    case 'profile':
-      return freeTaskTemplates[0];
-    case 'follow':
-      return freeTaskTemplates[1];
-    case 'social':
-      return freeTaskTemplates[1];
-    case 'video':
-      return normalizedText.includes('bienvenida') || normalizedText.includes('guía')
-        ? freeTaskTemplates[2]
-        : freeTaskTemplates[5];
-    case 'survey':
-      return freeTaskTemplates[3];
-    case 'review':
-      return freeTaskTemplates[4];
-    default:
-      return freeTaskTemplates[2];
-  }
+const taskTypeLabelMap = {
+  profile: 'Completar perfil',
+  referral: 'Invitar referido',
+  welcome: 'Ver guía de bienvenida',
+  survey: 'Completar encuesta',
+  goal: 'Activar objetivo',
+  dashboard: 'Explorar panel',
+  social: 'Invitar a un colega',
+  follow: 'Seguir cuenta',
+  video: 'Ver video',
+  review: 'Activar objetivo'
 };
 
 // Map task_type to icons so frontend doesn't force template titles/descriptions
@@ -313,27 +248,17 @@ const TasksList = () => {
         youtubePlayerRef.current = null;
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeVideoTask, isYouTubeVideo, videoRequiredSeconds]);
 
   const loadTasks = async () => {
     try {
       const response = await tasksService.getDailyTasks();
       const backendTasks = response?.tasks || [];
-      const taskTypeLabels = {
-        profile: 'Completar perfil',
-        referral: 'Invitar referido',
-        welcome: 'Ver guía de bienvenida',
-        survey: 'Completar encuesta',
-        goal: 'Activar objetivo',
-        dashboard: 'Explorar panel',
-        social: 'Invitar a un colega',
-        follow: 'Seguir cuenta',
-        video: 'Ver video',
-      };
 
       const normalizedTasks = backendTasks.map((task, index) => {
         const rawDescription = task.description || '';
-        const title = task.title || taskTypeLabels[task.task_type] || (task.task_type || 'Tarea');
+        const title = task.title || taskTypeLabelMap[task.task_type] || (task.task_type || 'Tarea');
         const Icon = iconMap[task.task_type] || Zap;
         const isScheduledSurvey = task.task_type === 'survey' && task.content_data?.available_at;
         const isAvailable = !isScheduledSurvey || new Date(task.content_data.available_at) <= new Date();
@@ -366,7 +291,8 @@ const TasksList = () => {
         name: response?.plan_info?.name || user?.plan_name || 'Free',
         dailyTasks: response?.plan_info?.daily_tasks || (user?.plan_name === 'Starter' ? 5 : user?.plan_name === 'Pro' ? 10 : user?.plan_name === 'Elite' ? 20 : 6),
         bonus: response?.plan_info?.bonus_percentage ?? (user?.plan_name === 'Starter' ? 10 : user?.plan_name === 'Pro' ? 20 : user?.plan_name === 'Elite' ? 25 : 0),
-        features: Array.isArray(response?.plan_info?.features) ? response.plan_info.features : []
+        features: Array.isArray(response?.plan_info?.features) ? response.plan_info.features : [],
+        taskTypes: Array.isArray(response?.plan_info?.task_types) ? response.plan_info.task_types : []
       };
 
       const hasSurveyTask = backendTasks.some((task) => task.task_type === 'survey');
@@ -408,6 +334,7 @@ const TasksList = () => {
     }
 
     loadTasks();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, requiresPlanSelection]);
 
   useEffect(() => {
@@ -421,6 +348,7 @@ const TasksList = () => {
     }, 30000);
 
     return () => window.clearInterval(intervalId);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, tasks]);
 
   const handleTaskClick = async (task) => {
@@ -636,19 +564,6 @@ const TasksList = () => {
     }
   };
 
-  const getTaskTypeIcon = (type) => {
-    switch (type) {
-      case 'daily':
-        return <Clock className="w-5 h-5" />;
-      case 'weekly':
-        return <Target className="w-5 h-5" />;
-      case 'special':
-        return <Star className="w-5 h-5" />;
-      default:
-        return <Zap className="w-5 h-5" />;
-    }
-  };
-
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -703,7 +618,18 @@ const TasksList = () => {
                     </div>
                   </div>
                 </div>
-
+                {planInfo.taskTypes?.length > 0 && (
+                  <div className="mt-6 rounded-3xl bg-slate-50 p-4">
+                    <h4 className="text-lg font-semibold text-slate-900">Tareas incluidas en el plan</h4>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                      {planInfo.taskTypes.map((taskType, index) => (
+                        <span key={index} className="rounded-full bg-slate-100 px-3 py-2 text-sm font-medium text-slate-700">
+                          {taskTypeLabelMap[taskType] || taskType}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 {planInfo.features?.length > 0 && (
                   <div className="mt-6 rounded-3xl bg-slate-50 p-4">
                     <h4 className="text-lg font-semibold text-slate-900">Características del plan</h4>

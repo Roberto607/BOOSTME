@@ -4,6 +4,7 @@ from rest_framework.test import APIClient
 from users.models import UserPlan
 from tasks.models import Task
 from tasks.views import TaskViewSet
+from plan.models import PlanDefinition
 from django.utils import timezone
 
 User = get_user_model()
@@ -43,6 +44,27 @@ class TaskFlowTests(TestCase):
         self.assertIn('dashboard', task_types)
         self.assertTrue(any(task_type in ['video', 'survey', 'referral', 'review'] for task_type in task_types))
 
+    def test_daily_tasks_response_includes_plan_task_types(self):
+        PlanDefinition.objects.create(
+            name='Free',
+            slug='free',
+            price=0,
+            is_free=True,
+            recommended=False,
+            is_active=True,
+            task_types='profile\nreferral\ndashboard',
+            features='Más tareas diarias\nBonos mejorados',
+            daily_tasks=6,
+            bonus_percentage=0,
+            weekly_withdrawal_limit=5
+        )
+
+        response = self.client.get('/api/tasks/tasks/daily_tasks/')
+        self.assertEqual(response.status_code, 200)
+        payload = response.json()
+        self.assertIn('plan_info', payload)
+        self.assertIn('task_types', payload['plan_info'])
+        self.assertListEqual(payload['plan_info']['task_types'], ['profile', 'referral', 'dashboard'])
 
     def test_profile_task_is_not_generated_when_profile_is_already_complete(self):
         self.user.bio = 'Perfil ya completo'
