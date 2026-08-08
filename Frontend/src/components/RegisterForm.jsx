@@ -144,22 +144,17 @@ const RegisterForm = () => {
                     sessionStorage.setItem('user', JSON.stringify(userData));
                 }
 
-                // Manejar caso especial cuando el email no se envía
-                if (data?.warning === 'email_not_sent') {
-                    setError(data?.message || "No se pudo enviar el email de verificación. Contacta al soporte.");
-                    setSuccess("");
-                } else {
-                    setSuccess(data?.message || "Registro exitoso. Revisa tu correo para verificar tu cuenta.");
+                if (data?.next_step === 'verify_wallet') {
+                    const verificationData = {
+                        wallet_address: data.wallet_address,
+                        wallet_verification_nonce: data.wallet_verification_nonce,
+                    };
+                    sessionStorage.setItem('walletVerificationData', JSON.stringify(verificationData));
+                    navigate('/verify-wallet', { replace: true, state: verificationData });
+                    return;
                 }
-                
-                // Si el registro fue exitoso y el email se envió, redirigir después de un breve delay
-                if (!data?.warning) {
-                    setTimeout(() => {
-                        if (!user?.is_email_verified) {
-                            setShowEmailNotice(true);
-                        }
-                    }, 1500);
-                }
+
+                setSuccess(data?.message || "Registro exitoso. Continúa al siguiente paso.");
             } else {
                 // Manejar códigos de error específicos del backend
                 switch (data?.code) {
