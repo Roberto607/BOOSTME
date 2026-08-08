@@ -23,6 +23,10 @@ from django.views.decorators.csrf import csrf_exempt
 from urllib.parse import urljoin, urlencode
 from urllib import request as urllib_request, error as urllib_error
 import json
+import secrets
+from datetime import timedelta
+from web3 import Web3
+from eth_account.messages import encode_defunct
 from .tokens import password_reset_token
 from .models import User, Transaction, UserPlan
 from .serializers import UserSerializer, RegisterSerializer, ActivatePlanSerializer, WithdrawSerializer
@@ -71,6 +75,26 @@ def _sanitize_for_json(obj):
     except Exception:
         return repr(obj)
 
+
+def _generate_wallet_nonce(length: int = 32) -> str:
+    return secrets.token_hex(length)
+
+
+def _wallet_nonce_expired(user: User) -> bool:
+    if not user.wallet_nonce_created_at:
+        return True
+    expiration = user.wallet_nonce_created_at + timedelta(minutes=15)
+    return timezone.now() > expiration
+
+
+def _verify_wallet_signature(wallet_address: str, nonce: str, signature: str) -> bool:
+    try:
+        message = encode_defunct(text=f"BoostMe verification nonce: {nonce}")
+        signer = Web3().eth.account.recover_message(message, signature=signature)
+        return signer.lower() == wallet_address.lower()
+    except Exception as exc:
+        logger.exception('Error verifying wallet signature: %s', exc)
+        return False
 
 def _attach_jwt_cookies(resp, access_token, refresh_token, access_max_age, refresh_max_age):
     secure_access = settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False)
@@ -168,7 +192,8 @@ class RegisterView(APIView):
             email = request.data.get('email', '').strip().lower()
             username = request.data.get('username', '').strip()
             password = request.data.get('password', '')
-            
+            wallet_address = (request.data.get('wallet_address') or '').strip().lower()
+
             # Validaciones básicas
             if not all([email, username, password]):
                 return Response({
@@ -228,7 +253,27 @@ class RegisterView(APIView):
                     "error": "El nombre de usuario ya está en uso",
                     "code": "username_exists"
                 }, status=status.HTTP_400_BAD_REQUEST)
-            
+
+            # Validar wallet si se proporcionó
+            if wallet_address:
+                if not wallet_address.startswith('0x') or len(wallet_address) != 42:
+                    return Response({
+                        "error": "La dirección de wallet debe comenzar con 0x y tener 42 caracteres",
+                        "code": "invalid_wallet_address"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                try:
+                    int(wallet_address[2:], 16)
+                except ValueError:
+                    return Response({
+                        "error": "La dirección de wallet debe ser hexadecimal",
+                        "code": "invalid_wallet_address"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+                if User.objects.filter(wallet_address=wallet_address).exists():
+                    return Response({
+                        "error": "Esta dirección de wallet ya está en uso",
+                        "code": "wallet_address_exists"
+                    }, status=status.HTTP_400_BAD_REQUEST)
+
             # Crear usuario
             user = None
             with transaction.atomic():
@@ -240,64 +285,70 @@ class RegisterView(APIView):
                         password=password,
                         is_active=False,
                         is_email_verified=False,
-                        has_financial_activation=False
+                        has_financial_activation=False,
+                        wallet_address=wallet_address or None
                     )
                     
                     # Generar tokens JWT
                     refresh = RefreshToken.for_user(user)
                     access_token = str(refresh.access_token)
                     refresh_token = str(refresh)
+
+                    if wallet_address:
+                        user.wallet_nonce = _generate_wallet_nonce()
+                        user.wallet_nonce_created_at = timezone.now()
+                        user.save(update_fields=['wallet_nonce', 'wallet_nonce_created_at'])
+                        frontend_url = _resolve_frontend_base_url(request)
+                    else:
+                        # Generar token de verificación por email
+                        token = account_activation_token.make_token(user)
+                        uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
+                        # Crear link de verificación
+                        frontend_url = _resolve_frontend_base_url(request)
+                        verification_link = urljoin(
+                            frontend_url,
+                            f"/verify-email/{uidb64}/{token}/"
+                        )
                     
-                    # Generar token de verificación
-                    token = account_activation_token.make_token(user)
-                    uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-                    
-                    # Crear link de verificación
-                    frontend_url = _resolve_frontend_base_url(request)
-                    verification_link = urljoin(
-                        frontend_url,
-                        f"/verify-email/{uidb64}/{token}/"
-                    )
-                    
-                    # Construir mensaje de email
-                    mail_subject = 'Activa tu cuenta en BoostMe'
-                    
-                    # Verificar si existe el template de email
-                    try:
-                        message = render_to_string('users/acc_active_email.html', {
-                            'user': user,
-                            'verification_link': verification_link,
-                            'uidb64': uidb64,
-                            'token': token,
-                            'domain': frontend_url,
-                            'protocol': 'https' if not settings.DEBUG else 'http',
-                        })
-                    except Exception as template_error:
-                        logger.error(f"Error al renderizar el template de email: {template_error}")
-                        # Crear un mensaje simple si el template falla
-                        message = f"""
-                        <h2>Bienvenido a BoostMe, {user.username}!</h2>
-                        <p>Gracias por registrarte. Para activar tu cuenta, por favor haz clic en el siguiente enlace:</p>
-                        <p><a href="{verification_link}">Verificar mi cuenta</a></p>
-                        <p>Si no puedes hacer clic en el enlace, copia y pega la siguiente URL en tu navegador:</p>
-                        <p>{verification_link}</p>
-                        <p>Si no creaste esta cuenta, puedes ignorar este mensaje.</p>
-                        """
-                    
-                    plain_text = (
-                        f"Hola {user.username},\n\n"
-                        f"Gracias por registrarte en BoostMe. Confirma tu correo aquí: {verification_link}\n\n"
-                        "Si no creaste esta cuenta, puedes ignorar este mensaje."
-                    )
-                    
-                    # Intentar enviar el email, pero no bloquear el registro si falla SMTP
                     email_sent = False
                     email_error = None
-                    try:
-                        email_sent, email_error = _send_html_mail(mail_subject, message, [email], text_content=plain_text)
-                    except Exception as mail_exc:
-                        email_sent = False
-                        email_error = str(mail_exc)
+                    if wallet_address:
+                        # Con verificación por wallet no enviamos email de activación
+                        email_sent = True
+                    else:
+                        # Construir mensaje de email
+                        mail_subject = 'Activa tu cuenta en BoostMe'
+                        try:
+                            message = render_to_string('users/acc_active_email.html', {
+                                'user': user,
+                                'verification_link': verification_link,
+                                'uidb64': uidb64,
+                                'token': token,
+                                'domain': frontend_url,
+                                'protocol': 'https' if not settings.DEBUG else 'http',
+                            })
+                        except Exception as template_error:
+                            logger.error(f"Error al renderizar el template de email: {template_error}")
+                            message = f"""
+                            <h2>Bienvenido a BoostMe, {user.username}!</h2>
+                            <p>Gracias por registrarte. Para activar tu cuenta, por favor haz clic en el siguiente enlace:</p>
+                            <p><a href="{verification_link}">Verificar mi cuenta</a></p>
+                            <p>Si no puedes hacer clic en el enlace, copia y pega la siguiente URL en tu navegador:</p>
+                            <p>{verification_link}</p>
+                            <p>Si no creaste esta cuenta, puedes ignorar este mensaje.</p>
+                            """
+
+                        plain_text = (
+                            f"Hola {user.username},\n\n"
+                            f"Gracias por registrarte en BoostMe. Confirma tu correo aquí: {verification_link}\n\n"
+                            "Si no creaste esta cuenta, puedes ignorar este mensaje."
+                        )
+
+                        try:
+                            email_sent, email_error = _send_html_mail(mail_subject, message, [email], text_content=plain_text)
+                        except Exception as mail_exc:
+                            email_sent = False
+                            email_error = str(mail_exc)
 
                     if email_sent:
                         logger.info(f"Email de verificación enviado a {email}")
@@ -320,16 +371,27 @@ class RegisterView(APIView):
                     
                     # Devolver respuesta completa con usuario serializado
                     response_data = {
-                        "message": "Registro exitoso. Revisa tu email para verificar tu cuenta.",
+                        "message": "Registro exitoso.",
                         "user": user_data,
                         "access": str(access_token),
                         "refresh": str(refresh),
-                        "next_step": "verify_email"
                     }
-                    
-                    response_data["verification_link"] = verification_link
-                    
-                    if not email_sent:
+
+                    if wallet_address:
+                        response_data.update({
+                            "next_step": "verify_wallet",
+                            "wallet_verification_nonce": user.wallet_nonce,
+                            "wallet_address": wallet_address,
+                            "message": "Registro exitoso. Firma el nonce para verificar tu wallet."
+                        })
+                    else:
+                        response_data.update({
+                            "next_step": "verify_email",
+                            "verification_link": verification_link,
+                            "message": "Registro exitoso. Revisa tu email para verificar tu cuenta."
+                        })
+
+                    if not email_sent and not wallet_address:
                         response_data["message"] = "Registro creado, pero no se pudo enviar el email de verificación. Puedes continuar y reintentar más tarde."
                         response_data["warning"] = "email_not_sent"
                         response_data["detail"] = email_error or 'No se pudo enviar el email'
@@ -411,10 +473,10 @@ class LoginView(APIView):
                     'code': 'invalid_credentials'
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
-            if not user.is_email_verified:
+            if not user.is_verified:
                 return Response({
-                    'error': 'Debes verificar tu email antes de iniciar sesión',
-                    'code': 'email_not_verified'
+                    'error': 'Debes verificar tu cuenta antes de iniciar sesión',
+                    'code': 'account_not_verified'
                 }, status=status.HTTP_403_FORBIDDEN)
 
             refresh = RefreshToken.for_user(user)
@@ -461,6 +523,63 @@ class LoginView(APIView):
             }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 @method_decorator(csrf_exempt, name='dispatch')
+class VerifyWalletSignatureView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        wallet_address = (request.data.get('wallet_address') or '').strip().lower()
+        nonce = request.data.get('nonce', '').strip()
+        signature = request.data.get('signature', '').strip()
+
+        if not wallet_address or not nonce or not signature:
+            return Response({
+                'error': 'wallet_address, nonce y signature son requeridos',
+                'code': 'missing_fields'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            user = User.objects.get(wallet_address=wallet_address)
+        except User.DoesNotExist:
+            return Response({
+                'error': 'Usuario con esa wallet no encontrado',
+                'code': 'user_not_found'
+            }, status=status.HTTP_404_NOT_FOUND)
+
+        if user.is_wallet_verified:
+            return Response({
+                'message': 'Wallet ya está verificada',
+                'user': UserSerializer(user, context={'request': request}).data
+            }, status=status.HTTP_200_OK)
+
+        if user.wallet_nonce != nonce:
+            return Response({
+                'error': 'Nonce inválido',
+                'code': 'invalid_nonce'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if _wallet_nonce_expired(user):
+            return Response({
+                'error': 'Nonce expirado',
+                'code': 'nonce_expired'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        if not _verify_wallet_signature(wallet_address, nonce, signature):
+            return Response({
+                'error': 'Firma inválida',
+                'code': 'invalid_signature'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        user.is_wallet_verified = True
+        user.is_active = True
+        user.wallet_nonce = ''
+        user.save(update_fields=['is_wallet_verified', 'is_active', 'wallet_nonce'])
+
+        return Response({
+            'message': 'Wallet verificada exitosamente',
+            'user': UserSerializer(user, context={'request': request}).data
+        }, status=status.HTTP_200_OK)
+
+
 class LogoutView(APIView):
     permission_classes = [IsAuthenticated]
 
@@ -505,10 +624,10 @@ class CustomTokenRefreshView(TokenRefreshView):
             user = refresh.user
             
             # Verificar el estado del usuario
-            if not user.is_email_verified:
+            if not user.is_verified:
                 return Response({
-                    'error': 'Email no verificado',
-                    'code': 'email_not_verified'
+                    'error': 'Cuenta no verificada',
+                    'code': 'account_not_verified'
                 }, status=status.HTTP_401_UNAUTHORIZED)
 
             # Generar nuevo access token
@@ -751,6 +870,8 @@ class UserStatusView(APIView):
                 "user": user_data,
                 "status": {
                     "is_email_verified": user.is_email_verified,
+                    "is_wallet_verified": user.is_wallet_verified,
+                    "is_verified": user.is_verified,
                     "has_financial_activation": user.has_financial_activation,
                     "is_active": user.is_active,
                     "can_withdraw": user.can_withdraw,
@@ -768,8 +889,8 @@ class UserStatusView(APIView):
 
     def get_next_step(self, user):
         """Determina el siguiente paso que debe seguir el usuario"""
-        if not user.is_email_verified:
-            return "verify_email"
+        if not user.is_verified:
+            return "verify_account"
         if not user.has_financial_activation:
             return "make_deposit"
         return "complete"

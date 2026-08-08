@@ -7,8 +7,12 @@ from decimal import Decimal
 class User(AbstractUser):
     email = models.EmailField(unique=True)
     is_email_verified = models.BooleanField(default=False)
-    
-     # 📝 Información del perfil
+    wallet_address = models.CharField(max_length=66, blank=True, null=True, unique=True)
+    is_wallet_verified = models.BooleanField(default=False)
+    wallet_nonce = models.CharField(max_length=128, blank=True, null=True)
+    wallet_nonce_created_at = models.DateTimeField(null=True, blank=True)
+
+    # 📝 Información del perfil
     bio = models.TextField(blank=True, null=True)
     country = models.CharField(max_length=50, blank=True, null=True)
     city = models.CharField(max_length=50, blank=True, null=True)
@@ -44,6 +48,10 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    @property
+    def is_verified(self):
+        return self.is_email_verified or self.is_wallet_verified
 
     @property
     def total_boost(self):

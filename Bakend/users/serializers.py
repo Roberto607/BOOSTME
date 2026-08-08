@@ -23,6 +23,7 @@ class UserSerializer(serializers.ModelSerializer):
     total_boost = serializers.SerializerMethodField()
     photo_url = serializers.SerializerMethodField()
     full_name = serializers.SerializerMethodField()
+    is_verified = serializers.SerializerMethodField()
     join_date = serializers.DateTimeField(format='%Y-%m-%d', read_only=True)
 
     class Meta:
@@ -42,6 +43,9 @@ class UserSerializer(serializers.ModelSerializer):
             'photo_url',
             'join_date',
             'is_email_verified',
+            'is_wallet_verified',
+            'wallet_address',
+            'is_verified',
             'has_financial_activation',
             'balance',
             'boost_balance',
@@ -78,6 +82,9 @@ class UserSerializer(serializers.ModelSerializer):
 
     def get_total_boost(self, obj):
         return float(obj.purchased_boost + obj.earned_boost)
+
+    def get_is_verified(self, obj):
+        return obj.is_verified
 
     def get_photo_url(self, obj):
         if obj.photo:
@@ -131,10 +138,35 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(write_only=True)
+    wallet_address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
 
     class Meta:
         model = User
-        fields = ('email', 'username', 'password', 'password2')
+        fields = ('email', 'username', 'password', 'password2', 'wallet_address')
+
+    def validate_wallet_address(self, value):
+        if not value:
+            return ''
+        value = value.strip()
+        if not value.startswith('0x') or len(value) != 42:
+            raise serializers.ValidationError('La dirección de wallet debe comenzar con 0x y tener 42 caracteres.')
+        try:
+            int(value[2:], 16)
+        except ValueError:
+            raise serializers.ValidationError('La dirección de wallet debe ser hexadecimal.')
+        return value.lower()
+
+    def validate_wallet_address(self, value):
+        if not value:
+            return ''
+        value = value.strip()
+        if not value.startswith('0x') or len(value) != 42:
+            raise serializers.ValidationError('La dirección de wallet debe comenzar con 0x y tener 42 caracteres.')
+        try:
+            int(value[2:], 16)
+        except ValueError:
+            raise serializers.ValidationError('La dirección de wallet debe ser hexadecimal.')
+        return value.lower()
 
     def validate(self, data):
         if data['password'] != data['password2']:
@@ -182,8 +214,8 @@ class LoginSerializer(serializers.Serializer):
         if not user:
             raise serializers.ValidationError("Usuario o contraseña incorrectos")
 
-        if not user.is_email_verified:
-            raise serializers.ValidationError("Email no verificado")
+        if not user.is_verified:
+            raise serializers.ValidationError("Cuenta no verificada")
 
         # Devuelve estado completo del usuario
         return UserSerializer(user).data
