@@ -25,8 +25,15 @@ from urllib import request as urllib_request, error as urllib_error
 import json
 import secrets
 from datetime import timedelta
-from web3 import Web3
-from eth_account.messages import encode_defunct
+
+try:
+    from web3 import Web3
+    from eth_account.messages import encode_defunct
+except ImportError:
+    Web3 = None
+    def encode_defunct(*args, **kwargs):
+        raise ImportError('web3 is required for wallet signature verification')
+
 from .tokens import password_reset_token
 from .models import User, Transaction, UserPlan
 from .serializers import UserSerializer, RegisterSerializer, ActivatePlanSerializer, WithdrawSerializer
@@ -88,6 +95,8 @@ def _wallet_nonce_expired(user: User) -> bool:
 
 
 def _verify_wallet_signature(wallet_address: str, nonce: str, signature: str) -> bool:
+    if Web3 is None:
+        raise ImportError('web3 is required for wallet signature verification')
     try:
         message = encode_defunct(text=f"BoostMe verification nonce: {nonce}")
         signer = Web3().eth.account.recover_message(message, signature=signature)
