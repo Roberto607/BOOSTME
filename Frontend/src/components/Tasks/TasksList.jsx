@@ -901,7 +901,6 @@ const TasksList = () => {
                   </div>
                 </div>
               </div>
-              </div>
             </div>
           )}
 
