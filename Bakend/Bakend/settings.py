@@ -340,7 +340,7 @@ has_explicit_db_config = any([
     os.getenv('DB_HOST'),
 ])
 
-use_sqlite_fallback = os.getenv('USE_SQLITE_FALLBACK', 'true').lower() in ('true', '1', 'yes')
+use_sqlite_fallback = os.getenv('USE_SQLITE_FALLBACK', 'false').lower() in ('true', '1', 'yes')
 
 if has_explicit_db_config:
     DATABASES = {'default': build_database_config()}
