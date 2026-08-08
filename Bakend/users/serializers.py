@@ -138,7 +138,7 @@ class UserSerializer(serializers.ModelSerializer):
 
 class RegisterSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(write_only=True)
-    wallet_address = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    wallet_address = serializers.CharField(required=True, allow_blank=False)
 
     class Meta:
         model = User
@@ -146,19 +146,7 @@ class RegisterSerializer(serializers.ModelSerializer):
 
     def validate_wallet_address(self, value):
         if not value:
-            return ''
-        value = value.strip()
-        if not value.startswith('0x') or len(value) != 42:
-            raise serializers.ValidationError('La dirección de wallet debe comenzar con 0x y tener 42 caracteres.')
-        try:
-            int(value[2:], 16)
-        except ValueError:
-            raise serializers.ValidationError('La dirección de wallet debe ser hexadecimal.')
-        return value.lower()
-
-    def validate_wallet_address(self, value):
-        if not value:
-            return ''
+            raise serializers.ValidationError('La dirección de wallet es requerida.')
         value = value.strip()
         if not value.startswith('0x') or len(value) != 42:
             raise serializers.ValidationError('La dirección de wallet debe comenzar con 0x y tener 42 caracteres.')
@@ -182,7 +170,8 @@ class RegisterSerializer(serializers.ModelSerializer):
                 password=validated_data['password'],
                 is_active=False,
                 is_email_verified=False,
-                has_financial_activation=False
+                has_financial_activation=False,
+                wallet_address=validated_data['wallet_address']
             )
             return user
         except RecursionError as e:
@@ -190,6 +179,7 @@ class RegisterSerializer(serializers.ModelSerializer):
             user = User(
                 username=validated_data['username'],
                 email=validated_data['email'],
+                wallet_address=validated_data['wallet_address'],
                 is_active=False,
                 is_email_verified=False,
                 has_financial_activation=False
