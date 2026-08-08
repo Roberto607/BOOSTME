@@ -665,8 +665,13 @@ class TaskViewSet(viewsets.ModelViewSet):
                 'simulated_content': 'Encuesta de preferencias.'
             }
 
+            plan_definition = PlanDefinition.objects.filter(name=user_plan.plan_name, is_active=True).first()
+            allowed_task_types = None
+            if plan_definition and plan_definition.task_types:
+                allowed_task_types = [line.strip() for line in str(plan_definition.task_types).splitlines() if line.strip()]
+
             base_tasks = []
-            if not self.user_profile_is_complete(user):
+            if not self.user_profile_is_complete(user) and (allowed_task_types is None or 'profile' in allowed_task_types):
                 base_tasks.append({
                     'task_type': 'profile',
                     'description': 'Completa tu perfil para activar tu cuenta en BoostMe.',
@@ -677,7 +682,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                     'simulated_content': 'Completa tu perfil y prepara tu primer progreso.'
                 })
 
-            base_tasks.extend([
+            candidate_tasks = [
                 {
                     'task_type': 'referral',
                     'description': 'Invita a 5 personas con tu enlace de referidos y gana 8 Boost cuando lo completes.',
@@ -708,7 +713,11 @@ class TaskViewSet(viewsets.ModelViewSet):
                     'simulated_action': 'goal',
                     'simulated_content': 'Activa un objetivo para empezar a acumular Boost.'
                 }
-            ])
+            ]
+
+            for task in candidate_tasks:
+                if allowed_task_types is None or task['task_type'] in allowed_task_types:
+                    base_tasks.append(task)
 
             free_tasks = []
             for task in base_tasks:

@@ -9,6 +9,19 @@ class PlanDefinition(models.Model):
         ('Elite', 'Elite'),
     ]
 
+    TASK_TYPE_CHOICES = [
+        ('like', 'Dar Like'),
+        ('follow', 'Seguir Cuenta'),
+        ('video', 'Ver Video'),
+        ('survey', 'Encuesta'),
+        ('review', 'Reseña'),
+        ('profile', 'Completar Perfil'),
+        ('social', 'Actividad Social'),
+        ('referral', 'Invitar Referido'),
+        ('goal', 'Objetivo'),
+        ('dashboard', 'Panel'),
+    ]
+
     FEATURE_CHOICES = [
         ('Más tareas diarias', 'Más tareas diarias'),
         ('Bonos mejorados', 'Bonos mejorados'),
@@ -29,6 +42,7 @@ class PlanDefinition(models.Model):
     is_free = models.BooleanField(default=False)
     recommended = models.BooleanField(default=False)
     is_active = models.BooleanField(default=True)
+    task_types = models.TextField(blank=True, help_text='Selecciona las tareas que pertenecerán a este plan, una por línea.')
     features = models.TextField(blank=True, help_text='Escribe las características del plan, una por línea.')
     daily_tasks = models.IntegerField(default=3)
     bonus_percentage = models.IntegerField(default=0)

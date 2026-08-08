@@ -5,6 +5,13 @@ from .models import PlanDefinition
 
 
 class PlanDefinitionForm(forms.ModelForm):
+    task_choices = forms.MultipleChoiceField(
+        required=False,
+        choices=PlanDefinition.TASK_TYPE_CHOICES,
+        widget=forms.CheckboxSelectMultiple,
+        label='Tareas del plan'
+    )
+
     feature_choices = forms.MultipleChoiceField(
         required=False,
         choices=PlanDefinition.FEATURE_CHOICES,
@@ -18,6 +25,10 @@ class PlanDefinitionForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        if self.instance and self.instance.task_types:
+            existing_task_types = [line.strip() for line in str(self.instance.task_types).splitlines() if line.strip()]
+            self.fields['task_choices'].initial = [task for task in existing_task_types if task in dict(self.fields['task_choices'].choices)]
+
         if self.instance and self.instance.features:
             existing_features = [line.strip() for line in str(self.instance.features).splitlines() if line.strip()]
             self.fields['feature_choices'].initial = [feature for feature in existing_features if feature in dict(self.fields['feature_choices'].choices)]
@@ -35,6 +46,8 @@ class PlanDefinitionForm(forms.ModelForm):
         instance = super().save(commit=False)
         selected_features = self.cleaned_data.get('feature_choices', []) or []
         instance.features = '\n'.join(selected_features)
+        selected_tasks = self.cleaned_data.get('task_choices', []) or []
+        instance.task_types = '\n'.join(selected_tasks)
         if commit:
             instance.save()
         return instance
@@ -51,6 +64,7 @@ class PlanDefinitionAdmin(admin.ModelAdmin):
     fieldsets = (
         (None, {'fields': ('name', 'slug', 'description', 'price', 'is_free', 'recommended', 'is_active')}),
         ('Configuración del plan', {'fields': ('daily_tasks', 'bonus_percentage', 'weekly_withdrawal_limit', 'min_referrals', 'commission_percentage')}),
+        ('Tareas del plan', {'fields': ('task_choices',)}),
         ('Características', {'fields': ('feature_choices',)}),
     )
 
