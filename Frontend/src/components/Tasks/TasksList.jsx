@@ -118,6 +118,7 @@ const TasksList = () => {
   const [planInfo, setPlanInfo] = useState(null);
   const [activeVideoTask, setActiveVideoTask] = useState(null);
   const [videoWatchedSeconds, setVideoWatchedSeconds] = useState(0);
+  const requiresPlanSelection = Boolean(user && !user.has_financial_activation);
   const [videoRequiredSeconds, setVideoRequiredSeconds] = useState(0);
   const [videoError, setVideoError] = useState(null);
   const [isCompletingVideo, setIsCompletingVideo] = useState(false);
@@ -398,8 +399,15 @@ const TasksList = () => {
   };
 
   useEffect(() => {
+    if (!user || requiresPlanSelection) {
+      setLoading(false);
+      setTasks([]);
+      setPlanInfo(null);
+      return;
+    }
+
     loadTasks();
-  }, [user]);
+  }, [user, requiresPlanSelection]);
 
   useEffect(() => {
     if (!user) return;
@@ -650,8 +658,24 @@ const TasksList = () => {
 
   return (
     <div className="px-4 md:px-8 py-4 md:py-8">
-      {planInfo && (
-        <div className="w-full max-w-2xl md:max-w-4xl mx-auto">
+      {requiresPlanSelection ? (
+        <div className="w-full max-w-2xl md:max-w-4xl mx-auto rounded-3xl border border-amber-400 bg-amber-50 p-8 text-center shadow-lg">
+          <h2 className="text-2xl font-bold text-amber-800">Selecciona un plan para ver tus tareas</h2>
+          <p className="mt-3 text-sm text-amber-700">
+            Actualmente solo puedes acceder a las tareas después de activar un plan. Ve a la sección de planes y elige el que quieres usar.
+          </p>
+          <button
+            type="button"
+            onClick={() => navigate('/deposit')}
+            className="mt-6 rounded-2xl bg-amber-600 px-6 py-3 text-sm font-semibold text-white transition hover:bg-amber-700"
+          >
+            Seleccionar plan
+          </button>
+        </div>
+      ) : (
+        <>
+          {planInfo && (
+            <div className="w-full max-w-2xl md:max-w-4xl mx-auto">
           <div className="flex items-center justify-between p-4 md:p-6">
             <div className="flex items-center gap-3">
               <Crown className="w-6 h-6 md:w-8 md:h-8 text-yellow-500" />
