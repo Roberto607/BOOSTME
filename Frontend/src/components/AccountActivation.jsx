@@ -62,7 +62,7 @@ const AccountActivation = () => {
     }
   };
 
-  if (user && user.is_email_verified) return null;
+  if (user && user.is_verified) return null;
 
   return (
     <div className="min-h-screen bg-gray-50 flex items-center justify-center px-4">
