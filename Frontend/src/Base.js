@@ -10,7 +10,7 @@ const defaultApiBaseUrl = import.meta.env.PROD
 
 const resolvedApiBaseUrl = explicitApiBaseUrl || defaultApiBaseUrl;
 
-export const API_BASE_URL = `${resolvedApiBaseUrl}/api/users/`;
+export const API_BASE_URL = `${resolvedApiBaseUrl}/api/users`;
 export const TASKS_API_BASE_URL = `${resolvedApiBaseUrl}/api/tasks`;
 export const REFERRALS_API_BASE_URL = `${resolvedApiBaseUrl}/api/referrals`;
 export const BONUSES_API_BASE_URL = `${resolvedApiBaseUrl}/api/bonuses`;

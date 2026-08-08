@@ -75,7 +75,7 @@ const VerifyWallet = () => {
         throw new Error("La wallet no soporta la firma personal.");
       }
 
-      const response = await fetch(`${API_BASE_URL}verify-wallet/`, {
+      const response = await fetch(`${API_BASE_URL}/verify-wallet/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ wallet_address: walletAddress, nonce, signature }),

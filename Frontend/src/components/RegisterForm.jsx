@@ -90,7 +90,7 @@ const RegisterForm = () => {
             setShowEmailNotice(false);
             setLoading(true);
 
-            const registerUrl = `${API_BASE_URL}register/`;
+            const registerUrl = `${API_BASE_URL}/register/`;
             console.log("Register URL:", registerUrl);
 
             const response = await fetch(registerUrl, {
