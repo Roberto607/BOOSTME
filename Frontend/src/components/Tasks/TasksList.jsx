@@ -641,8 +641,8 @@ const TasksList = () => {
                       <Crown className="w-5 h-5" />
                     </div>
                     <div>
-                      <h3 className="text-xl font-semibold text-slate-900">Plan {planInfo.name}</h3>
-                      <p className="mt-1 text-sm text-slate-600">Tu plan actual y los beneficios que desbloquea en BoostMe.</p>
+                      <h3 className="text-xl font-semibold text-slate-900">Estado del plan {planInfo.name}</h3>
+                      <p className="mt-1 text-sm text-slate-600">Información cargada desde el admin: tareas, bonificaciones y características del plan.</p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
