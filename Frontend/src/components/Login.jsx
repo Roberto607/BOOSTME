@@ -42,8 +42,14 @@ const Login = () => {
         setIsSubmitting(true);
         setErrors({});
         try {
-            await login(formData);
-            navigate(location.state?.from || '/dashboard');
+            const data = await login(formData);
+            if (location.state?.from) {
+                navigate(location.state.from);
+            } else if (data?.user && !data.user.has_financial_activation) {
+                navigate('/deposit');
+            } else {
+                navigate('/dashboard');
+            }
         } catch (error) {
             setErrors({ general: error.message });
         } finally {

@@ -51,61 +51,67 @@ const Bonuses = () => {
       try {
         setBonuses([]);
         setShowBonuses(true);
-        // Intentar cargar datos de la API usando cookies
+
+        const bonusesRes = await fetch(`${BONUSES_API_BASE_URL}/bonus-types/`, {
+          credentials: 'include',
+          headers: buildAuthHeaders()
+        });
+
+        if (bonusesRes.ok) {
+          const bonusesData = await bonusesRes.json();
+          const normalizedBonuses = Array.isArray(bonusesData?.results)
+            ? bonusesData.results
+            : Array.isArray(bonusesData)
+              ? bonusesData
+              : null;
+          if (normalizedBonuses && normalizedBonuses.length > 0) {
+            setBonuses(normalizedBonuses.map(mapBonusToUi));
+          } else if (Array.isArray(bonusesData)) {
+            setBonuses(bonusesData.map(mapBonusToUi));
+          }
+        }
+
+        if (!isAuthenticated || !user) {
+          return;
+        }
+
+        const [userBonusesRes, streakRes] = await Promise.all([
+          fetch(`${BONUSES_API_BASE_URL}/user-bonuses/`, { credentials: 'include', headers: buildAuthHeaders() }),
+          fetch(`${BONUSES_API_BASE_URL}/user-streak/`, { credentials: 'include', headers: buildAuthHeaders() })
+        ]);
+
+        if (userBonusesRes.ok) {
+          const userBonusesData = await userBonusesRes.json();
+          const normalizedUserBonuses = Array.isArray(userBonusesData?.results)
+            ? userBonusesData.results
+            : Array.isArray(userBonusesData)
+              ? userBonusesData
+              : null;
+          if (normalizedUserBonuses) {
+            setUserBonuses(normalizedUserBonuses);
+          }
+        }
+
+        if (streakRes.ok) {
+          const streakData = await streakRes.json();
+          const normalizedStreak = streakData?.results?.[0] || streakData;
+          if (normalizedStreak) {
+            setUserStreak(normalizedStreak);
+          }
+        }
+
         try {
-          const [bonusesRes, userBonusesRes, streakRes] = await Promise.all([
-            fetch(`${BONUSES_API_BASE_URL}/bonus-types/`, { credentials: 'include', headers: buildAuthHeaders() }),
-            fetch(`${BONUSES_API_BASE_URL}/user-bonuses/`, { credentials: 'include', headers: buildAuthHeaders() }),
-            fetch(`${BONUSES_API_BASE_URL}/user-streak/`, { credentials: 'include', headers: buildAuthHeaders() })
-          ]);
+          const statsRes = await fetch(`${BONUSES_API_BASE_URL}/user-bonuses/bonus_stats/`, {
+            credentials: 'include',
+            headers: buildAuthHeaders()
+          });
 
-          if (bonusesRes.ok) {
-            const bonusesData = await bonusesRes.json();
-            const normalizedBonuses = Array.isArray(bonusesData?.results)
-              ? bonusesData.results
-              : Array.isArray(bonusesData)
-                ? bonusesData
-                : null;
-            if (normalizedBonuses && normalizedBonuses.length > 0) {
-              setBonuses(normalizedBonuses.map(mapBonusToUi));
-            } else if (Array.isArray(bonusesData)) {
-              setBonuses(bonusesData.map(mapBonusToUi));
-            }
+          if (statsRes.ok) {
+            const stats = await statsRes.json();
+            setBonusStats(stats);
           }
-
-          if (userBonusesRes.ok) {
-            const userBonusesData = await userBonusesRes.json();
-            const normalizedUserBonuses = Array.isArray(userBonusesData?.results)
-              ? userBonusesData.results
-              : Array.isArray(userBonusesData)
-                ? userBonusesData
-                : null;
-            if (normalizedUserBonuses) {
-              setUserBonuses(normalizedUserBonuses);
-            }
-          }
-
-          if (streakRes.ok) {
-            const streakData = await streakRes.json();
-            const normalizedStreak = streakData?.results?.[0] || streakData;
-            if (normalizedStreak) {
-              setUserStreak(normalizedStreak);
-            }
-          }
-
-          // Intentar cargar estadísticas si el endpoint existe
-          try {
-            const statsRes = await fetch(`${BONUSES_API_BASE_URL}/user-bonuses/bonus_stats/`, { credentials: 'include', headers: buildAuthHeaders() });
-
-            if (statsRes.ok) {
-              const stats = await statsRes.json();
-              setBonusStats(stats);
-            }
-          } catch (statsError) {
-            console.log('Stats endpoint not available, using example data');
-          }
-        } catch (apiError) {
-          console.log('API not available, using example data', apiError);
+        } catch (statsError) {
+          console.log('Stats endpoint not available, using example data');
         }
       } catch (error) {
         console.error('Error loading bonuses:', error);
@@ -114,7 +120,7 @@ const Bonuses = () => {
     };
 
     loadBonuses();
-  }, []);
+  }, [isAuthenticated, user]);
 
   const claimBonus = async (e) => {
     e.preventDefault();
@@ -136,9 +142,14 @@ const Bonuses = () => {
         body: JSON.stringify({ bonus_id: selectedBonus.id })
       });
 
+      if (response.status === 401) {
+        setError('Debes iniciar sesión para reclamar bonos.');
+        navigate('/login', { state: { from: '/bonuses' } });
+        return;
+      }
+
       if (response.ok) {
         setMessage(`¡Bono ${selectedBonus.name} reclamado exitosamente!`);
-        // Actualizar el progreso del bono
         setBonuses(prevBonuses => 
           prevBonuses.map(bonus => 
             bonus.id === selectedBonus.id 

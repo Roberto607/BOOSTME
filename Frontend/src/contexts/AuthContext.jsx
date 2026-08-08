@@ -46,7 +46,13 @@ export const AuthProvider = ({ children }) => {
         });
     }, [updateAuthState]);
 
-    const buildAuthHeaders = useCallback((headers = {}) => headers, []);
+    const buildAuthHeaders = useCallback((headers = {}) => {
+        const finalHeaders = { ...headers };
+        if (authState.accessToken) {
+            finalHeaders.Authorization = `Bearer ${authState.accessToken}`;
+        }
+        return finalHeaders;
+    }, [authState.accessToken]);
 
     // Helpers para exponer setters compatibles con componentes existentes
     const setUser = useCallback((user) => updateAuthState({ user }), [updateAuthState]);
@@ -246,7 +252,6 @@ export const AuthProvider = ({ children }) => {
             '/revisar-correo',
             '/forgot-password',
             '/contact',
-            '/deposit',
             '/verify-wallet',
             '/about',
             '/how-it-works',
