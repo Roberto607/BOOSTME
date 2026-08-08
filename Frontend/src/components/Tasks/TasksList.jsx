@@ -365,7 +365,8 @@ const TasksList = () => {
       const planData = {
         name: response?.plan_info?.name || user?.plan_name || 'Free',
         dailyTasks: response?.plan_info?.daily_tasks || (user?.plan_name === 'Starter' ? 5 : user?.plan_name === 'Pro' ? 10 : user?.plan_name === 'Elite' ? 20 : 6),
-        bonus: response?.plan_info?.bonus_percentage ?? (user?.plan_name === 'Starter' ? 10 : user?.plan_name === 'Pro' ? 20 : user?.plan_name === 'Elite' ? 25 : 0)
+        bonus: response?.plan_info?.bonus_percentage ?? (user?.plan_name === 'Starter' ? 10 : user?.plan_name === 'Pro' ? 20 : user?.plan_name === 'Elite' ? 25 : 0),
+        features: Array.isArray(response?.plan_info?.features) ? response.plan_info.features : []
       };
 
       const hasSurveyTask = backendTasks.some((task) => task.task_type === 'survey');
@@ -675,22 +676,52 @@ const TasksList = () => {
       ) : (
         <>
           {planInfo && (
-            <div className="w-full max-w-2xl md:max-w-4xl mx-auto">
-          <div className="flex items-center justify-between p-4 md:p-6">
-            <div className="flex items-center gap-3">
-              <Crown className="w-6 h-6 md:w-8 md:h-8 text-yellow-500" />
-              <div>
-                <h3 className="text-lg md:text-xl font-bold text-gray-800">Plan {planInfo.name}</h3>
-                <p className="text-sm md:text-base text-gray-600">
-                  {planInfo.dailyTasks} tareas diarias • +{planInfo.bonus}% bonus
-                </p>
+            <div className="w-full max-w-2xl md:max-w-4xl mx-auto mb-6">
+              <div className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="rounded-3xl bg-slate-950 p-3 text-white shadow-lg">
+                      <Crown className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-semibold text-slate-900">Plan {planInfo.name}</h3>
+                      <p className="mt-1 text-sm text-slate-600">Tu plan actual y los beneficios que desbloquea en BoostMe.</p>
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                    <div className="rounded-3xl bg-slate-950 px-4 py-4 text-white shadow-lg">
+                      <p className="text-sm uppercase tracking-[0.2em] text-slate-300">Tareas diarias</p>
+                      <p className="mt-2 text-2xl font-semibold">{planInfo.dailyTasks}</p>
+                    </div>
+                    <div className="rounded-3xl bg-slate-950 px-4 py-4 text-white shadow-lg">
+                      <p className="text-sm uppercase tracking-[0.2em] text-slate-300">Bonus</p>
+                      <p className="mt-2 text-2xl font-semibold">+{planInfo.bonus}%</p>
+                    </div>
+                    <div className="rounded-3xl bg-slate-950 px-4 py-4 text-white shadow-lg">
+                      <p className="text-sm uppercase tracking-[0.2em] text-slate-300">Límite retiros</p>
+                      <p className="mt-2 text-2xl font-semibold">{planInfo.weekly_withdrawal_limit ?? '—'}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {planInfo.features?.length > 0 && (
+                  <div className="mt-6 rounded-3xl bg-slate-50 p-4">
+                    <h4 className="text-lg font-semibold text-slate-900">Características del plan</h4>
+                    <div className="mt-4 grid gap-3 sm:grid-cols-2">
+                      {planInfo.features.map((feature, index) => (
+                        <div key={index} className="flex items-start gap-3 rounded-3xl border border-slate-200 bg-white px-4 py-3 text-sm text-slate-700">
+                          <CheckCircle2 className="mt-1 h-4 w-4 text-emerald-500" />
+                          <span>{feature}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
-        </div>
-      )}
+          )}
 
-      <div className="w-full max-w-2xl md:max-w-4xl mx-auto mb-6">
+          <div className="w-full max-w-2xl md:max-w-4xl mx-auto mb-6">
         <div className="rounded-3xl bg-slate-950 text-white shadow-xl p-4 md:p-6">
           <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
             <h2 className="text-2xl md:text-3xl font-bold">Tareas Disponibles</h2>

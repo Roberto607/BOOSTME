@@ -5,6 +5,7 @@ from rest_framework.response import Response
 from .models import Task, TaskCompletion
 from .serializers import TaskSerializer, TaskCompletionSerializer
 from users.models import UserPlan
+from plan.models import PlanDefinition
 import random
 from django.utils import timezone
 from django.conf import settings
@@ -408,14 +409,24 @@ class TaskViewSet(viewsets.ModelViewSet):
             # Obtener las tareas
             tasks = self.get_queryset()
             serializer = self.get_serializer(tasks, many=True)
-            
+
+            plan_features = []
+            plan_definition = PlanDefinition.objects.filter(name=user_plan.plan_name, is_active=True).first()
+            if plan_definition:
+                raw_features = plan_definition.features or ''
+                if isinstance(raw_features, str):
+                    plan_features = [line.strip() for line in raw_features.splitlines() if line.strip()]
+                elif isinstance(raw_features, (list, tuple)):
+                    plan_features = [str(item).strip() for item in raw_features if str(item).strip()]
+
             return Response({
                 'tasks': serializer.data,
                 'plan_info': {
                     'name': user_plan.plan_name,
                     'daily_tasks': user_plan.daily_tasks,
                     'bonus_percentage': user_plan.bonus_percentage,
-                    'weekly_withdrawal_limit': user_plan.weekly_withdrawal_limit
+                    'weekly_withdrawal_limit': user_plan.weekly_withdrawal_limit,
+                    'features': plan_features
                 }
             })
         except Exception as e:
