@@ -82,12 +82,22 @@
   .main-content {
     @apply flex flex-col items-center gap-5 px-4 md:px-8 py-4 md:py-8;
   }
-
+  /* Cards should fill their grid cell and not be constrained to a small max-width */
   .balance-card,
   .tasks-card,
   .plan-card,
   .quick-actions {
-    @apply bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full max-w-2xl transition-transform duration-200 hover:scale-105;
+    @apply bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full max-w-full transition-transform duration-200;
+  }
+
+  /* Apply hover scale only on md+ to avoid layout shifts on small screens */
+  @media (min-width: 768px) {
+    .balance-card:hover,
+    .tasks-card:hover,
+    .plan-card:hover,
+    .quick-actions:hover {
+      transform: translateY(-6px);
+    }
   }
 
   .balance-header {

@@ -837,9 +837,9 @@ const TasksList = () => {
           </div>
 
           {activeVideoTask && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-              <div className="w-full max-w-3xl overflow-hidden rounded-3xl bg-white shadow-2xl">
-                <div className="flex flex-col gap-2 border-b px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6">
+              <div className="w-full max-w-5xl mx-2 overflow-hidden rounded-3xl bg-white shadow-2xl">
+                <div className="flex flex-col gap-2 border-b px-4 py-3 sm:px-6 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-xl font-semibold text-slate-900">{activeVideoTask.title}</h3>
                     <p className="mt-1 text-sm text-slate-600">{activeVideoTask.description}</p>
@@ -852,9 +852,11 @@ const TasksList = () => {
                     Cerrar
                   </button>
                 </div>
-                <div className="px-6 py-5">
+                <div className="px-4 py-4 sm:px-6 sm:py-5">
                   {isYouTubeVideo ? (
-                    <div ref={youtubeContainerRef} className="h-[360px] w-full rounded-3xl bg-slate-900" />
+                    <div className="relative w-full" style={{ paddingTop: '56.25%' }}>
+                      <div ref={youtubeContainerRef} className="absolute inset-0 rounded-3xl bg-slate-900 overflow-hidden" />
+                    </div>
                   ) : (
                     <video
                       ref={videoRef}
@@ -862,7 +864,7 @@ const TasksList = () => {
                       controls
                       onTimeUpdate={handleVideoTimeUpdate}
                       onEnded={handleVideoEnded}
-                      className="h-72 w-full rounded-3xl bg-slate-900 object-cover"
+                      className="w-full h-auto max-h-[60vh] rounded-3xl bg-slate-900 object-contain"
                     />
                   )}
                   <div className="mt-4">
@@ -899,13 +901,14 @@ const TasksList = () => {
                   </div>
                 </div>
               </div>
+              </div>
             </div>
           )}
 
           {activeSurveyTask && (
             <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 sm:p-6">
               <div className="w-full max-w-2xl max-h-[calc(100vh-3rem)] overflow-hidden rounded-3xl bg-white shadow-2xl">
-                <div className="flex flex-col gap-2 border-b px-6 py-4 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-2 border-b px-4 py-3 sm:px-6 sm:py-4 sm:flex-row sm:items-center sm:justify-between">
                   <div>
                     <h3 className="text-xl font-semibold text-slate-900">{activeSurveyTask.title}</h3>
                     <p className="mt-1 text-sm text-slate-600">{activeSurveyTask.description}</p>
@@ -918,7 +921,7 @@ const TasksList = () => {
                     Cerrar
                   </button>
                 </div>
-                <div className="max-h-[calc(100vh-14rem)] overflow-y-auto space-y-6 px-6 py-5">
+                <div className="max-h-[calc(100vh-14rem)] overflow-y-auto space-y-6 px-4 py-4 sm:px-6 sm:py-5">
                   <div className="rounded-3xl bg-slate-50 p-5">
                     <h4 className="text-lg font-semibold text-slate-900">{activeSurveyTask.contentData?.survey_title || 'Encuesta'}</h4>
                     <p className="mt-2 text-sm text-slate-600">Responde las preguntas y completa la tarea para ganar tu boost.</p>

@@ -254,7 +254,8 @@ const Dashboard = () => {
       <main className="main-content">
         {currentView === 'dashboard' && (
           <>
-            <div className="balance-card">
+            <div className="dashboard-grid w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="balance-card md:col-span-2">
               <div className="balance-header">
                 <div>
                   <p className="balance-label">Saldo Total BOOST</p>
@@ -294,9 +295,10 @@ const Dashboard = () => {
                   Saldo en wallet: {userBalance.wallet.toFixed(2)} USDT
                 </p>
               </div>
-            </div>
+              </div>
 
-            <div className="quick-actions">
+              <div className="space-y-6">
+                <div className="quick-actions">
               <h2 className="text-xl md:text-2xl">Resumen de hoy</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -324,9 +326,9 @@ const Dashboard = () => {
                   <p className="text-sm text-gray-500">Revisa tu disponibilidad</p>
                 </div>
               </div>
-            </div>
+                </div>
 
-            <div className="quick-actions">
+                <div className="quick-actions">
               <h2 className="text-xl md:text-2xl">Acciones recomendadas</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 {recommendedActions.map((item) => (
@@ -343,9 +345,9 @@ const Dashboard = () => {
                   </button>
                 ))}
               </div>
-            </div>
+                </div>
 
-            <div className="quick-actions">
+                <div className="quick-actions">
               <h2 className="text-xl md:text-2xl">Logros recientes</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 {achievements.map((item) => (
@@ -358,11 +360,11 @@ const Dashboard = () => {
                   </div>
                 ))}
               </div>
-            </div>
+                </div>
 
-            <div className="quick-actions">
+                <div className="quick-actions">
               <h2 className="text-xl md:text-2xl">Acciones Rápidas</h2>
-              <div className="actions-grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="actions-grid grid grid-cols-2 md:grid-cols-4 gap-4">
                 <button 
                   className="action-button"
                   onClick={handleDepositClick}
@@ -392,9 +394,11 @@ const Dashboard = () => {
                   <span className="text-xs md:text-sm">Tareas</span>
                 </button>
               </div>
+                </div>
+              </div>
             </div>
 
-            <div className="plan-card">
+            <div className="plan-card w-full max-w-6xl">
               <div className="plan-header">
                 <h2 className="text-xl md:text-2xl">Estado del Plan</h2>
                 <Star className="plan-star w-6 h-6 md:w-8 md:h-8" />
