@@ -21,7 +21,22 @@ class PlanDefinitionForm(forms.ModelForm):
 
     class Meta:
         model = PlanDefinition
-        fields = '__all__'
+        fields = [
+            'name',
+            'slug',
+            'description',
+            'price',
+            'is_free',
+            'recommended',
+            'is_active',
+            'daily_tasks',
+            'bonus_percentage',
+            'weekly_withdrawal_limit',
+            'min_referrals',
+            'commission_percentage',
+            'task_choices',
+            'feature_choices',
+        ]
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
