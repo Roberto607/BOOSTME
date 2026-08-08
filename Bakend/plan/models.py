@@ -2,7 +2,27 @@ from django.db import models
 
 
 class PlanDefinition(models.Model):
-    name = models.CharField(max_length=50, unique=True)
+    PLAN_CHOICES = [
+        ('Free', 'Free'),
+        ('Starter', 'Starter'),
+        ('Pro', 'Pro'),
+        ('Elite', 'Elite'),
+    ]
+
+    FEATURE_CHOICES = [
+        ('Más tareas diarias', 'Más tareas diarias'),
+        ('Bonos mejorados', 'Bonos mejorados'),
+        ('Acceso prioritario a bonos', 'Acceso prioritario a bonos'),
+        ('Límite de retiros semanal mayor', 'Límite de retiros semanal mayor'),
+        ('Tareas especiales extra', 'Tareas especiales extra'),
+        ('Soporte preferente', 'Soporte preferente'),
+        ('Comisiones por referidos', 'Comisiones por referidos'),
+        ('Guías y tutoriales premium', 'Guías y tutoriales premium'),
+        ('Visibilidad de rendimiento', 'Visibilidad de rendimiento'),
+        ('Desafíos exclusivos', 'Desafíos exclusivos'),
+    ]
+
+    name = models.CharField(max_length=50, unique=True, choices=PLAN_CHOICES)
     slug = models.SlugField(max_length=60, unique=True)
     description = models.TextField(blank=True)
     price = models.DecimalField(max_digits=12, decimal_places=2, default=0)
