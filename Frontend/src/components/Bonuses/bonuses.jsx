@@ -77,7 +77,7 @@ const Bonuses = () => {
 
         const [userBonusesRes, streakRes] = await Promise.all([
           fetch(`${BONUSES_API_BASE_URL}/user-bonuses/`, { credentials: 'include', headers: buildAuthHeaders() }),
-          fetch(`${BONUSES_API_BASE_URL}/user-streak/`, { credentials: 'include', headers: buildAuthHeaders() })
+          fetch(`${BONUSES_API_BASE_URL}/user-streak/current/`, { credentials: 'include', headers: buildAuthHeaders() })
         ]);
 
         if (userBonusesRes.ok) {
@@ -86,18 +86,16 @@ const Bonuses = () => {
             ? userBonusesData.results
             : Array.isArray(userBonusesData)
               ? userBonusesData
-              : null;
-          if (normalizedUserBonuses) {
-            setUserBonuses(normalizedUserBonuses);
-          }
+              : [];
+          setUserBonuses(normalizedUserBonuses);
         }
 
         if (streakRes.ok) {
           const streakData = await streakRes.json();
-          const normalizedStreak = streakData?.results?.[0] || streakData;
-          if (normalizedStreak) {
-            setUserStreak(normalizedStreak);
-          }
+          const normalizedStreak = Array.isArray(streakData)
+            ? streakData[0] || {}
+            : (streakData || {});
+          setUserStreak(normalizedStreak);
         }
 
         try {
