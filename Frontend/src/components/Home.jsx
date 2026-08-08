@@ -350,7 +350,6 @@ const Home = () => {
             <h3 className="mb-4 text-lg font-semibold text-white">Ayuda</h3>
             <ul className="space-y-2 text-sm text-slate-400">
               <li><Link to="/quick-help" className="transition hover:text-white">Ayuda rápida</Link></li>
-              <li><Link to="/contact" className="transition hover:text-white">Contacto directo</Link></li>
               <li><Link to="/privacy" className="transition hover:text-white">Política de privacidad</Link></li>
             </ul>
           </div>

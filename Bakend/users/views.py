@@ -164,6 +164,18 @@ class ContactView(APIView):
                 f"Mensaje:\n{message}"
             )
 
+            if not settings.EMAIL_HOST_USER or not settings.DEFAULT_FROM_EMAIL:
+                logger.error(
+                    "Contacto rechazado porque falta configuración de correo. "
+                    "EMAIL_HOST_USER=%r DEFAULT_FROM_EMAIL=%r",
+                    settings.EMAIL_HOST_USER,
+                    settings.DEFAULT_FROM_EMAIL,
+                )
+                return Response(
+                    {"error": "El servicio de correo no está configurado. Intenta más tarde."},
+                    status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                )
+
             sent, error = _send_html_mail(
                 subject,
                 f"<p><strong>Nombre:</strong> {name}<br/><strong>Correo:</strong> {email}</p><p>{message}</p>",
