@@ -23,12 +23,11 @@ import HowItWorksPage from "../components/HowItWorksPage";
 
 const ProtectedRoute = ({ children }) => {
   const location = useLocation();
-  const { isAuthenticated, loading, accessToken, user } = useAuth();
-  const hasPersistedSession = Boolean(accessToken || sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
-  const isSessionValid = Boolean(isAuthenticated && (user || accessToken));
+  const { isAuthenticated, loading, user } = useAuth();
+  const isSessionValid = Boolean(isAuthenticated && user);
 
   if (loading) return <LoadingScreen />;
-  if (!isSessionValid && !hasPersistedSession) {
+  if (!isSessionValid) {
     return <Navigate to="/login" replace state={{ from: `${location.pathname}${location.search}` }} />;
   }
 

@@ -128,21 +128,7 @@ const RegisterForm = () => {
                 const refreshToken = data?.refresh || null;
 
                 setUser(userData);
-                setAccessToken(token);
-                setIsAuthenticated(Boolean(token));
-
-                // Guardar tokens en sessionStorage para persistencia
-                if (token) {
-                    sessionStorage.setItem('accessToken', token);
-                }
-                
-                if (refreshToken) {
-                    sessionStorage.setItem('refreshToken', refreshToken);
-                }
-                
-                if (userData) {
-                    sessionStorage.setItem('user', JSON.stringify(userData));
-                }
+                setIsAuthenticated(true);
 
                 if (data?.next_step === 'verify_wallet') {
                     const verificationData = {

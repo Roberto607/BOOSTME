@@ -5,10 +5,7 @@ const fetchWithAuth = async (url, options = {}) => {
         ...options.headers
     };
 
-    const accessToken = sessionStorage.getItem('accessToken');
-    if (accessToken) {
-        headers['Authorization'] = `Bearer ${accessToken}`;
-    }
+    return headers;
 
     // Si no es FormData, agregar Content-Type
     if (!(options.body instanceof FormData)) {

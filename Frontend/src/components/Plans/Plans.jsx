@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
 import { useNavigate } from "react-router-dom";
-import { API_BASE_URL } from "../../Base";
+import { API_BASE_URL, PLANS_API_BASE_URL } from "../../Base";
 import { Wallet, Star, Check, ArrowRight, Mail, Loader2, AlertCircle } from "lucide-react";
 import Web3 from "web3";
 
-const buildPlansUrl = () => "/api/plans/plans/";
+const buildPlansUrl = () => `${PLANS_API_BASE_URL}/plans/`;
 
 const Plans = () => {
   const { user, loading, isAuthenticated, setUser, setAccessToken, setIsAuthenticated } = useAuth();

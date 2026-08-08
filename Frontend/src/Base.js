@@ -14,5 +14,6 @@ export const API_BASE_URL = `${resolvedApiBaseUrl}/api/users`;
 export const TASKS_API_BASE_URL = `${resolvedApiBaseUrl}/api/tasks`;
 export const REFERRALS_API_BASE_URL = `${resolvedApiBaseUrl}/api/referrals`;
 export const BONUSES_API_BASE_URL = `${resolvedApiBaseUrl}/api/bonuses`;
+export const PLANS_API_BASE_URL = `${resolvedApiBaseUrl}/api/plans`;
 
 export const buildApiUrl = (path) => `${API_BASE_URL}${path.startsWith('/') ? path : `/${path}`}`;

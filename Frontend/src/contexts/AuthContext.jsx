@@ -21,52 +21,23 @@ export const AuthProvider = ({ children }) => {
             return { isAuthenticated: false, user: null, accessToken: null, loading: true };
         }
 
-        let storedUser = null;
-        try {
-            storedUser = JSON.parse(sessionStorage.getItem('user') || 'null');
-        } catch {
-            storedUser = null;
-        }
-
-        const hasStoredSession = Boolean(sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
-
         return {
-            isAuthenticated: hasStoredSession,
-            user: storedUser,
-            accessToken: sessionStorage.getItem('accessToken'),
+            isAuthenticated: false,
+            user: null,
+            accessToken: null,
             loading: true
         };
     });
 
     // Función para actualizar el estado de autenticación
     const updateAuthState = useCallback((updates) => {
-        setAuthState(prevState => {
-            const newState = {
-                ...prevState,
-                ...updates
-            };
-            // Persistir accessToken y user en sessionStorage
-            if (updates.accessToken !== undefined) {
-                if (updates.accessToken) {
-                    sessionStorage.setItem('accessToken', updates.accessToken);
-                } else {
-                    sessionStorage.removeItem('accessToken');
-                }
-            }
-            if (updates.user !== undefined) {
-                if (updates.user) {
-                    sessionStorage.setItem('user', JSON.stringify(updates.user));
-                } else {
-                    sessionStorage.removeItem('user');
-                }
-            }
-            return newState;
-        });
+        setAuthState(prevState => ({
+            ...prevState,
+            ...updates
+        }));
     }, []);
 
     const clearAuthData = useCallback(() => {
-        sessionStorage.removeItem('accessToken');
-        sessionStorage.removeItem('user');
         updateAuthState({
             isAuthenticated: false,
             user: null,
@@ -75,21 +46,10 @@ export const AuthProvider = ({ children }) => {
         });
     }, [updateAuthState]);
 
-    const buildAuthHeaders = useCallback((headers = {}) => {
-        const accessToken = sessionStorage.getItem('accessToken');
-        if (!accessToken) {
-            return headers;
-        }
-
-        return {
-            ...headers,
-            Authorization: `Bearer ${accessToken}`
-        };
-    }, []);
+    const buildAuthHeaders = useCallback((headers = {}) => headers, []);
 
     // Helpers para exponer setters compatibles con componentes existentes
     const setUser = useCallback((user) => updateAuthState({ user }), [updateAuthState]);
-    const setAccessToken = useCallback((accessToken) => updateAuthState({ accessToken }), [updateAuthState]);
     const setIsAuthenticated = useCallback((isAuthenticated) => updateAuthState({ isAuthenticated }), [updateAuthState]);
 
     const updateUserProfile = useCallback(async (formData) => {
@@ -237,16 +197,10 @@ export const AuthProvider = ({ children }) => {
         navigate('/');
     }, [navigate, clearAuthData]);
 
-    // Inicialización: comprobar sesión con cookies solo para rutas privadas
+    // Inicialización: comprobar sesión usando cookies en el backend
     useEffect(() => {
         const initializeAuth = async () => {
             try {
-                const hasSession = Boolean(sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
-                if (!hasSession) {
-                    updateAuthState({ loading: false, isAuthenticated: false, user: null, accessToken: null });
-                    return;
-                }
-
                 let res = await fetch(`${API_BASE_URL}/status/`, {
                     method: 'GET',
                     credentials: 'include',
@@ -267,33 +221,20 @@ export const AuthProvider = ({ children }) => {
                 }
 
                 if (!res.ok) {
-                    const storedUser = JSON.parse(sessionStorage.getItem('user') || 'null');
-                    const storedAccessToken = sessionStorage.getItem('accessToken');
-                    updateAuthState({
-                        loading: false,
-                        isAuthenticated: Boolean(storedAccessToken || storedUser),
-                        user: storedUser,
-                        accessToken: storedAccessToken
-                    });
+                    updateAuthState({ loading: false, isAuthenticated: false, user: null, accessToken: null });
                     return;
                 }
 
                 const data = await res.json();
                 updateAuthState({
                     isAuthenticated: true,
-                    user: data.user || JSON.parse(sessionStorage.getItem('user') || 'null'),
+                    user: data.user || null,
+                    accessToken: null,
                     loading: false
                 });
             } catch (error) {
                 console.error("Error al inicializar autenticación:", error);
-                const storedUser = JSON.parse(sessionStorage.getItem('user') || 'null');
-                const storedAccessToken = sessionStorage.getItem('accessToken');
-                updateAuthState({
-                    loading: false,
-                    isAuthenticated: Boolean(storedAccessToken || storedUser),
-                    user: storedUser,
-                    accessToken: storedAccessToken
-                });
+                updateAuthState({ loading: false, isAuthenticated: false, user: null, accessToken: null });
             }
         };
 

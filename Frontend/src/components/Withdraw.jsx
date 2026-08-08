@@ -14,8 +14,7 @@ const Withdraw = () => {
   const [isProcessing, setIsProcessing] = useState(false);
 
   useEffect(() => {
-    const hasStoredSession = Boolean(sessionStorage.getItem('accessToken') || sessionStorage.getItem('user'));
-    if (!loading && !isAuthenticated && !hasStoredSession) {
+    if (!loading && !isAuthenticated) {
       navigate('/login');
     }
   }, [loading, isAuthenticated, navigate]);
