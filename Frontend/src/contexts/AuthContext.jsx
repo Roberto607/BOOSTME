@@ -50,6 +50,7 @@ export const AuthProvider = ({ children }) => {
 
     // Helpers para exponer setters compatibles con componentes existentes
     const setUser = useCallback((user) => updateAuthState({ user }), [updateAuthState]);
+    const setAccessToken = useCallback((accessToken) => updateAuthState({ accessToken }), [updateAuthState]);
     const setIsAuthenticated = useCallback((isAuthenticated) => updateAuthState({ isAuthenticated }), [updateAuthState]);
 
     const updateUserProfile = useCallback(async (formData) => {
