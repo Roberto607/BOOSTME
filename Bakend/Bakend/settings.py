@@ -247,7 +247,17 @@ WSGI_APPLICATION = 'Bakend.wsgi.application'
 # -----------------------------
 
 def get_database_url() -> str:
-    for key in ('DATABASE_URL', 'POSTGRES_URL', 'POSTGRESQL_URL', 'DB_URL', 'DATABASE_URL_NON_POOLING'):
+    for key in (
+        'DATABASE_URL',
+        'POSTGRES_URL',
+        'POSTGRESQL_URL',
+        'DB_URL',
+        'DATABASE_URL_NON_POOLING',
+        'RENDER_DATABASE_URL',
+        'INTERNAL_DATABASE_URL',
+        'DATABASE_URL_INTERNAL',
+        'INTERNAL_DB_URL',
+    ):
         value = os.getenv(key, '').strip()
         if value:
             return value
