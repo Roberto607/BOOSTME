@@ -338,6 +338,7 @@ const TasksList = () => {
         const isAvailable = !isScheduledSurvey || new Date(task.content_data.available_at) <= new Date();
         const isPendingSurvey = task.task_type === 'survey' && !isAvailable;
 
+        const taskUrl = task.task_type === 'profile' ? null : task.content_url || task.action_url || null;
         return {
           id: task.id || `${task.task_type || 'task'}-${index}`,
           type: 'daily',
@@ -351,8 +352,9 @@ const TasksList = () => {
           maxProgress: 1,
           provider: task.provider || 'BoostMe',
           payoutType: task.payoutType || 'Boost demo',
-          url: task.task_type === 'profile' ? null : task.content_url || null,
-          contentData: task.content_data || {},
+          url: taskUrl,
+          actionUrl: task.action_url || null,
+          contentData: task.content_data || task.action_data || {},
           targetPath: task.task_type === 'profile' ? '/Profile' : null
         };
       });
@@ -435,15 +437,16 @@ const TasksList = () => {
       return;
     }
 
-    if (task?.url) {
+    const taskUrl = task?.url || task?.actionUrl || null;
+    if (taskUrl) {
       if (task?.taskType === 'video') {
-        const isLocalVideo = task.url.startsWith('/') || task.url.endsWith('.mp4');
-        const isYouTube = isYouTubeUrl(task.url);
+        const isLocalVideo = taskUrl.startsWith('/') || taskUrl.endsWith('.mp4');
+        const isYouTube = isYouTubeUrl(taskUrl);
         if (isLocalVideo || isYouTube) {
           const requiredSeconds = Number(task.contentData?.duration || 30);
           watchedSecondsRef.current = 0;
           lastTrackedPlaybackTimeRef.current = 0;
-          setActiveVideoTask(task);
+          setActiveVideoTask({ ...task, url: taskUrl });
           setIsYouTubeVideo(isYouTube);
           setVideoWatchedSeconds(0);
           setVideoRequiredSeconds(requiredSeconds);
@@ -451,11 +454,11 @@ const TasksList = () => {
           return;
         }
 
-        window.open(task.url, '_blank', 'noopener,noreferrer');
+        window.open(taskUrl, '_blank', 'noopener,noreferrer');
         return;
       }
 
-      window.open(task.url, '_blank', 'noopener,noreferrer');
+      window.open(taskUrl, '_blank', 'noopener,noreferrer');
       return;
     }
 
@@ -793,13 +796,13 @@ const TasksList = () => {
                 Cerrar
               </button>
             </div>
-            <div className="px-6 py-5">
+                    <div className="px-6 py-5">
               {isYouTubeVideo ? (
                 <div ref={youtubeContainerRef} className="h-[360px] w-full rounded-3xl bg-slate-900" />
               ) : (
                 <video
                   ref={videoRef}
-                  src={activeVideoTask.url}
+                  src={activeVideoTask.url || activeVideoTask.actionUrl}
                   controls
                   onTimeUpdate={handleVideoTimeUpdate}
                   onEnded={handleVideoEnded}

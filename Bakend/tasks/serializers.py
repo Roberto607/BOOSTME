@@ -2,6 +2,8 @@ from rest_framework import serializers
 from .models import Task, TaskCompletion
 
 class TaskSerializer(serializers.ModelSerializer):
+    title = serializers.SerializerMethodField()
+
     class Meta:
         model = Task
         fields = [
@@ -11,12 +13,25 @@ class TaskSerializer(serializers.ModelSerializer):
             'boost_reward',
             'created_at',
             'expires_at',
+            'title',
             'description',
             'content_type',
             'content_url',
-            'content_data'
+            'content_data',
+            'action_type',
+            'action_url',
+            'action_data'
         ]
         read_only_fields = ['id', 'created_at', 'status']
+
+    def get_title(self, obj):
+        if obj.content_data and isinstance(obj.content_data, dict):
+            title = obj.content_data.get('title')
+            if title:
+                return title
+        if obj.description:
+            return obj.description
+        return obj.get_task_type_display()
 
 class TaskCompletionSerializer(serializers.ModelSerializer):
     """
