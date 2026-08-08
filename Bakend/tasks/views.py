@@ -683,6 +683,7 @@ class TaskViewSet(viewsets.ModelViewSet):
                 'simulated_content': 'Encuesta de preferencias.'
             }
 
+            user_plan = UserPlan.objects.get(user=user)
             plan_definition = PlanDefinition.objects.filter(name=user_plan.plan_name, is_active=True).first()
             allowed_task_types = None
             if plan_definition and plan_definition.task_types:
