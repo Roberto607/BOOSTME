@@ -1,8 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Gift, TrendingUp, Award, Clock, Flame, Check, Star, ArrowRight, Loader2 } from 'lucide-react';
+import { Gift, TrendingUp, Award, Clock, Flame, Check, Star, ArrowRight, Loader2, ShieldCheck, Users, ClipboardCheck, Sparkles } from 'lucide-react';
 import { BONUSES_API_BASE_URL } from "../../Base";
 import { useAuth } from '../../contexts/AuthContext';
+
+const bonusTypeLabelMap = {
+  streak: 'Racha',
+  tasks: 'Tareas',
+  plan: 'Plan',
+  referral: 'Referidos'
+};
+
+const bonusTypeIconMap = {
+  streak: Flame,
+  tasks: ClipboardCheck,
+  plan: Sparkles,
+  referral: Users
+};
 
 const Bonuses = () => {
   const navigate = useNavigate();
@@ -14,7 +28,6 @@ const Bonuses = () => {
   const [error, setError] = useState("");
   const [showBonuses, setShowBonuses] = useState(false);
   const [bonuses, setBonuses] = useState([]);
-  const [userBonuses, setUserBonuses] = useState([]);
   const [userStreak, setUserStreak] = useState({
     current_streak: 3,
     max_streak: 7
@@ -25,28 +38,29 @@ const Bonuses = () => {
     claimedCount: 5
   });
 
-  const mapBonusToUi = (bonus) => ({
-    id: bonus.id,
-    name: bonus.name,
-    value: Number(bonus.value || 0),
-    description: bonus.description || 'Sin descripción',
-    requirement_value: Number(bonus.requirement_value || 0),
-    current_progress: 0,
-    isSpecial: bonus.bonus_type === 'streak' || bonus.bonus_type === 'referral',
-    isAvailable: Boolean(bonus.is_active),
-    bonus_type: bonus.bonus_type,
-    features: Array.isArray(bonus.features) ? bonus.features : []
-  });
-
-  const buildAuthHeaders = () => {
-    const headers = {};
-    if (accessToken) {
-      headers.Authorization = `Bearer ${accessToken}`;
-    }
-    return headers;
-  };
-
   useEffect(() => {
+    const buildAuthHeaders = () => {
+      const headers = {};
+      if (accessToken) {
+        headers.Authorization = `Bearer ${accessToken}`;
+      }
+      return headers;
+    };
+
+    const mapBonusToUi = (bonus) => ({
+      id: bonus.id,
+      name: bonus.name,
+      value: Number(bonus.value || 0),
+      description: bonus.description || 'Sin descripción',
+      requirement_value: Number(bonus.requirement_value || 0),
+      current_progress: 0,
+      isSpecial: bonus.bonus_type === 'streak' || bonus.bonus_type === 'referral',
+      isAvailable: Boolean(bonus.is_active),
+      bonus_type: bonus.bonus_type,
+      bonus_type_label: bonusTypeLabelMap[bonus.bonus_type] || bonus.bonus_type,
+      bonus_type_icon: bonusTypeIconMap[bonus.bonus_type] || Gift,
+      features: Array.isArray(bonus.features) ? bonus.features : []
+    });
     const loadBonuses = async () => {
       try {
         setBonuses([]);
@@ -75,20 +89,7 @@ const Bonuses = () => {
           return;
         }
 
-        const [userBonusesRes, streakRes] = await Promise.all([
-          fetch(`${BONUSES_API_BASE_URL}/user-bonuses/`, { credentials: 'include', headers: buildAuthHeaders() }),
-          fetch(`${BONUSES_API_BASE_URL}/user-streak/current/`, { credentials: 'include', headers: buildAuthHeaders() })
-        ]);
-
-        if (userBonusesRes.ok) {
-          const userBonusesData = await userBonusesRes.json();
-          const normalizedUserBonuses = Array.isArray(userBonusesData?.results)
-            ? userBonusesData.results
-            : Array.isArray(userBonusesData)
-              ? userBonusesData
-              : [];
-          setUserBonuses(normalizedUserBonuses);
-        }
+        const streakRes = await fetch(`${BONUSES_API_BASE_URL}/user-streak/current/`, { credentials: 'include', headers: buildAuthHeaders() });
 
         if (streakRes.ok) {
           const streakData = await streakRes.json();
@@ -108,7 +109,7 @@ const Bonuses = () => {
             const stats = await statsRes.json();
             setBonusStats(stats);
           }
-        } catch (statsError) {
+        } catch {
           console.log('Stats endpoint not available, using example data');
         }
       } catch (error) {
@@ -118,7 +119,7 @@ const Bonuses = () => {
     };
 
     loadBonuses();
-  }, [isAuthenticated, user]);
+  }, [isAuthenticated, user, accessToken]);
 
   const claimBonus = async (e) => {
     e.preventDefault();
@@ -198,6 +199,21 @@ const Bonuses = () => {
           </div>
         )}
 
+        <div className="mt-4 grid gap-3 sm:grid-cols-3">
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Reclamados</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{bonusStats.claimedCount}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Pendientes</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{bonusStats.pendingCount}</p>
+          </div>
+          <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700">
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">Bonos activos</p>
+            <p className="mt-2 text-lg font-semibold text-slate-900">{bonuses.length}</p>
+          </div>
+        </div>
+
         {userStreak && (
           <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
             <span className="text-base">🔥</span>
@@ -227,11 +243,13 @@ const Bonuses = () => {
                 className="relative bg-white rounded-2xl p-6 shadow hover:-translate-y-1 hover:shadow-lg transition cursor-pointer border border-slate-200"
               >
                 <div className="mb-4 flex flex-wrap items-center gap-2">
-                  {bonus.isSpecial && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-gradient-to-r from-blue-600 to-sky-500 px-3 py-1 text-xs font-semibold text-white shadow-sm">
-                      <Star className="w-3.5 h-3.5" /> Especial
-                    </span>
-                  )}
+                  <span className="inline-flex items-center gap-2 rounded-full bg-slate-100 px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+                    {(() => {
+                      const Icon = bonus.bonus_type_icon;
+                      return <Icon className="w-3.5 h-3.5 text-slate-700" />;
+                    })()}
+                    {bonus.bonus_type_label}
+                  </span>
 
                   {bonus.isAvailable && (
                     <span className="inline-flex items-center gap-1 rounded-full bg-slate-900 px-3 py-1 text-xs font-semibold text-white shadow-sm">
@@ -283,15 +301,24 @@ const Bonuses = () => {
           onSubmit={claimBonus}
           className="bg-white p-6 rounded-2xl shadow max-w-md mx-auto w-full"
         >
-          <div className="flex justify-between bg-gray-100 p-4 rounded-lg mb-4">
-            <strong>{selectedBonus.name}</strong>
-            <button
-              type="button"
-              onClick={() => setSelectedBonus(null)}
-              className="text-blue-600 font-semibold"
-            >
-              Cambiar
-            </button>
+          <div className="flex flex-col gap-3 bg-gray-100 p-4 rounded-lg mb-4">
+            <div className="flex items-center justify-between gap-4">
+              <strong>{selectedBonus.name}</strong>
+              <button
+                type="button"
+                onClick={() => setSelectedBonus(null)}
+                className="text-blue-600 font-semibold"
+              >
+                Cambiar
+              </button>
+            </div>
+            <div className="inline-flex items-center gap-2 rounded-full bg-white px-3 py-1 text-xs font-semibold text-slate-700 shadow-sm">
+              {(() => {
+                const Icon = selectedBonus.bonus_type_icon;
+                return <Icon className="w-3.5 h-3.5 text-slate-700" />;
+              })()}
+              {selectedBonus.bonus_type_label}
+            </div>
           </div>
 
           {message && (
