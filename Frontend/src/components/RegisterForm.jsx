@@ -11,6 +11,7 @@ const RegisterForm = () => {
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [username, setUsername] = useState("");
+    const [walletAddress, setWalletAddress] = useState("");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
@@ -58,6 +59,10 @@ const RegisterForm = () => {
         if (!/^[a-zA-Z0-9_]{3,20}$/.test(username)) {
             return setError("El nombre de usuario debe tener entre 3 y 20 caracteres y solo puede contener letras, números y guiones bajos");
         }
+
+        if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress.trim())) {
+            return setError("La dirección de la billetera es requerida y debe ser una dirección válida de 42 caracteres que comience con 0x.");
+        }
         
         if (password.length < 8) {
             return setError("La contraseña debe tener al menos 8 caracteres");
@@ -91,7 +96,12 @@ const RegisterForm = () => {
             const response = await fetch(registerUrl, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ username: username.trim(), email: email.trim().toLowerCase(), password }),
+                body: JSON.stringify({
+                    username: username.trim(),
+                    email: email.trim().toLowerCase(),
+                    password,
+                    wallet_address: walletAddress.trim().toLowerCase()
+                }),
                 credentials: 'include' // Importante para manejar cookies
             });
 
@@ -247,6 +257,19 @@ const RegisterForm = () => {
                     placeholder="Email"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    required
+                    disabled={loading}
+                    className="w-full p-3 mb-4 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition"
+                />
+
+                <input
+                    id="walletAddress"
+                    name="walletAddress"
+                    type="text"
+                    autoComplete="off"
+                    placeholder="Dirección de la billetera (0x...)"
+                    value={walletAddress}
+                    onChange={(e) => setWalletAddress(e.target.value)}
                     required
                     disabled={loading}
                     className="w-full p-3 mb-4 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition"
