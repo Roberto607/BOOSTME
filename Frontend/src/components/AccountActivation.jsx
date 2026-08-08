@@ -14,7 +14,7 @@ const AccountActivation = () => {
   const { user, setUser, setAccessToken, setIsAuthenticated } = useAuth();
 
   useEffect(() => {
-    if (user && user.is_email_verified) {
+    if (user && user.is_verified) {
       navigate('/deposit', { replace: true });
       return;
     }

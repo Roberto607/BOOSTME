@@ -47,18 +47,6 @@ const Plans = () => {
   useEffect(() => {
     if (loading) return;
 
-    if (!user) {
-      setShowVerification(false);
-      setShowPlans(true);
-      return;
-    }
-
-    if (!user.is_email_verified) {
-      setShowVerification(true);
-      setShowPlans(false);
-      return;
-    }
-
     setShowVerification(false);
     setShowPlans(true);
   }, [user, loading]);
@@ -207,13 +195,13 @@ const Plans = () => {
       <div className="min-h-screen flex items-center justify-center px-4">
         <div className="bg-white p-10 rounded-xl shadow max-w-md w-full text-center">
           <Mail className="w-12 h-12 text-blue-600 mx-auto mb-4" />
-          <h2 className="text-xl font-bold mb-2">Verifica tu correo</h2>
+          <h2 className="text-xl font-bold mb-2">Verifica tu cuenta</h2>
           <p className="text-gray-600">{user.email}</p>
           <button
-            onClick={() => navigate("/login")}
+            onClick={() => navigate("/verify-wallet")}
             className="mt-6 rounded-lg bg-slate-900 px-6 py-2 text-white transition hover:bg-slate-800"
           >
-            Ir a iniciar sesión
+            Ir a verificar wallet
           </button>
         </div>
       </div>

@@ -307,7 +307,7 @@ const Profile = () => {
           <div className="space-y-2 text-sm text-gray-600">
             <div className="flex justify-between"><span>Plan</span><span className="font-medium text-gray-800">{user?.user_plan?.plan_name || user?.plan_name || 'Free'}</span></div>
             <div className="flex justify-between"><span>Balance</span><span className="font-medium text-gray-800">{formatNumber(user?.boost_balance || 0)} BOOST</span></div>
-            <div className="flex justify-between"><span>Email verificado</span><span className="font-medium text-gray-800">{user?.is_email_verified ? 'Sí' : 'No'}</span></div>
+            <div className="flex justify-between"><span>Cuenta verificada</span><span className="font-medium text-gray-800">{user?.is_verified ? 'Sí' : 'No'}</span></div>
             <div className="flex justify-between"><span>Activación financiera</span><span className="font-medium text-gray-800">{user?.has_financial_activation ? 'Sí' : 'No'}</span></div>
           </div>
         </div>

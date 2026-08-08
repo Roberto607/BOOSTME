@@ -259,8 +259,8 @@ class ActivatePlanSerializer(serializers.Serializer):
         except User.DoesNotExist:
             raise serializers.ValidationError("No existe una cuenta con este email")
 
-        if not user.is_email_verified:
-            raise serializers.ValidationError("Por favor, verifica tu correo electrónico antes de continuar")
+        if not user.is_verified:
+            raise serializers.ValidationError("Por favor, verifica tu cuenta antes de continuar")
 
         if user.has_financial_activation:
             raise serializers.ValidationError("Ya tienes un plan activo")

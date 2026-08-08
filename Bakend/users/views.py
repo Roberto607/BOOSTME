@@ -754,11 +754,11 @@ class DepositView(APIView):
 
     def post(self, request):
         try:
-            # Verificar que el email esté verificado
-            if not request.user.is_email_verified:
+            # Verificar que la cuenta esté verificada
+            if not request.user.is_verified:
                 return Response({
-                    "error": "Debes verificar tu correo antes de realizar un depósito",
-                    "code": "email_not_verified"
+                    "error": "Debes verificar tu cuenta antes de realizar un depósito",
+                    "code": "account_not_verified"
                 }, status=status.HTTP_403_FORBIDDEN)
 
             amount_usdt = float(request.data.get('amount', 0))

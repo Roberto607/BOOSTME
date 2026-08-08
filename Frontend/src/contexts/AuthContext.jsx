@@ -210,8 +210,8 @@ export const AuthProvider = ({ children }) => {
             if (!response.ok) {
                 if (data && data.code === 'invalid_credentials') {
                     throw new Error('Credenciales inválidas');
-                } else if (data && data.code === 'email_not_verified') {
-                    throw new Error('Debes verificar tu email antes de iniciar sesión');
+                } else if (data && data.code === 'account_not_verified') {
+                    throw new Error('Debes verificar tu cuenta antes de iniciar sesión');
                 } else {
                     throw new Error((data && (data.error || data.detail)) || 'Error de autenticación');
                 }

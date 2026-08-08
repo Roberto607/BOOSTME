@@ -23,7 +23,7 @@ const RegisterForm = () => {
             return;
         }
 
-        if (!user.is_email_verified) {
+        if (!user.is_verified) {
             setShowEmailNotice(true);
             return;
         }
@@ -42,7 +42,7 @@ const RegisterForm = () => {
         return () => window.clearTimeout(timer);
     }, [showEmailNotice]);
 
-    if (window.location.pathname.includes("/verify-email/")) return null;
+    if (window.location.pathname.includes("/verify-email/") || window.location.pathname.includes("/verify-wallet")) return null;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
