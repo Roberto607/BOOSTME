@@ -92,7 +92,7 @@ const VerifyWallet = () => {
       setSuccess(data?.message || "Wallet verificada correctamente.");
       sessionStorage.removeItem("walletVerificationData");
       setTimeout(() => {
-        navigate("/deposit", { replace: true });
+        navigate("/dashboard", { replace: true });
       }, 1200);
     } catch (err) {
       console.error(err);

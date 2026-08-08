@@ -46,7 +46,7 @@ const AccountActivation = () => {
         }
 
         setTimeout(() => {
-          navigate('/deposit', { replace: true });
+          navigate('/dashboard', { replace: true });
         }, 1500);
       } else {
         setStatus('error');

@@ -28,8 +28,7 @@ const RegisterForm = () => {
             return;
         }
 
-        if (!user.has_financial_activation) navigate("/deposit", { replace: true });
-        else navigate("/dashboard", { replace: true });
+        navigate("/dashboard", { replace: true });
     }, [user, navigate]);
 
     useEffect(() => {

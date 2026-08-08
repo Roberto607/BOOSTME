@@ -45,8 +45,6 @@ const Login = () => {
             const data = await login(formData);
             if (location.state?.from) {
                 navigate(location.state.from);
-            } else if (data?.user && !data.user.has_financial_activation) {
-                navigate('/deposit');
             } else {
                 navigate('/dashboard');
             }
