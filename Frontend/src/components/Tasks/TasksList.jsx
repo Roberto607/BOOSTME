@@ -946,6 +946,8 @@ const TasksList = () => {
           </div>
         </div>
       )}
+      </>
+    )}
     </div>
   );
 };
