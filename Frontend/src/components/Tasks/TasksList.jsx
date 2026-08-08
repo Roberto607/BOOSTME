@@ -392,6 +392,21 @@ const TasksList = () => {
       return;
     }
 
+    // For video tasks, always open the video modal even if no URL is provided.
+    // Prevent falling through to the generic completion path which would POST
+    // without the required `watched_seconds` and cause a 400 from backend.
+    if (task?.taskType === 'video') {
+      watchedSecondsRef.current = 0;
+      lastTrackedPlaybackTimeRef.current = 0;
+      console.log('Opening video task (no-url fallback):', { id: task.id, url: task.url });
+      setActiveVideoTask({ ...task, url: task.url });
+      setIsYouTubeVideo(isYouTubeUrl(task.url));
+      setVideoWatchedSeconds(0);
+      setVideoRequiredSeconds(Number(task.contentData?.duration || 30));
+      setVideoError(task.url ? null : 'Video no disponible.');
+      return;
+    }
+
     const taskUrl = task?.url || task?.actionUrl || null;
     if (taskUrl) {
       if (task?.taskType === 'video') {
