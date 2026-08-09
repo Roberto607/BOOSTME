@@ -174,14 +174,28 @@ const Home = () => {
 
       {menuOpen && (
         <div className="md:hidden">
-          <div className="absolute inset-x-0 top-full z-40 bg-white shadow-lg">
-            <div className="mx-4 flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div
+            className="fixed inset-0 z-40 bg-slate-950/40"
+            onClick={() => setMenuOpen(false)}
+          />
+          <div className="fixed right-0 top-0 z-50 flex h-full w-72 flex-col overflow-hidden rounded-l-3xl border-l border-slate-200 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
+              <span className="text-base font-semibold text-slate-900">Navegación</span>
+              <button
+                className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-slate-200"
+                onClick={() => setMenuOpen(false)}
+                aria-label="Cerrar menú"
+              >
+                <X size={18} />
+              </button>
+            </div>
+            <div className="flex grow flex-col gap-2 px-4 py-4">
               <button
                 onClick={() => {
                   navigate('/how-it-works');
                   setMenuOpen(false);
                 }}
-                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               >
                 Cómo funciona
               </button>
@@ -190,7 +204,7 @@ const Home = () => {
                   handleOpenPlans();
                   setMenuOpen(false);
                 }}
-                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               >
                 Planes
               </button>
@@ -199,7 +213,7 @@ const Home = () => {
                   handleOpenBonuses();
                   setMenuOpen(false);
                 }}
-                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               >
                 Bonos
               </button>
@@ -208,7 +222,7 @@ const Home = () => {
                   navigate('/login');
                   setMenuOpen(false);
                 }}
-                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               >
                 Iniciar Sesión
               </button>
@@ -217,7 +231,7 @@ const Home = () => {
                   navigate('/register');
                   setMenuOpen(false);
                 }}
-                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
               >
                 Registrarse
               </button>
