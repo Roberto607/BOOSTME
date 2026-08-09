@@ -17,7 +17,7 @@ import {
   Flame,
   Clock3
 } from 'lucide-react';
-import './Dashboard.css';
+// Dashboard styles moved to Tailwind in index.css and component classes
 import Profile from './Perfil/Profile';
 import TasksList from './Tasks/TasksList';
 import Referidos from './Referidos/Referidos';
@@ -140,8 +140,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="dashboard-container">
-      <header className="dashboard-header">
+    <div className="flex flex-col min-h-screen bg-[var(--bg)]">
+      <header className="bg-white shadow-sm px-4 md:px-8 py-4 relative z-10" style={{ borderBottom: '1px solid rgba(56,189,248,0.15)' }}>
         <div className="header-top">
           <h1 className="text-2xl md:text-3xl">BoostMe</h1>
 
@@ -153,152 +153,146 @@ const Dashboard = () => {
             {menuOpen ? <X size={26} /> : <Menu size={26} />}
           </button>
 
-          <div className="user-info hidden md:flex">
+          <div className="hidden md:flex items-center gap-4">
             {(user?.has_financial_activation || userPlan.name !== 'Free') && (
-              <span className="plan-badge">Plan {userPlan.name}</span>
+              <span className="px-3 py-1 rounded-full font-semibold text-sm" style={{ background: 'rgba(56,189,248,0.14)', color: 'var(--brand-900)' }}>Plan {userPlan.name}</span>
             )}
-            <button onClick={handleLogout} className="logout-button">
+            <button onClick={handleLogout} className="text-white rounded-lg px-3 py-1 cursor-pointer transition-all duration-200" style={{ background: 'var(--brand-900)' }}>
               Cerrar Sesión
             </button>
           </div>
         </div>
 
-        <p className="saludo text-base md:text-lg">¡Hola, {user?.username || "Usuario"}!</p>
+        <p className="text-center font-semibold mt-2 text-[var(--brand-900)] text-base md:text-lg">¡Hola, {user?.username || "Usuario"}!</p>
 
-        <nav className="top-nav">
+        <nav className="hidden md:flex justify-center gap-4 md:gap-8 mt-4">
           <button 
-            className={`nav-button ${currentView === 'dashboard' ? 'active' : ''}`}
+            className={`flex items-center gap-1 cursor-pointer text-gray-600 font-semibold transition-all duration-200 ${currentView === 'dashboard' ? 'text-[var(--brand-900)]' : ''}`}
             onClick={() => setCurrentView('dashboard')}
           >
-            <Wallet className="nav-icon" />
+            <Wallet className="w-5 h-5" />
             <span className="hidden md:inline">Inicio</span>
           </button>
           <button 
-            className={`nav-button ${currentView === 'tasks' ? 'active' : ''}`}
+            className={`flex items-center gap-1 cursor-pointer text-gray-600 font-semibold transition-all duration-200 ${currentView === 'tasks' ? 'text-[var(--brand-900)]' : ''}`}
             onClick={() => setCurrentView('tasks')}
           >
-            <Target className="nav-icon" />
+            <Target className="w-5 h-5" />
             <span className="hidden md:inline">Tareas</span>
           </button>
           <button 
-            className={`nav-button ${currentView === 'referrals' ? 'active' : ''}`}
+            className={`flex items-center gap-1 cursor-pointer text-gray-600 font-semibold transition-all duration-200 ${currentView === 'referrals' ? 'text-[var(--brand-900)]' : ''}`}
             onClick={() => setCurrentView('referrals')}
           >
-            <Users className="nav-icon" />
+            <Users className="w-5 h-5" />
             <span className="hidden md:inline">Referidos</span>
           </button>
         
           <button 
-            className={`nav-button ${currentView === 'profile' ? 'active' : ''}`}
+            className={`flex items-center gap-1 cursor-pointer text-gray-600 font-semibold transition-all duration-200 ${currentView === 'profile' ? 'text-[var(--brand-900)]' : ''}`}
             onClick={() => setCurrentView('profile')}
           >
-            <Users className="nav-icon" />
+            <Users className="w-5 h-5" />
             <span className="hidden md:inline">Perfil</span>
           </button>
         </nav>
       </header>
 
-      <aside className={`side-menu ${menuOpen ? 'open' : ''}`}>
-        <button onClick={() => setMenuOpen(false)} className="menu-close"><X /></button>
-        <p className="saludo-side">¡Hola, {user?.username || "Usuario"}!</p>
+      <aside className={`fixed top-0 ${menuOpen ? 'left-0' : '-left-64'} w-60 h-screen bg-white shadow-lg px-4 py-8 transition-all duration-300 flex flex-col gap-4 z-20 md:hidden`}>
+        <button onClick={() => setMenuOpen(false)} className="self-end bg-transparent border-0 cursor-pointer text-[var(--brand-900)]"><X /></button>
+        <p className="text-center font-semibold mb-4 text-[var(--brand-900)]">¡Hola, {user?.username || "Usuario"}!</p>
         
         <button 
-          className={`nav-button ${currentView === 'dashboard' ? 'active' : ''}`}
+          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'dashboard' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('dashboard');
             setMenuOpen(false);
           }}
         >
-          <Wallet /> Inicio
+          <Wallet className="w-5 h-5 mr-2" /> Inicio
         </button>
         <button 
-          className={`nav-button ${currentView === 'tasks' ? 'active' : ''}`}
+          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'tasks' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('tasks');
             setMenuOpen(false);
           }}
         >
-          <Target /> Tareas
+          <Target className="w-5 h-5 mr-2" /> Tareas
         </button>
         <button 
-          className={`nav-button ${currentView === 'referrals' ? 'active' : ''}`}
+          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'referrals' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('referrals');
             setMenuOpen(false);
           }}
         >
-          <Users /> Referidos
+          <Users className="w-5 h-5 mr-2" /> Referidos
         </button>
         <button 
-          className={`nav-button ${currentView === 'bonuses' ? 'active' : ''}`}
+          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'bonuses' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('bonuses');
             setMenuOpen(false);
           }}
         >
-          <Gift /> Bonos
+          <Gift className="w-5 h-5 mr-2" /> Bonos
         </button>
         <button 
-          className={`nav-button ${currentView === 'profile' ? 'active' : ''}`}
+          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'profile' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('profile');
             setMenuOpen(false);
           }}
         >
-          <Users /> Perfil
+          <Users className="w-5 h-5 mr-2" /> Perfil
         </button>
 
-        <button className="logout-side" onClick={handleLogout}>Cerrar Sesión</button>
+        <button className="mt-auto text-white rounded-lg px-2 py-1.5 bg-[var(--brand-900)]" onClick={handleLogout}>Cerrar Sesión</button>
       </aside>
 
-      <main className="main-content">
+      <main className="flex flex-col items-center gap-5 px-4 md:px-8 py-4 md:py-8">
         {currentView === 'dashboard' && (
           <>
-            <div className="dashboard-grid w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="balance-card md:col-span-2">
-              <div className="balance-header">
+            <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6">
+              <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full md:col-span-2">
+              <div className="flex justify-between items-center">
                 <div>
-                  <p className="balance-label">Saldo Total BOOST</p>
-                  <p className="balance-amount text-3xl md:text-4xl">
+                  <p className="text-gray-500 text-sm md:text-base">Saldo Total BOOST</p>
+                  <p className="font-bold text-[var(--brand-900)] text-3xl md:text-4xl">
                     {userBalance.purchased + userBalance.earned}
                   </p>
                 </div>
-                <Wallet className="balance-icon w-8 h-8 md:w-10 md:h-10" />
+                <Wallet className="text-[var(--brand-700)] w-8 h-8 md:w-10 md:h-10" />
+              </div>
+              <div className="flex justify-between mt-4">
+                <div>
+                  <p className="text-xs md:text-sm text-gray-500">BOOST Comprados</p>
+                  <p className="font-semibold text-gray-800">{userBalance.purchased}</p>
+                </div>
+                <div>
+                  <p className="text-xs md:text-sm text-gray-500">BOOST Ganados</p>
+                  <p className="font-semibold text-gray-800">{userBalance.earned}</p>
+                </div>
               </div>
 
-              <div className="balance-details">
-                <div className="balance-item">
-                  <p className="item-label">BOOST Comprados</p>
-                  <p className="item-value">{userBalance.purchased}</p>
-                </div>
-                <div className="balance-item">
-                  <p className="item-label">BOOST Ganados</p>
-                  <p className="item-value">{userBalance.earned}</p>
-                </div>
-              </div>
-
-              <div className="withdraw-section">
-                <p className="withdraw-label text-sm md:text-base">
-                  {canWithdrawNow ? 'Retiro disponible ahora' : 'Próximo retiro disponible'}
-                </p>
-                <p className="withdraw-date text-base md:text-lg">{userBalance.nextWithdrawalDate}</p>
-                <p className="withdraw-amount text-sm md:text-base">
-                  {userBalance.currentWeekWithdrawn} / {userBalance.weeklyLimit} BOOST
-                </p>
-                <button 
-                  className="withdraw-button"
+              <div className="mt-4 text-center">
+                <p className="text-sm md:text-base">{canWithdrawNow ? 'Retiro disponible ahora' : 'Próximo retiro disponible'}</p>
+                <p className="text-base md:text-lg">{userBalance.nextWithdrawalDate}</p>
+                <p className="text-sm md:text-base">{userBalance.currentWeekWithdrawn} / {userBalance.weeklyLimit} BOOST</p>
+                <button
+                  className="w-full md:w-3/5 max-w-56 text-white rounded-lg px-4 py-2 mt-2 bg-[var(--brand-900)] hover:bg-[#111c33] transition-all duration-200"
                   onClick={(e) => { console.log('Retirar button clicked'); handleGoToWithdraw(); }}
                 >
                   Retirar BOOST
                 </button>
-                <p className="withdraw-note text-xs text-gray-500 mt-2">
-                  Saldo en wallet: {userBalance.wallet.toFixed(2)} USDT
-                </p>
+                <p className="text-xs text-gray-500 mt-2">Saldo en wallet: {userBalance.wallet.toFixed(2)} USDT</p>
+              </div>
               </div>
               </div>
 
               <div className="space-y-6">
-                <div className="quick-actions">
+                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full">
               <h2 className="text-xl md:text-2xl">Resumen de hoy</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
@@ -325,10 +319,10 @@ const Dashboard = () => {
                   <p className="text-2xl font-bold text-gray-800">{userBalance.nextWithdrawalDate || '—'}</p>
                   <p className="text-sm text-gray-500">Revisa tu disponibilidad</p>
                 </div>
-              </div>
+                </div>
                 </div>
 
-                <div className="quick-actions">
+                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full">
               <h2 className="text-xl md:text-2xl">Acciones recomendadas</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 {recommendedActions.map((item) => (
@@ -344,10 +338,10 @@ const Dashboard = () => {
                     <p className="text-sm text-gray-500">{item.description}</p>
                   </button>
                 ))}
-              </div>
+                </div>
                 </div>
 
-                <div className="quick-actions">
+                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full">
               <h2 className="text-xl md:text-2xl">Logros recientes</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 {achievements.map((item) => (
@@ -362,65 +356,64 @@ const Dashboard = () => {
               </div>
                 </div>
 
-                <div className="quick-actions">
+                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full">
               <h2 className="text-xl md:text-2xl">Acciones Rápidas</h2>
-              <div className="actions-grid grid grid-cols-2 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <button 
-                  className="action-button"
+                  className="flex flex-col items-center gap-1 bg-gray-100 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200 hover:bg-[rgba(56,189,248,0.12)]"
                   onClick={handleDepositClick}
                 >
-                  <Crown className="action-icon w-6 h-6 md:w-8 md:h-8" />
+                  <Crown className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
                   <span className="text-xs md:text-sm">Planes</span>
                 </button>
                 <button 
-                  className="action-button" 
+                  className="flex flex-col items-center gap-1 bg-gray-100 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200 hover:bg-[rgba(56,189,248,0.12)]" 
                   onClick={() => setCurrentView('bonuses')}
                 >
-                  <Gift className="action-icon w-6 h-6 md:w-8 md:h-8" />
+                  <Gift className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
                   <span className="text-xs md:text-sm">Bonos</span>
                 </button>
                 <button 
-                  className="action-button"
+                  className="flex flex-col items-center gap-1 bg-gray-100 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200 hover:bg-[rgba(56,189,248,0.12)]"
                   onClick={() => setCurrentView('referrals')}
                 >
-                  <Users className="action-icon w-6 h-6 md:w-8 md:h-8" />
+                  <Users className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
                   <span className="text-xs md:text-sm">Referidos</span>
                 </button>
                 <button 
-                  className="action-button"
+                  className="flex flex-col items-center gap-1 bg-gray-100 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200 hover:bg-[rgba(56,189,248,0.12)]"
                   onClick={() => setCurrentView('tasks')}
                 >
-                  <Trophy className="action-icon w-6 h-6 md:w-8 md:h-8" />
+                  <Trophy className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
                   <span className="text-xs md:text-sm">Tareas</span>
                 </button>
-              </div>
                 </div>
               </div>
             </div>
 
-            <div className="plan-card w-full max-w-6xl">
-              <div className="plan-header">
+            <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full max-w-6xl">
+              <div className="flex justify-between items-center">
                 <h2 className="text-xl md:text-2xl">Estado del Plan</h2>
-                <Star className="plan-star w-6 h-6 md:w-8 md:h-8" />
+                <Star className="text-[var(--brand-300)] w-6 h-6 md:w-8 md:h-8" />
               </div>
-              <div className="plan-details">
-                <div className="plan-item">
+              <div className="mt-4">
+                <div className="flex justify-between mt-2 text-sm md:text-base">
                   <span>Plan Actual</span>
                   <span>{userPlan.name}</span>
                 </div>
-                <div className="plan-item">
+                <div className="flex justify-between mt-2 text-sm md:text-base">
                   <span>Tareas diarias</span>
                   <span>{userPlan.dailyTasks}</span>
                 </div>
-                <div className="plan-item">
+                <div className="flex justify-between mt-2 text-sm md:text-base">
                   <span>Bonus</span>
                   <span>+{userPlan.bonus}%</span>
                 </div>
-                <div className="plan-item">
+                <div className="flex justify-between mt-2 text-sm md:text-base">
                   <span>Días restantes</span>
                   <span>{userPlan.daysRemaining} días</span>
                 </div>
-                <div className="plan-item">
+                <div className="flex justify-between mt-2 text-sm md:text-base">
                   <span>Límite de retiro</span>
                   <span>{userPlan.weeklyLimit} BOOST/semana</span>
                 </div>
