@@ -17,6 +17,7 @@ import {
   Flame,
   Clock3
 } from 'lucide-react';
+import brandLogo from '../../static/Logo Boostme.png';
 // Dashboard styles moved to Tailwind in index.css and component classes
 import Profile from './Perfil/Profile';
 import TasksList from './Tasks/TasksList';
@@ -144,9 +145,7 @@ const Dashboard = () => {
       <header className="sticky top-0 z-30 border-b border-slate-200/70 bg-white/85 px-4 py-4 shadow-sm backdrop-blur-xl md:px-8" style={{ borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
-            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--brand-900)] text-lg font-bold text-white">
-              B
-            </div>
+            <img src={brandLogo} alt="BoostMe logo" className="h-10 w-auto rounded-2xl" />
             <div>
               <h1 className="text-xl font-bold text-[var(--brand-900)] sm:text-2xl">BoostMe</h1>
               <p className="text-sm text-slate-500">Tu panel diario</p>
