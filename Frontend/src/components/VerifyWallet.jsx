@@ -12,6 +12,35 @@ const VerifyWallet = () => {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showOpenInApp, setShowOpenInApp] = useState(false);
+
+  const isMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window.navigator.userAgent);
+
+  const handleOpenInWalletApp = () => {
+    const currentUrl = window.location.href;
+    if (walletNetwork === "tron") {
+      window.location.href = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
+      return;
+    }
+
+    const metaMaskDeepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
+    window.location.href = metaMaskDeepLink;
+  };
+
+  const getEvmWalletProvider = () => {
+    const providers = [
+      window.ethereum,
+      window.trustwallet,
+      window.okxwallet,
+      window.bitkeep,
+      window.coinbaseWalletExtension,
+      window.imToken,
+      window.walletconnect,
+      window.metaMask,
+    ];
+
+    return providers.find(Boolean) || null;
+  };
 
   useEffect(() => {
     const stateData = location.state || {};
@@ -39,6 +68,7 @@ const VerifyWallet = () => {
   const handleSignWallet = async () => {
     setError("");
     setSuccess("");
+    setShowOpenInApp(false);
 
     if (!walletAddress || !nonce) {
       setError("Falta la dirección de wallet o el nonce de verificación.");
@@ -54,7 +84,8 @@ const VerifyWallet = () => {
       if (walletNetwork === 'tron') {
         const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
         if (!tronWeb || !tronWeb.ready) {
-          throw new Error("Necesitas TronLink o una wallet TRON conectada.");
+          setShowOpenInApp(isMobileDevice());
+          throw new Error("Tu wallet TRON no está disponible en este navegador. Abre esta página desde la app de tu wallet usando \"Abrir en la app\".");
         }
         const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
         if (!currentAddress || currentAddress !== walletAddress) {
@@ -66,19 +97,20 @@ const VerifyWallet = () => {
           signature = await tronWeb.trx.sign(message, currentAddress);
         }
       } else {
-        if (!window.ethereum && !window.trustwallet && !window.web3) {
-          throw new Error("Necesitas una wallet compatible instalada, como MetaMask o Trust Wallet.");
+        const provider = getEvmWalletProvider() || (window.web3 && window.web3.currentProvider);
+        if (!provider) {
+          setShowOpenInApp(isMobileDevice());
+          throw new Error("Tu wallet no está disponible en este navegador. Abre esta página desde la app de tu wallet usando \"Abrir en la app\" y vuelve a verificar.");
         }
 
-        const provider = window.ethereum || window.trustwallet || window.web3.currentProvider;
         const web3 = new Web3(provider);
         const accounts = await web3.eth.requestAccounts();
         if (!accounts || !accounts.length) {
-          throw new Error("No se pudo obtener la cuenta de la wallet.");
+          throw new Error("Conecta primero la cuenta correcta en tu wallet para continuar.");
         }
         const account = accounts[0];
         if (account.toLowerCase() !== walletAddress.toLowerCase()) {
-          throw new Error("La wallet conectada no coincide con la dirección registrada.");
+          throw new Error(`La wallet conectada no coincide con la dirección registrada (${walletAddress}). Conecta la misma cuenta que usaste al registrarte.`);
         }
 
         if (web3.eth.personal && typeof web3.eth.personal.sign === "function") {
@@ -128,6 +160,20 @@ const VerifyWallet = () => {
         {error && (
           <div className="bg-red-100 border-l-4 border-red-600 text-red-700 px-4 py-3 rounded mb-4">
             {error}
+          </div>
+        )}
+
+        {showOpenInApp && (
+          <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 px-4 py-3 rounded mb-4">
+            <p className="font-medium mb-2">No se detectó tu wallet en este navegador.</p>
+            <p className="mb-3">Abre esta página desde la app de tu wallet usando la opción “Abrir en la app” para verificar tu dirección.</p>
+            <button
+              type="button"
+              onClick={handleOpenInWalletApp}
+              className="w-full py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600 transition"
+            >
+              Abrir en la app
+            </button>
           </div>
         )}
 
