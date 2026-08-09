@@ -179,62 +179,59 @@ const Dashboard = () => {
           ¡Hola, {user?.username || "Usuario"}!
         </p>
 
-        <nav className="mx-auto mt-4 hidden max-w-7xl md:flex md:justify-center md:gap-6 lg:gap-8">
-          <button 
-            className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'dashboard' ? 'text-[var(--brand-900)]' : ''}`}
-            onClick={() => setCurrentView('dashboard')}
-          >
-            <Wallet className="h-5 w-5" />
-            <span>Inicio</span>
-          </button>
-          <button 
-            className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'tasks' ? 'text-[var(--brand-900)]' : ''}`}
-            onClick={() => setCurrentView('tasks')}
-          >
-            <Target className="h-5 w-5" />
-            <span>Tareas</span>
-          </button>
-          <button 
-            className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'referrals' ? 'text-[var(--brand-900)]' : ''}`}
-            onClick={() => setCurrentView('referrals')}
-          >
-            <Users className="h-5 w-5" />
-            <span>Referidos</span>
-          </button>
-          <button 
-            className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'profile' ? 'text-[var(--brand-900)]' : ''}`}
-            onClick={() => setCurrentView('profile')}
-          >
-            <Users className="h-5 w-5" />
-            <span>Perfil</span>
-          </button>
+        <nav className="mx-auto mt-4 hidden max-w-7xl md:flex md:items-center md:justify-between md:gap-6">
+          <div className="flex flex-wrap items-center gap-6">
+            <button 
+              className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'dashboard' ? 'text-[var(--brand-900)]' : ''}`}
+              onClick={() => setCurrentView('dashboard')}
+            >
+              <Wallet className="h-5 w-5" />
+              <span>Inicio</span>
+            </button>
+            <button 
+              className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'tasks' ? 'text-[var(--brand-900)]' : ''}`}
+              onClick={() => setCurrentView('tasks')}
+            >
+              <Target className="h-5 w-5" />
+              <span>Tareas</span>
+            </button>
+            <button 
+              className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'referrals' ? 'text-[var(--brand-900)]' : ''}`}
+              onClick={() => setCurrentView('referrals')}
+            >
+              <Users className="h-5 w-5" />
+              <span>Referidos</span>
+            </button>
+            <button 
+              className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'profile' ? 'text-[var(--brand-900)]' : ''}`}
+              onClick={() => setCurrentView('profile')}
+            >
+              <Users className="h-5 w-5" />
+              <span>Perfil</span>
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              onClick={handleDepositClick}
+              className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+            >
+              Planes
+            </button>
+            <button
+              onClick={() => setCurrentView('bonuses')}
+              className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+            >
+              Bonos
+            </button>
+            <button
+              onClick={() => setCurrentView('tasks')}
+              className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+            >
+              Tareas
+            </button>
+          </div>
         </nav>
-        <div className="mx-auto mt-4 hidden w-full max-w-7xl items-center justify-center gap-3 md:flex">
-          <button
-            onClick={handleDepositClick}
-            className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
-          >
-            Planes
-          </button>
-          <button
-            onClick={() => setCurrentView('bonuses')}
-            className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
-          >
-            Bonos
-          </button>
-          <button
-            onClick={() => setCurrentView('referrals')}
-            className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
-          >
-            Referidos
-          </button>
-          <button
-            onClick={() => setCurrentView('tasks')}
-            className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
-          >
-            Tareas
-          </button>
-        </div>
       </header>
 
       {menuOpen && (
@@ -314,15 +311,6 @@ const Dashboard = () => {
             className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
           >
             Bonos
-          </button>
-          <button
-            onClick={() => {
-              setCurrentView('referrals');
-              setMenuOpen(false);
-            }}
-            className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
-          >
-            Referidos
           </button>
           <button
             onClick={() => {
