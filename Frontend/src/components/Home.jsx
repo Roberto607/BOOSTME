@@ -134,9 +134,9 @@ const Home = () => {
   return (
     <div className="min-h-screen bg-[linear-gradient(180deg,#f8fbff_0%,#eef8ff_100%)] text-slate-900">
       <header className="sticky top-0 z-50 border-b border-slate-200/70 bg-white/85 backdrop-blur-xl">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 md:px-6 lg:px-8">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 md:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <img src={brandLogo} alt="BoostMe logo" className="h-9 w-auto object-contain md:h-10" />
+            <img src={brandLogo} alt="BoostMe logo" className="h-8 w-auto object-contain sm:h-9 md:h-10" />
             <span className="text-lg font-semibold tracking-tight text-slate-900 md:text-xl">BoostMe</span>
           </div>
 
@@ -149,13 +149,13 @@ const Home = () => {
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/login')}
-              className="rounded-full border border-slate-300 bg-white px-4 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700"
+              className="rounded-full border border-slate-300 bg-white px-3 py-2 text-sm font-semibold text-slate-700 transition hover:border-sky-400 hover:text-sky-700 sm:px-4"
             >
               Iniciar Sesión
             </button>
             <button
               onClick={() => navigate('/register')}
-              className="rounded-full bg-gradient-to-r from-[#0f2a44] to-[#38bdf8] px-4 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90"
+              className="rounded-full bg-gradient-to-r from-[#0f2a44] to-[#38bdf8] px-3 py-2 text-sm font-semibold text-white shadow-sm transition hover:opacity-90 sm:px-4"
             >
               Registrarse
             </button>
@@ -170,35 +170,35 @@ const Home = () => {
       )}
 
       <main className="flex flex-col">
-        <section className="bg-[linear-gradient(135deg,#0f2a44_0%,#155f7a_45%,#38bdf8_100%)] px-4 py-16 text-white md:px-6 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:py-16">
+        <section className="bg-[linear-gradient(135deg,#0f2a44_0%,#155f7a_45%,#38bdf8_100%)] px-4 py-12 text-white sm:px-6 md:py-16 lg:px-8">
+          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:py-16">
             <div className="flex flex-col justify-center">
-              <span className="mb-4 inline-flex w-fit rounded-full border border-white/15 bg-white/10 px-4 py-1 text-sm font-semibold text-slate-200">
+              <span className="mb-4 inline-flex w-fit rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-semibold text-slate-200 sm:px-4">
                 Turn your screen time into real rewards
               </span>
-              <h1 className="text-4xl font-bold leading-tight text-white md:text-5xl lg:text-6xl">
+              <h1 className="text-3xl font-bold leading-tight text-white sm:text-4xl md:text-5xl lg:text-6xl">
                 Convierte tu tiempo libre en recompensas reales.
               </h1>
-              <p className="mt-5 max-w-2xl text-lg leading-8 text-slate-300">
+              <p className="mt-4 max-w-2xl text-base leading-7 text-slate-300 sm:mt-5 sm:text-lg sm:leading-8">
                 Completa tareas simples, desbloquea bonos claros y gestiona tus recompensas desde una experiencia limpia y transparente.
               </p>
-              <div className="mt-8 flex flex-wrap items-center gap-3">
+              <div className="mt-6 flex flex-wrap items-center gap-3 sm:mt-8">
                 <button
                   onClick={() => navigate('/register')}
-                  className="rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
+                  className="rounded-full bg-white px-5 py-3 text-sm font-semibold text-slate-950 transition hover:bg-slate-100"
                 >
                   Crear cuenta gratis
                 </button>
                 <button
                   onClick={() => navigate('/login')}
-                  className="rounded-full border border-white/20 bg-white/10 px-6 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
+                  className="rounded-full border border-white/20 bg-white/10 px-5 py-3 text-sm font-semibold text-white transition hover:bg-white/20"
                 >
                   Iniciar sesión
                 </button>
               </div>
-              <div className="mt-8 flex flex-wrap gap-3">
+              <div className="mt-6 flex flex-wrap gap-3 sm:mt-8">
                 {stats.map((stat) => (
-                  <div key={stat.label} className="rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
+                  <div key={stat.label} className="min-w-[140px] rounded-2xl border border-white/10 bg-white/10 px-4 py-3 backdrop-blur">
                     <strong className="block text-lg font-semibold text-white">{stat.value}</strong>
                     <span className="mt-1 block text-sm text-slate-300">{stat.label}</span>
                   </div>
@@ -206,10 +206,10 @@ const Home = () => {
               </div>
             </div>
             <div className="flex items-center justify-center">
-              <div className="w-full rounded-[2rem] border border-white/10 bg-gradient-to-br from-[#0f2a44] to-[#38bdf8] p-8 shadow-2xl">
+              <div className="w-full max-w-xl rounded-[1.5rem] border border-white/10 bg-gradient-to-br from-[#0f2a44] to-[#38bdf8] p-5 shadow-2xl sm:p-8 sm:rounded-[2rem]">
                 <p className="text-sm font-medium text-slate-200">Tu panel en un solo lugar</p>
-                <div className="mt-5 rounded-[1.5rem] bg-slate-950/60 p-5">
-                  <div className="flex items-center justify-between">
+                <div className="mt-4 rounded-[1.25rem] bg-slate-950/60 p-4 sm:mt-5 sm:p-5 sm:rounded-[1.5rem]">
+                  <div className="flex items-center justify-between gap-2">
                     <span className="text-sm font-semibold text-white">Dashboard</span>
                     <span className="rounded-full bg-emerald-500/20 px-3 py-1 text-xs font-semibold text-emerald-300">Activo</span>
                   </div>
@@ -224,15 +224,15 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="bg-white px-4 py-14 md:px-6 lg:px-8">
+        <section className="bg-white px-4 py-12 sm:px-6 md:py-14 lg:px-8">
           <div className="mx-auto max-w-7xl">
             <div className="mx-auto max-w-3xl text-center">
               <span className="mb-3 inline-flex rounded-full bg-gradient-to-r from-[#0f2a44] via-[#38bdf8] to-[#f59e0b] px-3 py-1 text-sm font-semibold text-white">
                 3 formas simples de ganar
               </span>
-              <h2 className="text-3xl font-bold text-slate-950 md:text-4xl">Elige la tarea que mejor encaja con tu tiempo.</h2>
+              <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl md:text-4xl">Elige la tarea que mejor encaja con tu tiempo.</h2>
             </div>
-            <div className="mt-10 grid gap-6 md:grid-cols-3">
+            <div className="mt-8 grid gap-6 sm:mt-10 md:grid-cols-3">
               {earnWays.map((way) => (
                 <article key={way.title} className="rounded-[2rem] border border-slate-200 bg-slate-50 p-6 shadow-sm">
                   <div className="mb-4 inline-flex rounded-full bg-[#0f2a44] px-3 py-1 text-xs font-semibold uppercase tracking-[0.2em] text-white">
@@ -247,14 +247,14 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="bg-white px-4 py-14 md:px-6 lg:px-8">
+        <section className="bg-white px-4 py-12 sm:px-6 md:py-14 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <span className="mb-3 inline-flex rounded-full bg-gradient-to-r from-[#0f2a44] via-[#38bdf8] to-[#f59e0b] px-3 py-1 text-sm font-semibold text-white">
                 Cómo funciona
               </span>
-              <h2 className="text-3xl font-bold text-slate-950 md:text-4xl">Un flujo claro desde que te registras hasta que retiras.</h2>
-              <p className="mt-4 max-w-xl text-lg leading-8 text-slate-600">
+              <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl md:text-4xl">Un flujo claro desde que te registras hasta que retiras.</h2>
+              <p className="mt-4 max-w-xl text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
                 Tu progreso queda visible, tus recompensas se explican antes de empezar y tu panel te mantiene en control.
               </p>
             </div>
@@ -272,14 +272,14 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="bg-white px-4 py-14 md:px-6 lg:px-8">
+        <section className="bg-white px-4 py-12 sm:px-6 md:py-14 lg:px-8">
           <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div>
               <span className="mb-3 inline-flex rounded-full bg-gradient-to-r from-[#0f2a44] via-[#38bdf8] to-[#f59e0b] px-3 py-1 text-sm font-semibold text-white">
                 Transparente y claro
               </span>
-              <h2 className="text-3xl font-bold text-slate-950 md:text-4xl">Diseñado para que cada acción tenga sentido.</h2>
-              <p className="mt-4 text-lg leading-8 text-slate-600">
+              <h2 className="text-2xl font-bold text-slate-950 sm:text-3xl md:text-4xl">Diseñado para que cada acción tenga sentido.</h2>
+              <p className="mt-4 text-base leading-7 text-slate-600 sm:text-lg sm:leading-8">
                 Desde ver el valor de cada tarea hasta seguir tus bonos y retiros, todo se presenta de forma clara y simple.
               </p>
             </div>
@@ -297,9 +297,9 @@ const Home = () => {
           </div>
         </section>
 
-        <section className="bg-gradient-to-r from-[#0f2a44] to-[#38bdf8] px-4 py-16 text-center text-white md:px-6 lg:px-8">
-          <h2 className="text-3xl font-bold md:text-4xl">Empieza hoy y convierte tus minutos en oportunidades.</h2>
-          <p className="mx-auto mt-4 max-w-2xl text-lg leading-8 text-slate-200">Tu tiempo tiene valor. Haz que cada minuto cuente con BoostMe.</p>
+        <section className="bg-gradient-to-r from-[#0f2a44] to-[#38bdf8] px-4 py-12 text-center text-white sm:px-6 md:py-16 lg:px-8">
+          <h2 className="text-2xl font-bold sm:text-3xl md:text-4xl">Empieza hoy y convierte tus minutos en oportunidades.</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-slate-200 sm:text-lg sm:leading-8">Tu tiempo tiene valor. Haz que cada minuto cuente con BoostMe.</p>
           <button
             onClick={() => navigate('/register')}
             className="mt-8 rounded-full bg-white px-6 py-3 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
@@ -308,8 +308,8 @@ const Home = () => {
           </button>
         </section>
       </main>
-      <footer className="bg-[#0f2a44] px-4 py-12 text-slate-300 md:px-6 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-8 md:grid-cols-4">
+      <footer className="bg-[#0f2a44] px-4 py-10 text-slate-300 sm:px-6 md:py-12 lg:px-8">
+        <div className="mx-auto grid max-w-7xl gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <img src={brandLogo} alt="BoostMe logo" className="h-10 w-auto" />
