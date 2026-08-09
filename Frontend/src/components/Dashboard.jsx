@@ -213,18 +213,21 @@ const Dashboard = () => {
               onClick={handleDepositClick}
               className="flex items-center gap-1 rounded-full border border-transparent bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] transition-all duration-200 hover:border-sky-200 hover:bg-sky-100"
             >
+              <Crown className="h-4 w-4" />
               <span>Planes</span>
             </button>
             <button
               onClick={() => setCurrentView('bonuses')}
               className="flex items-center gap-1 rounded-full border border-transparent bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] transition-all duration-200 hover:border-sky-200 hover:bg-sky-100"
             >
+              <Gift className="h-4 w-4" />
               <span>Bonos</span>
             </button>
             <button
               onClick={() => setCurrentView('tasks')}
               className="flex items-center gap-1 rounded-full border border-transparent bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] transition-all duration-200 hover:border-sky-200 hover:bg-sky-100"
             >
+              <Target className="h-4 w-4" />
               <span>Tareas</span>
             </button>
           </div>
