@@ -18,6 +18,59 @@ const RegisterForm = () => {
     const [loading, setLoading] = useState(false);
     const [showEmailNotice, setShowEmailNotice] = useState(false);
 
+    const isMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window.navigator.userAgent);
+
+    const getEvmWalletProvider = () => {
+        const providers = [
+            window.ethereum,
+            window.trustwallet,
+            window.okxwallet,
+            window.bitkeep,
+            window.coinbaseWalletExtension,
+            window.imToken,
+            window.walletconnect,
+            window.metaMask,
+        ];
+
+        return providers.find(Boolean) || null;
+    };
+
+    const ensureWalletIsConnected = async (address, network) => {
+        if (network === 'tron') {
+            const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
+            if (!tronWeb || !tronWeb.ready) {
+                throw new Error("Para registrarte debes abrir esta página desde la app de tu wallet y usar la opción 'Abrir en la app'.");
+            }
+
+            const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
+            if (!currentAddress || currentAddress.toLowerCase() !== address.toLowerCase()) {
+                throw new Error("La wallet TRON conectada debe coincidir exactamente con la dirección que estás registrando.");
+            }
+            return;
+        }
+
+        const provider = getEvmWalletProvider() || (window.web3 && window.web3.currentProvider);
+        if (!provider) {
+            if (isMobileDevice()) {
+                throw new Error("No se detectó tu wallet en este navegador. Abre esta página desde la app de tu wallet usando 'Abrir en la app' y luego intenta registrar.");
+            }
+
+            throw new Error("Debes tener conectada una wallet EVM compatible antes de registrarte.");
+        }
+
+        const accounts = await provider.request ? await provider.request({ method: 'eth_requestAccounts' }) : [];
+        const account = Array.isArray(accounts) ? accounts[0] : null;
+        const connectedWallet = account || (window.ethereum && window.ethereum.selectedAddress) || (window.trustwallet && window.trustwallet.selectedAddress);
+
+        if (!connectedWallet) {
+            throw new Error("Conecta tu wallet antes de continuar con el registro.");
+        }
+
+        if (connectedWallet.toLowerCase() !== address.toLowerCase()) {
+            throw new Error("La wallet conectada no coincide con la dirección que estás registrando. Conéctate con la misma dirección.");
+        }
+    };
+
     useEffect(() => {
         if (!user) {
             setShowEmailNotice(false);
@@ -62,7 +115,6 @@ const RegisterForm = () => {
 
         const isValidEVM = (v) => /^0x[a-fA-F0-9]{40}$/.test(v);
         const isValidTron = (v) => /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(v);
-        const isValidBTC = (v) => /^(1|3|bc1)[A-Za-z0-9]{25,64}$/.test(v);
 
         if (!walletAddress) {
             return setError("La dirección de la billetera es requerida.");
@@ -79,6 +131,12 @@ const RegisterForm = () => {
             }
         } else {
             return setError("Red de wallet no soportada.");
+        }
+
+        try {
+            await ensureWalletIsConnected(addr, walletNetwork);
+        } catch (walletError) {
+            return setError(walletError.message || "Debes conectar tu wallet antes de continuar.");
         }
 
         if (password.length < 8) {
