@@ -347,7 +347,7 @@ class RegisterView(APIView):
                     # Para direcciones EVM (0x...) generamos un nonce y pedimos firma.
                     # Para otras direcciones (TRON, BTC/Omni) registramos la dirección
                     # pero no exigimos la verificación por firma en este paso.
-                    if wallet_address.startswith('0x'):
+                    if wallet_network in SUPPORTED_WALLET_NETWORKS:
                         user.wallet_nonce = _generate_wallet_nonce()
                         user.wallet_nonce_created_at = timezone.now()
                         user.save(update_fields=['wallet_nonce', 'wallet_nonce_created_at'])
@@ -377,7 +377,7 @@ class RegisterView(APIView):
                         "refresh": str(refresh),
                     }
 
-                    if wallet_address.startswith('0x'):
+                    if wallet_network in SUPPORTED_WALLET_NETWORKS:
                         response_data.update({
                             "message": "Registro exitoso. Firma el nonce para verificar tu wallet.",
                             "next_step": "verify_wallet",
@@ -524,6 +524,7 @@ class VerifyWalletSignatureView(APIView):
 
     def post(self, request):
         wallet_address = (request.data.get('wallet_address') or '').strip().lower()
+        wallet_network = (request.data.get('wallet_network') or 'polygon').strip().lower()
         nonce = request.data.get('nonce', '').strip()
         signature = request.data.get('signature', '').strip()
 
@@ -559,16 +560,29 @@ class VerifyWalletSignatureView(APIView):
                 'code': 'nonce_expired'
             }, status=status.HTTP_400_BAD_REQUEST)
 
-        if not _verify_wallet_signature(wallet_address, nonce, signature):
-            return Response({
-                'error': 'Firma inválida',
-                'code': 'invalid_signature'
-            }, status=status.HTTP_400_BAD_REQUEST)
+        if wallet_network in ('polygon', 'bsc'):
+            if not _verify_wallet_signature(wallet_address, nonce, signature):
+                return Response({
+                    'error': 'Firma inválida',
+                    'code': 'invalid_signature'
+                }, status=status.HTTP_400_BAD_REQUEST)
+        elif wallet_network == 'tron':
+            if not re.match(r'^T[1-9A-HJ-NP-Za-km-z]{33}$', wallet_address):
+                return Response({
+                    'error': 'Dirección TRON inválida',
+                    'code': 'invalid_wallet_address'
+                }, status=status.HTTP_400_BAD_REQUEST)
+            if not signature:
+                return Response({
+                    'error': 'Firma inválida',
+                    'code': 'invalid_signature'
+                }, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_wallet_verified = True
         user.is_active = True
         user.wallet_nonce = ''
-        user.save(update_fields=['is_wallet_verified', 'is_active', 'wallet_nonce'])
+        user.wallet_network = wallet_network
+        user.save(update_fields=['is_wallet_verified', 'is_active', 'wallet_nonce', 'wallet_network'])
 
         return Response({
             'message': 'Wallet verificada exitosamente',

@@ -123,6 +123,8 @@ class RegisterVerificationLinkTests(TestCase):
         self.assertTrue(User.objects.filter(email='tronuser@example.com').exists())
         self.assertEqual(response.data.get('wallet_address'), 'TQ5LFpM4grzY2Qan9P6zGt3kJKRQ4uBeeN')
         self.assertEqual(response.data.get('wallet_network'), 'tron')
+        self.assertIn('next_step', response.data)
+        self.assertIn('wallet_verification_nonce', response.data)
 
     def test_register_rejects_invalid_wallet_network(self):
         client = APIClient()

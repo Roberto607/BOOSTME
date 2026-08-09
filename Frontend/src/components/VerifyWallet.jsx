@@ -7,6 +7,7 @@ const VerifyWallet = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [walletAddress, setWalletAddress] = useState("");
+  const [walletNetwork, setWalletNetwork] = useState("polygon");
   const [nonce, setNonce] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -19,6 +20,7 @@ const VerifyWallet = () => {
 
     if (stateData.wallet_address && stateData.wallet_verification_nonce) {
       setWalletAddress(stateData.wallet_address);
+      setWalletNetwork(stateData.wallet_network || 'polygon');
       setNonce(stateData.wallet_verification_nonce);
       sessionStorage.setItem("walletVerificationData", JSON.stringify(stateData));
       return;
@@ -26,6 +28,7 @@ const VerifyWallet = () => {
 
     if (savedData?.wallet_address && savedData?.wallet_verification_nonce) {
       setWalletAddress(savedData.wallet_address);
+      setWalletNetwork(savedData.wallet_network || 'polygon');
       setNonce(savedData.wallet_verification_nonce);
       return;
     }
@@ -42,43 +45,58 @@ const VerifyWallet = () => {
       return;
     }
 
-    if (!window.ethereum && !window.trustwallet && !window.web3) {
-      setError("Necesitas una wallet compatible instalada, como MetaMask o Trust Wallet.");
-      return;
-    }
+    const message = `BoostMe verification nonce: ${nonce}`;
 
     try {
       setLoading(true);
-      const provider = window.ethereum || window.trustwallet || window.web3.currentProvider;
-      const web3 = new Web3(provider);
-      const accounts = await web3.eth.requestAccounts();
-      if (!accounts || !accounts.length) {
-        throw new Error("No se pudo obtener la cuenta de la wallet.");
-      }
-      const account = accounts[0];
-      if (account.toLowerCase() !== walletAddress.toLowerCase()) {
-        setError("La wallet conectada no coincide con la dirección registrada.");
-        setLoading(false);
-        return;
-      }
-
-      const message = `BoostMe verification nonce: ${nonce}`;
       let signature;
-      if (web3.eth.personal && typeof web3.eth.personal.sign === "function") {
-        signature = await web3.eth.personal.sign(message, account, "");
-      } else if (provider.request) {
-        signature = await provider.request({
-          method: "personal_sign",
-          params: [message, account],
-        });
+
+      if (walletNetwork === 'tron') {
+        const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
+        if (!tronWeb || !tronWeb.ready) {
+          throw new Error("Necesitas TronLink o una wallet TRON conectada.");
+        }
+        const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
+        if (!currentAddress || currentAddress !== walletAddress) {
+          throw new Error("La wallet TRON conectada no coincide con la dirección registrada.");
+        }
+        try {
+          signature = await tronWeb.trx.sign(message);
+        } catch {
+          signature = await tronWeb.trx.sign(message, currentAddress);
+        }
       } else {
-        throw new Error("La wallet no soporta la firma personal.");
+        if (!window.ethereum && !window.trustwallet && !window.web3) {
+          throw new Error("Necesitas una wallet compatible instalada, como MetaMask o Trust Wallet.");
+        }
+
+        const provider = window.ethereum || window.trustwallet || window.web3.currentProvider;
+        const web3 = new Web3(provider);
+        const accounts = await web3.eth.requestAccounts();
+        if (!accounts || !accounts.length) {
+          throw new Error("No se pudo obtener la cuenta de la wallet.");
+        }
+        const account = accounts[0];
+        if (account.toLowerCase() !== walletAddress.toLowerCase()) {
+          throw new Error("La wallet conectada no coincide con la dirección registrada.");
+        }
+
+        if (web3.eth.personal && typeof web3.eth.personal.sign === "function") {
+          signature = await web3.eth.personal.sign(message, account, "");
+        } else if (provider.request) {
+          signature = await provider.request({
+            method: "personal_sign",
+            params: [message, account],
+          });
+        } else {
+          throw new Error("La wallet no soporta la firma personal.");
+        }
       }
 
       const response = await fetch(`${API_BASE_URL}/verify-wallet/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet_address: walletAddress, nonce, signature }),
+        body: JSON.stringify({ wallet_address: walletAddress, wallet_network: walletNetwork, nonce, signature }),
         credentials: "include",
       });
 
