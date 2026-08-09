@@ -209,6 +209,32 @@ const Dashboard = () => {
             <span>Perfil</span>
           </button>
         </nav>
+        <div className="mx-auto mt-4 hidden w-full max-w-7xl items-center justify-center gap-3 md:flex">
+          <button
+            onClick={handleDepositClick}
+            className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+          >
+            Planes
+          </button>
+          <button
+            onClick={() => setCurrentView('bonuses')}
+            className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+          >
+            Bonos
+          </button>
+          <button
+            onClick={() => setCurrentView('referrals')}
+            className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+          >
+            Referidos
+          </button>
+          <button
+            onClick={() => setCurrentView('tasks')}
+            className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+          >
+            Tareas
+          </button>
+        </div>
       </header>
 
       {menuOpen && (
@@ -269,6 +295,45 @@ const Dashboard = () => {
         >
           <Users className="mr-2 h-5 w-5" /> Perfil
         </button>
+
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <button
+            onClick={() => {
+              handleDepositClick();
+              setMenuOpen(false);
+            }}
+            className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
+          >
+            Planes
+          </button>
+          <button
+            onClick={() => {
+              setCurrentView('bonuses');
+              setMenuOpen(false);
+            }}
+            className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
+          >
+            Bonos
+          </button>
+          <button
+            onClick={() => {
+              setCurrentView('referrals');
+              setMenuOpen(false);
+            }}
+            className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
+          >
+            Referidos
+          </button>
+          <button
+            onClick={() => {
+              setCurrentView('tasks');
+              setMenuOpen(false);
+            }}
+            className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
+          >
+            Tareas
+          </button>
+        </div>
 
         <button className="rounded-xl bg-[var(--brand-900)] px-3 py-3 text-sm font-semibold text-white transition hover:bg-[#111c33]" onClick={handleLogout}>Cerrar Sesión</button>
       </aside>
@@ -404,40 +469,6 @@ const Dashboard = () => {
               </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-200">
-              <h2 className="text-xl md:text-2xl text-[var(--brand-900)]">Acciones Rápidas</h2>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                <button 
-                  className="flex flex-col items-center gap-1 rounded-xl p-4 cursor-pointer font-semibold text-slate-900 transition-all duration-200 border border-slate-200 bg-sky-50 hover:bg-sky-100"
-                  onClick={handleDepositClick}
-                >
-                  <Crown className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
-                  <span className="text-xs md:text-sm">Planes</span>
-                </button>
-                <button 
-                  className="flex flex-col items-center gap-1 rounded-xl p-4 cursor-pointer font-semibold text-slate-900 transition-all duration-200 border border-slate-200 bg-sky-50 hover:bg-sky-100" 
-                  onClick={() => setCurrentView('bonuses')}
-                >
-                  <Gift className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
-                  <span className="text-xs md:text-sm">Bonos</span>
-                </button>
-                <button 
-                  className="flex flex-col items-center gap-1 rounded-xl p-4 cursor-pointer font-semibold text-slate-900 transition-all duration-200 border border-slate-200 bg-sky-50 hover:bg-sky-100"
-                  onClick={() => setCurrentView('referrals')}
-                >
-                  <Users className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
-                  <span className="text-xs md:text-sm">Referidos</span>
-                </button>
-                <button 
-                  className="flex flex-col items-center gap-1 rounded-xl p-4 cursor-pointer font-semibold text-slate-900 transition-all duration-200 border border-slate-200 bg-sky-50 hover:bg-sky-100"
-                  onClick={() => setCurrentView('tasks')}
-                >
-                  <Trophy className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
-                  <span className="text-xs md:text-sm">Tareas</span>
-                </button>
-                </div>
-              </div>
-            </div>
 
           </>
         )}
