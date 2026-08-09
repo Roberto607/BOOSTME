@@ -178,9 +178,9 @@ const Home = () => {
             className="fixed inset-0 z-40 bg-slate-950/40"
             onClick={() => setMenuOpen(false)}
           />
-          <div className="fixed right-0 top-0 z-50 flex h-full w-72 flex-col overflow-hidden rounded-l-3xl border-l border-slate-200 bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 px-4 py-4">
-              <span className="text-base font-semibold text-slate-900">Navegación</span>
+          <div className="fixed right-0 top-0 z-50 flex h-full w-72 flex-col overflow-hidden rounded-l-3xl border-l border-sky-500/20 bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-sky-500/20 bg-sky-600 px-4 py-4">
+              <span className="text-base font-semibold text-white">Navegación</span>
               <button
                 className="inline-flex h-10 w-10 items-center justify-center rounded-full bg-slate-100 text-slate-900 transition hover:bg-slate-200"
                 onClick={() => setMenuOpen(false)}
@@ -195,7 +195,7 @@ const Home = () => {
                   navigate('/how-it-works');
                   setMenuOpen(false);
                 }}
-                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:bg-sky-50"
               >
                 Cómo funciona
               </button>
@@ -204,7 +204,7 @@ const Home = () => {
                   handleOpenPlans();
                   setMenuOpen(false);
                 }}
-                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:bg-sky-50"
               >
                 Planes
               </button>
@@ -213,7 +213,7 @@ const Home = () => {
                   handleOpenBonuses();
                   setMenuOpen(false);
                 }}
-                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:border-sky-200 hover:bg-sky-50"
               >
                 Bonos
               </button>
@@ -222,7 +222,7 @@ const Home = () => {
                   navigate('/login');
                   setMenuOpen(false);
                 }}
-                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                className="rounded-2xl border border-slate-200 bg-white px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:border-sky-500 hover:bg-sky-600 hover:text-white"
               >
                 Iniciar Sesión
               </button>
@@ -231,7 +231,7 @@ const Home = () => {
                   navigate('/register');
                   setMenuOpen(false);
                 }}
-                className="rounded-2xl px-4 py-3 text-left text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
+                className="rounded-2xl border border-slate-200 bg-gradient-to-r from-[#0f2a44] to-[#38bdf8] px-4 py-3 text-left text-sm font-semibold text-white transition hover:from-[#111c33] hover:to-[#0b5f8a]"
               >
                 Registrarse
               </button>
