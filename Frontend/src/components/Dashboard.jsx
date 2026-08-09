@@ -179,56 +179,53 @@ const Dashboard = () => {
           ¡Hola, {user?.username || "Usuario"}!
         </p>
 
-        <nav className="mx-auto mt-4 hidden max-w-7xl md:flex md:items-center md:justify-between md:gap-6">
-          <div className="flex flex-wrap items-center gap-6">
+        <nav className="mx-auto mt-4 hidden max-w-7xl md:flex md:justify-center">
+          <div className="flex flex-wrap items-center justify-center gap-3">
             <button 
-              className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'dashboard' ? 'text-[var(--brand-900)]' : ''}`}
+              className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${currentView === 'dashboard' ? 'text-[var(--brand-900)]' : ''}`}
               onClick={() => setCurrentView('dashboard')}
             >
               <Wallet className="h-5 w-5" />
               <span>Inicio</span>
             </button>
             <button 
-              className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'tasks' ? 'text-[var(--brand-900)]' : ''}`}
+              className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${currentView === 'tasks' ? 'text-[var(--brand-900)]' : ''}`}
               onClick={() => setCurrentView('tasks')}
             >
               <Target className="h-5 w-5" />
               <span>Tareas</span>
             </button>
             <button 
-              className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'referrals' ? 'text-[var(--brand-900)]' : ''}`}
+              className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${currentView === 'referrals' ? 'text-[var(--brand-900)]' : ''}`}
               onClick={() => setCurrentView('referrals')}
             >
               <Users className="h-5 w-5" />
               <span>Referidos</span>
             </button>
             <button 
-              className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'profile' ? 'text-[var(--brand-900)]' : ''}`}
+              className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${currentView === 'profile' ? 'text-[var(--brand-900)]' : ''}`}
               onClick={() => setCurrentView('profile')}
             >
               <Users className="h-5 w-5" />
               <span>Perfil</span>
             </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
             <button
               onClick={handleDepositClick}
-              className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+              className="flex items-center gap-1 rounded-full border border-transparent bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] transition-all duration-200 hover:border-sky-200 hover:bg-sky-100"
             >
-              Planes
+              <span>Planes</span>
             </button>
             <button
               onClick={() => setCurrentView('bonuses')}
-              className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+              className="flex items-center gap-1 rounded-full border border-transparent bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] transition-all duration-200 hover:border-sky-200 hover:bg-sky-100"
             >
-              Bonos
+              <span>Bonos</span>
             </button>
             <button
               onClick={() => setCurrentView('tasks')}
-              className="rounded-full bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] shadow-sm transition hover:bg-sky-100"
+              className="flex items-center gap-1 rounded-full border border-transparent bg-sky-50 px-4 py-2 text-sm font-semibold text-[var(--brand-900)] transition-all duration-200 hover:border-sky-200 hover:bg-sky-100"
             >
-              Tareas
+              <span>Tareas</span>
             </button>
           </div>
         </nav>
