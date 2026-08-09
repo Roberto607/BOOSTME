@@ -171,7 +171,7 @@ const Home = () => {
 
       <main className="flex flex-col">
         <section className="bg-[linear-gradient(135deg,#0f2a44_0%,#155f7a_45%,#38bdf8_100%)] px-4 py-12 text-white sm:px-6 md:py-16 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:py-16">
+          <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[1.05fr_0.95fr] lg:gap-10 lg:py-16">
             <div className="flex flex-col justify-center">
               <span className="mb-4 inline-flex w-fit rounded-full border border-white/15 bg-white/10 px-3 py-1 text-sm font-semibold text-slate-200 sm:px-4">
                 Turn your screen time into real rewards
@@ -225,7 +225,7 @@ const Home = () => {
         </section>
 
         <section className="bg-white px-4 py-12 sm:px-6 md:py-14 lg:px-8">
-          <div className="mx-auto max-w-7xl">
+          <div className="mx-auto max-w-6xl">
             <div className="mx-auto max-w-3xl text-center">
               <span className="mb-3 inline-flex rounded-full bg-gradient-to-r from-[#0f2a44] via-[#38bdf8] to-[#f59e0b] px-3 py-1 text-sm font-semibold text-white">
                 3 formas simples de ganar
@@ -248,7 +248,7 @@ const Home = () => {
         </section>
 
         <section className="bg-white px-4 py-12 sm:px-6 md:py-14 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
+          <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.9fr_1.1fr]">
             <div>
               <span className="mb-3 inline-flex rounded-full bg-gradient-to-r from-[#0f2a44] via-[#38bdf8] to-[#f59e0b] px-3 py-1 text-sm font-semibold text-white">
                 Cómo funciona
@@ -273,7 +273,7 @@ const Home = () => {
         </section>
 
         <section className="bg-white px-4 py-12 sm:px-6 md:py-14 lg:px-8">
-          <div className="mx-auto grid max-w-7xl gap-8 lg:grid-cols-[0.95fr_1.05fr]">
+          <div className="mx-auto grid max-w-6xl gap-8 lg:grid-cols-[0.95fr_1.05fr]">
             <div>
               <span className="mb-3 inline-flex rounded-full bg-gradient-to-r from-[#0f2a44] via-[#38bdf8] to-[#f59e0b] px-3 py-1 text-sm font-semibold text-white">
                 Transparente y claro
@@ -309,7 +309,7 @@ const Home = () => {
         </section>
       </main>
       <footer className="bg-[#0f2a44] px-4 py-10 text-slate-300 sm:px-6 md:py-12 lg:px-8">
-        <div className="mx-auto grid max-w-7xl gap-8 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mx-auto grid max-w-6xl gap-8 sm:grid-cols-2 lg:grid-cols-4">
           <div className="space-y-4">
             <div className="flex items-center gap-3">
               <img src={brandLogo} alt="BoostMe logo" className="h-10 w-auto" />
