@@ -8,7 +8,7 @@ import Web3 from "web3";
 const buildPlansUrl = () => `${PLANS_API_BASE_URL}/plans/`;
 
 const Plans = () => {
-  const { user, loading, isAuthenticated, setUser, setAccessToken, setIsAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, logout, setUser, setAccessToken, setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
   const isLoggedIn = Boolean(user && isAuthenticated && !loading);
@@ -77,6 +77,11 @@ const Plans = () => {
   /* ========================
      TRANSFERENCIA
   ======================== */
+  const handleLogout = async () => {
+    await logout();
+    navigate('/');
+  };
+
   const transferUSDT = async (amount) => {
     try {
       const contract = new web3.eth.Contract(
@@ -220,6 +225,18 @@ const Plans = () => {
               <h1 className="text-xl font-bold text-[var(--brand-900)] sm:text-2xl">BoostMe</h1>
               <p className="text-sm text-slate-500">Tu panel diario</p>
             </div>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1 text-sm font-semibold text-slate-700">
+              {user?.plan_name ? `Plan ${user.plan_name}` : 'Plan Free'}
+            </span>
+            <button
+              onClick={handleLogout}
+              className="hidden rounded-lg bg-[var(--brand-900)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#111c33] md:inline-flex"
+            >
+              Cerrar Sesión
+            </button>
           </div>
         </div>
 
