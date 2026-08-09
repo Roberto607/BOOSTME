@@ -221,52 +221,54 @@ const Plans = () => {
               <p className="text-sm text-slate-500">Tu panel diario</p>
             </div>
           </div>
+        </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <button
+        <nav className="mx-auto mt-4 hidden max-w-7xl md:flex md:justify-center">
+          <div className="flex flex-wrap items-center justify-center gap-3">
+            <button 
+              className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${location.pathname === '/dashboard' ? 'text-[var(--brand-900)]' : ''}`}
               onClick={() => navigate('/dashboard')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname === '/dashboard' ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
-              <Wallet className="h-4 w-4" />
-              Inicio
+              <Wallet className="h-5 w-5" />
+              <span>Inicio</span>
             </button>
-            <button
+            <button 
+              className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${location.pathname === '/dashboard/tasks' ? 'text-[var(--brand-900)]' : ''}`}
               onClick={() => navigate('/dashboard/tasks')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname === '/dashboard/tasks' ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
-              <Target className="h-4 w-4" />
-              Tareas
+              <Target className="h-5 w-5" />
+              <span>Tareas</span>
             </button>
-            <button
+            <button 
+              className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${location.pathname === '/dashboard/referidos' || location.pathname === '/referidos' ? 'text-[var(--brand-900)]' : ''}`}
               onClick={() => navigate('/dashboard/referidos')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/referidos' || location.pathname === '/referidos') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
-              <Users className="h-4 w-4" />
-              Referidos
+              <Users className="h-5 w-5" />
+              <span>Referidos</span>
             </button>
-            <button
+            <button 
+              className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${location.pathname === '/dashboard/profile' || location.pathname === '/Profile' ? 'text-[var(--brand-900)]' : ''}`}
               onClick={() => navigate('/dashboard/profile')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/profile' || location.pathname === '/Profile') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
-              <Users className="h-4 w-4" />
-              Perfil
+              <Users className="h-5 w-5" />
+              <span>Perfil</span>
             </button>
             <button
+              className="flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)]"
               onClick={() => navigate('/deposit')}
-              className="flex items-center gap-2 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-slate-200 hover:text-[var(--brand-900)]"
             >
               <Crown className="h-4 w-4" />
-              Planes
+              <span>Planes</span>
             </button>
             <button
+              className="flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)]"
               onClick={() => navigate('/dashboard/bonuses')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/bonuses' || location.pathname === '/bonuses') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
               <Gift className="h-4 w-4" />
-              Bonos
+              <span>Bonos</span>
             </button>
           </div>
-        </div>
+        </nav>
       </header>
 
       <div className="max-w-7xl mx-auto px-4 py-8 md:px-8">
@@ -283,45 +285,6 @@ const Plans = () => {
                 : "Explora los planes y activa tu cuenta cuando quieras."}
             </p>
           </div>
-
-          <nav className="flex flex-wrap items-center justify-center gap-2">
-            <button
-              onClick={() => navigate('/dashboard')}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${location.pathname === '/dashboard' ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
-            >
-              <Wallet className="h-4 w-4" /> Inicio
-            </button>
-            <button
-              onClick={() => navigate('/dashboard/tasks')}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${location.pathname === '/dashboard/tasks' ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
-            >
-              <Target className="h-4 w-4" /> Tareas
-            </button>
-            <button
-              onClick={() => navigate('/dashboard/referidos')}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/referidos' || location.pathname === '/referidos') ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
-            >
-              <Users className="h-4 w-4" /> Referidos
-            </button>
-            <button
-              onClick={() => navigate('/dashboard/profile')}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/profile' || location.pathname === '/Profile') ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
-            >
-              <Users className="h-4 w-4" /> Perfil
-            </button>
-            <button
-              onClick={() => navigate('/deposit')}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${location.pathname === '/deposit' ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
-            >
-              <Crown className="h-4 w-4" /> Planes
-            </button>
-            <button
-              onClick={() => navigate('/dashboard/bonuses')}
-              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/bonuses' || location.pathname === '/bonuses') ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
-            >
-              <Gift className="h-4 w-4" /> Bonos
-            </button>
-          </nav>
 
           <div className="grid gap-4 sm:grid-cols-2">
             {user?.has_financial_activation && (
