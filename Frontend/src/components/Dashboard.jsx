@@ -140,158 +140,204 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-[var(--bg)]">
-      <header className="bg-white shadow-sm px-4 md:px-8 py-4 relative z-10" style={{ borderBottom: '1px solid rgba(56,189,248,0.15)' }}>
-        <div className="header-top">
-          <h1 className="text-2xl md:text-3xl">BoostMe</h1>
+    <div className="flex min-h-screen flex-col bg-[var(--bg)]">
+      <header className="sticky top-0 z-30 border-b border-sky-100/80 bg-white/95 px-4 py-4 shadow-sm backdrop-blur md:px-8" style={{ borderBottom: '1px solid rgba(56,189,248,0.15)' }}>
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--brand-900)] text-lg font-bold text-white">
+              B
+            </div>
+            <div>
+              <h1 className="text-xl font-bold text-[var(--brand-900)] sm:text-2xl">BoostMe</h1>
+              <p className="text-sm text-slate-500">Tu panel diario</p>
+            </div>
+          </div>
 
-          <button
-            className="menu-button md:hidden"
-            onClick={() => setMenuOpen(!menuOpen)}
-            aria-label="Abrir menú"
-          >
-            {menuOpen ? <X size={26} /> : <Menu size={26} />}
-          </button>
-
-          <div className="hidden md:flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
             {(user?.has_financial_activation || userPlan.name !== 'Free') && (
-              <span className="px-3 py-1 rounded-full font-semibold text-sm" style={{ background: 'rgba(56,189,248,0.14)', color: 'var(--brand-900)' }}>Plan {userPlan.name}</span>
+              <span className="rounded-full px-3 py-1 text-sm font-semibold" style={{ background: 'rgba(56,189,248,0.14)', color: 'var(--brand-900)' }}>
+                Plan {userPlan.name}
+              </span>
             )}
-            <button onClick={handleLogout} className="text-white rounded-lg px-3 py-1 cursor-pointer transition-all duration-200" style={{ background: 'var(--brand-900)' }}>
+            <button
+              className="hidden rounded-lg bg-[var(--brand-900)] px-3 py-2 text-sm font-semibold text-white transition hover:bg-[#111c33] md:inline-flex"
+              onClick={handleLogout}
+            >
               Cerrar Sesión
+            </button>
+            <button
+              className="inline-flex rounded-lg border border-slate-200 bg-white p-2 text-[var(--brand-900)] shadow-sm md:hidden"
+              onClick={() => setMenuOpen(!menuOpen)}
+              aria-label="Abrir menú"
+            >
+              {menuOpen ? <X size={22} /> : <Menu size={22} />}
             </button>
           </div>
         </div>
 
-        <p className="text-center font-semibold mt-2 text-[var(--brand-900)] text-base md:text-lg">¡Hola, {user?.username || "Usuario"}!</p>
+        <p className="mx-auto mt-3 max-w-7xl text-center text-sm font-semibold text-[var(--brand-900)] sm:text-base md:text-left">
+          ¡Hola, {user?.username || "Usuario"}!
+        </p>
 
-        <nav className="hidden md:flex justify-center gap-4 md:gap-8 mt-4">
+        <nav className="mx-auto mt-4 hidden max-w-7xl md:flex md:justify-center md:gap-6 lg:gap-8">
           <button 
-            className={`flex items-center gap-1 cursor-pointer text-gray-600 font-semibold transition-all duration-200 ${currentView === 'dashboard' ? 'text-[var(--brand-900)]' : ''}`}
+            className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'dashboard' ? 'text-[var(--brand-900)]' : ''}`}
             onClick={() => setCurrentView('dashboard')}
           >
-            <Wallet className="w-5 h-5" />
-            <span className="hidden md:inline">Inicio</span>
+            <Wallet className="h-5 w-5" />
+            <span>Inicio</span>
           </button>
           <button 
-            className={`flex items-center gap-1 cursor-pointer text-gray-600 font-semibold transition-all duration-200 ${currentView === 'tasks' ? 'text-[var(--brand-900)]' : ''}`}
+            className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'tasks' ? 'text-[var(--brand-900)]' : ''}`}
             onClick={() => setCurrentView('tasks')}
           >
-            <Target className="w-5 h-5" />
-            <span className="hidden md:inline">Tareas</span>
+            <Target className="h-5 w-5" />
+            <span>Tareas</span>
           </button>
           <button 
-            className={`flex items-center gap-1 cursor-pointer text-gray-600 font-semibold transition-all duration-200 ${currentView === 'referrals' ? 'text-[var(--brand-900)]' : ''}`}
+            className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'referrals' ? 'text-[var(--brand-900)]' : ''}`}
             onClick={() => setCurrentView('referrals')}
           >
-            <Users className="w-5 h-5" />
-            <span className="hidden md:inline">Referidos</span>
+            <Users className="h-5 w-5" />
+            <span>Referidos</span>
           </button>
-        
           <button 
-            className={`flex items-center gap-1 cursor-pointer text-gray-600 font-semibold transition-all duration-200 ${currentView === 'profile' ? 'text-[var(--brand-900)]' : ''}`}
+            className={`flex items-center gap-1 font-semibold text-gray-600 transition-all duration-200 ${currentView === 'profile' ? 'text-[var(--brand-900)]' : ''}`}
             onClick={() => setCurrentView('profile')}
           >
-            <Users className="w-5 h-5" />
-            <span className="hidden md:inline">Perfil</span>
+            <Users className="h-5 w-5" />
+            <span>Perfil</span>
           </button>
         </nav>
       </header>
 
-      <aside className={`fixed top-0 ${menuOpen ? 'left-0' : '-left-64'} w-60 h-screen bg-white shadow-lg px-4 py-8 transition-all duration-300 flex flex-col gap-4 z-20 md:hidden`}>
-        <button onClick={() => setMenuOpen(false)} className="self-end bg-transparent border-0 cursor-pointer text-[var(--brand-900)]"><X /></button>
-        <p className="text-center font-semibold mb-4 text-[var(--brand-900)]">¡Hola, {user?.username || "Usuario"}!</p>
+      {menuOpen && (
+        <div
+          className="fixed inset-0 z-20 bg-slate-950/40 md:hidden"
+          onClick={() => setMenuOpen(false)}
+        />
+      )}
+
+      <aside className={`fixed left-0 top-0 z-30 flex h-screen w-[82vw] max-w-[280px] flex-col gap-4 bg-white px-4 py-6 shadow-2xl transition-all duration-300 md:hidden ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <button onClick={() => setMenuOpen(false)} className="self-end rounded-full p-2 text-[var(--brand-900)]"><X /></button>
+        <p className="mb-2 text-center text-sm font-semibold text-[var(--brand-900)]">¡Hola, {user?.username || "Usuario"}!</p>
         
         <button 
-          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'dashboard' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'dashboard' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('dashboard');
             setMenuOpen(false);
           }}
         >
-          <Wallet className="w-5 h-5 mr-2" /> Inicio
+          <Wallet className="mr-2 h-5 w-5" /> Inicio
         </button>
         <button 
-          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'tasks' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'tasks' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('tasks');
             setMenuOpen(false);
           }}
         >
-          <Target className="w-5 h-5 mr-2" /> Tareas
+          <Target className="mr-2 h-5 w-5" /> Tareas
         </button>
         <button 
-          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'referrals' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'referrals' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('referrals');
             setMenuOpen(false);
           }}
         >
-          <Users className="w-5 h-5 mr-2" /> Referidos
+          <Users className="mr-2 h-5 w-5" /> Referidos
         </button>
         <button 
-          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'bonuses' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'bonuses' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('bonuses');
             setMenuOpen(false);
           }}
         >
-          <Gift className="w-5 h-5 mr-2" /> Bonos
+          <Gift className="mr-2 h-5 w-5" /> Bonos
         </button>
         <button 
-          className={`flex items-center gap-2 text-gray-700 cursor-pointer ${currentView === 'profile' ? 'text-[var(--brand-900)] font-semibold' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'profile' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('profile');
             setMenuOpen(false);
           }}
         >
-          <Users className="w-5 h-5 mr-2" /> Perfil
+          <Users className="mr-2 h-5 w-5" /> Perfil
         </button>
 
-        <button className="mt-auto text-white rounded-lg px-2 py-1.5 bg-[var(--brand-900)]" onClick={handleLogout}>Cerrar Sesión</button>
+        <button className="mt-auto rounded-lg bg-[var(--brand-900)] px-3 py-2 text-sm font-semibold text-white" onClick={handleLogout}>Cerrar Sesión</button>
       </aside>
 
-      <main className="flex flex-col items-center gap-5 px-4 md:px-8 py-4 md:py-8">
+      <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-3 py-4 sm:px-4 md:px-6 lg:px-8 lg:py-8">
         {currentView === 'dashboard' && (
           <>
-            <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full md:col-span-2">
-              <div className="flex justify-between items-center">
-                <div>
-                  <p className="text-gray-500 text-sm md:text-base">Saldo Total BOOST</p>
-                  <p className="font-bold text-[var(--brand-900)] text-3xl md:text-4xl">
-                    {userBalance.purchased + userBalance.earned}
-                  </p>
+            <div className="grid w-full max-w-7xl grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
+              <div className="w-full rounded-3xl bg-white p-4 shadow-sm sm:p-6">
+                <div className="flex flex-wrap items-start justify-between gap-3">
+                  <div>
+                    <p className="text-sm text-gray-500 sm:text-base">Saldo Total BOOST</p>
+                    <p className="text-3xl font-bold text-[var(--brand-900)] sm:text-4xl">
+                      {userBalance.purchased + userBalance.earned}
+                    </p>
+                  </div>
+                  <Wallet className="h-8 w-8 text-[var(--brand-700)] sm:h-10 sm:w-10" />
                 </div>
-                <Wallet className="text-[var(--brand-700)] w-8 h-8 md:w-10 md:h-10" />
-              </div>
-              <div className="flex justify-between mt-4">
-                <div>
-                  <p className="text-xs md:text-sm text-gray-500">BOOST Comprados</p>
-                  <p className="font-semibold text-gray-800">{userBalance.purchased}</p>
+                <div className="mt-4 flex flex-wrap justify-between gap-4">
+                  <div>
+                    <p className="text-xs text-gray-500 sm:text-sm">BOOST Comprados</p>
+                    <p className="font-semibold text-gray-800">{userBalance.purchased}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-gray-500 sm:text-sm">BOOST Ganados</p>
+                    <p className="font-semibold text-gray-800">{userBalance.earned}</p>
+                  </div>
                 </div>
-                <div>
-                  <p className="text-xs md:text-sm text-gray-500">BOOST Ganados</p>
-                  <p className="font-semibold text-gray-800">{userBalance.earned}</p>
+
+                <div className="mt-4 text-center sm:text-left">
+                  <p className="text-sm sm:text-base">{canWithdrawNow ? 'Retiro disponible ahora' : 'Próximo retiro disponible'}</p>
+                  <p className="text-base font-semibold text-slate-800 sm:text-lg">{userBalance.nextWithdrawalDate}</p>
+                  <p className="text-sm sm:text-base">{userBalance.currentWeekWithdrawn} / {userBalance.weeklyLimit} BOOST</p>
+                  <button
+                    className="mt-3 w-full max-w-56 rounded-lg bg-[var(--brand-900)] px-4 py-2 text-white transition-all duration-200 hover:bg-[#111c33] sm:w-3/5"
+                    onClick={(e) => { console.log('Retirar button clicked'); handleGoToWithdraw(); }}
+                  >
+                    Retirar BOOST
+                  </button>
+                  <p className="mt-2 text-xs text-gray-500">Saldo en wallet: {userBalance.wallet.toFixed(2)} USDT</p>
                 </div>
               </div>
 
-              <div className="mt-4 text-center">
-                <p className="text-sm md:text-base">{canWithdrawNow ? 'Retiro disponible ahora' : 'Próximo retiro disponible'}</p>
-                <p className="text-base md:text-lg">{userBalance.nextWithdrawalDate}</p>
-                <p className="text-sm md:text-base">{userBalance.currentWeekWithdrawn} / {userBalance.weeklyLimit} BOOST</p>
-                <button
-                  className="w-full md:w-3/5 max-w-56 text-white rounded-lg px-4 py-2 mt-2 bg-[var(--brand-900)] hover:bg-[#111c33] transition-all duration-200"
-                  onClick={(e) => { console.log('Retirar button clicked'); handleGoToWithdraw(); }}
-                >
-                  Retirar BOOST
-                </button>
-                <p className="text-xs text-gray-500 mt-2">Saldo en wallet: {userBalance.wallet.toFixed(2)} USDT</p>
+              <div className="w-full rounded-3xl bg-white p-4 shadow-sm sm:p-6">
+                <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">Estado del Plan</h2>
+                <div className="mt-4 space-y-3 text-sm sm:text-base">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-gray-600">Plan Actual</span>
+                    <span className="font-semibold text-slate-900">{userPlan.name}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-gray-600">Tareas diarias</span>
+                    <span className="font-semibold text-slate-900">{userPlan.dailyTasks}</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-gray-600">Bonus</span>
+                    <span className="font-semibold text-slate-900">+{userPlan.bonus}%</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-gray-600">Días restantes</span>
+                    <span className="font-semibold text-slate-900">{userPlan.daysRemaining} días</span>
+                  </div>
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="text-gray-600">Límite de retiro</span>
+                    <span className="font-semibold text-slate-900">{userPlan.weeklyLimit} BOOST/semana</span>
+                  </div>
+                </div>
               </div>
-              </div>
-              </div>
+            </div>
 
-              <div className="space-y-6">
+            <div className="w-full space-y-6">
                 <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full">
               <h2 className="text-xl md:text-2xl">Resumen de hoy</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
@@ -391,34 +437,6 @@ const Dashboard = () => {
               </div>
             </div>
 
-            <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full max-w-6xl">
-              <div className="flex justify-between items-center">
-                <h2 className="text-xl md:text-2xl">Estado del Plan</h2>
-                <Star className="text-[var(--brand-300)] w-6 h-6 md:w-8 md:h-8" />
-              </div>
-              <div className="mt-4">
-                <div className="flex justify-between mt-2 text-sm md:text-base">
-                  <span>Plan Actual</span>
-                  <span>{userPlan.name}</span>
-                </div>
-                <div className="flex justify-between mt-2 text-sm md:text-base">
-                  <span>Tareas diarias</span>
-                  <span>{userPlan.dailyTasks}</span>
-                </div>
-                <div className="flex justify-between mt-2 text-sm md:text-base">
-                  <span>Bonus</span>
-                  <span>+{userPlan.bonus}%</span>
-                </div>
-                <div className="flex justify-between mt-2 text-sm md:text-base">
-                  <span>Días restantes</span>
-                  <span>{userPlan.daysRemaining} días</span>
-                </div>
-                <div className="flex justify-between mt-2 text-sm md:text-base">
-                  <span>Límite de retiro</span>
-                  <span>{userPlan.weeklyLimit} BOOST/semana</span>
-                </div>
-              </div>
-            </div>
           </>
         )}
 
