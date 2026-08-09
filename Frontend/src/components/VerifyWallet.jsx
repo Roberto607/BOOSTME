@@ -16,17 +16,6 @@ const VerifyWallet = () => {
 
   const isMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window.navigator.userAgent);
 
-  const handleOpenInWalletApp = () => {
-    const currentUrl = window.location.href;
-    if (walletNetwork === "tron") {
-      window.location.href = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
-      return;
-    }
-
-    const metaMaskDeepLink = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
-    window.location.href = metaMaskDeepLink;
-  };
-
   const getEvmWalletProvider = () => {
     const providers = [
       window.ethereum,
@@ -64,6 +53,33 @@ const VerifyWallet = () => {
 
     setError("No hay datos de verificación disponibles. Regístrate primero para obtener el nonce.");
   }, [location.state]);
+
+  useEffect(() => {
+    if (!walletAddress || !nonce) return;
+    const hasWallet = walletNetwork === 'tron'
+      ? !!(window.tronWeb || window.tronLink?.tronWeb)
+      : !!(getEvmWalletProvider() || (window.web3 && window.web3.currentProvider));
+
+    if (isMobileDevice() && !hasWallet) {
+      setShowOpenInApp(true);
+    }
+  }, [walletAddress, nonce, walletNetwork]);
+
+  const handleOpenInWalletApp = () => {
+    const currentUrl = window.location.href;
+
+    if (walletNetwork === 'tron') {
+      const tronLinkUrl = `https://link.tronlink.org/open?target=${encodeURIComponent(currentUrl)}`;
+      window.location.href = tronLinkUrl;
+      return;
+    }
+
+    const metamaskUrl = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
+    const trustWalletUrl = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(currentUrl)}`;
+
+    const primaryUrl = /Android/i.test(window.navigator.userAgent) ? metamaskUrl : trustWalletUrl;
+    window.location.href = primaryUrl;
+  };
 
   const handleSignWallet = async () => {
     setError("");
