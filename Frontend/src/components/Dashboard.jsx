@@ -140,8 +140,8 @@ const Dashboard = () => {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-[var(--bg)]">
-      <header className="sticky top-0 z-30 border-b border-sky-100/80 bg-white/95 px-4 py-4 shadow-sm backdrop-blur md:px-8" style={{ borderBottom: '1px solid rgba(56,189,248,0.15)' }}>
+    <div className="flex min-h-screen flex-col bg-slate-950">
+      <header className="sticky top-0 z-30 border-b border-slate-900/10 bg-slate-950/95 px-4 py-4 shadow-sm backdrop-blur md:px-8" style={{ borderBottom: '1px solid rgba(148,163,184,0.15)' }}>
         <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3">
           <div className="flex items-center gap-3">
             <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-[var(--brand-900)] text-lg font-bold text-white">
@@ -277,11 +277,11 @@ const Dashboard = () => {
         {currentView === 'dashboard' && (
           <>
             <div className="grid w-full max-w-7xl grid-cols-1 gap-6 xl:grid-cols-[1.2fr_0.8fr]">
-              <div className="w-full rounded-3xl bg-white p-4 shadow-sm sm:p-6">
+              <div className="w-full rounded-3xl bg-slate-900/95 border border-slate-800/80 p-4 shadow-sm sm:p-6">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
-                    <p className="text-sm text-gray-500 sm:text-base">Saldo Total BOOST</p>
-                    <p className="text-3xl font-bold text-[var(--brand-900)] sm:text-4xl">
+                    <p className="text-sm text-slate-400 sm:text-base">Saldo Total BOOST</p>
+                    <p className="text-3xl font-bold text-white sm:text-4xl">
                       {userBalance.purchased + userBalance.earned}
                     </p>
                   </div>
@@ -312,8 +312,8 @@ const Dashboard = () => {
                 </div>
               </div>
 
-              <div className="w-full rounded-3xl bg-white p-4 shadow-sm sm:p-6">
-                <h2 className="text-lg font-semibold text-slate-900 sm:text-xl">Estado del Plan</h2>
+              <div className="w-full rounded-3xl bg-slate-900/95 border border-slate-800/80 p-4 shadow-sm sm:p-6">
+                <h2 className="text-lg font-semibold text-white sm:text-xl">Estado del Plan</h2>
                 <div className="mt-4 space-y-3 text-sm sm:text-base">
                   <div className="flex items-center justify-between gap-2">
                     <span className="text-gray-600">Plan Actual</span>
@@ -340,38 +340,38 @@ const Dashboard = () => {
             </div>
 
             <div className="w-full space-y-6">
-                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full">
-              <h2 className="text-xl md:text-2xl">Resumen de hoy</h2>
+                <div className="bg-slate-950/95 rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-800/80">
+              <h2 className="text-xl md:text-2xl text-white">Resumen de hoy</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
-                    <Flame size={16} />
+                <div className="bg-slate-900/95 rounded-2xl p-4 shadow-sm border border-slate-800/70">
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[var(--brand-700)]/10 px-3 py-1 text-sm font-semibold text-[var(--brand-900)]">
+                    <Flame className="text-[var(--brand-700)]" size={16} />
                     <span>Racha</span>
                   </div>
                   <p className="text-2xl font-bold text-slate-900">{streakValue} días</p>
                   <p className="text-sm text-slate-500">Tu progreso sigue en marcha</p>
                 </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
-                    <TrendingUp size={16} />
+                <div className="bg-slate-900/95 rounded-2xl p-4 shadow-sm border border-slate-800/70">
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[var(--brand-700)]/15 px-3 py-1 text-sm font-semibold text-white">
+                    <TrendingUp className="text-[var(--brand-700)]" size={16} />
                     <span>Progreso semanal</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-900">{progressPercent}%</p>
-                  <p className="text-sm text-slate-500">Meta de BOOST acumulado</p>
+                  <p className="text-2xl font-bold text-white">{progressPercent}%</p>
+                  <p className="text-sm text-slate-400">Meta de BOOST acumulado</p>
                 </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
-                    <Clock3 size={16} />
+                <div className="bg-slate-900/95 rounded-2xl p-4 shadow-sm border border-slate-800/70">
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[var(--brand-700)]/15 px-3 py-1 text-sm font-semibold text-white">
+                    <Clock3 className="text-[var(--brand-700)]" size={16} />
                     <span>Próximo retiro</span>
                   </div>
-                  <p className="text-2xl font-bold text-slate-900">{userBalance.nextWithdrawalDate || '—'}</p>
-                  <p className="text-sm text-slate-500">Revisa tu disponibilidad</p>
+                  <p className="text-2xl font-bold text-white">{userBalance.nextWithdrawalDate || '—'}</p>
+                  <p className="text-sm text-slate-400">Revisa tu disponibilidad</p>
                 </div>
                 </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full">
-              <h2 className="text-xl md:text-2xl">Acciones recomendadas</h2>
+                <div className="bg-slate-900/95 rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-800/70">
+              <h2 className="text-xl md:text-2xl text-white">Acciones recomendadas</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 {recommendedActions.map((item) => (
                   <button
@@ -389,8 +389,8 @@ const Dashboard = () => {
                 </div>
                 </div>
 
-                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full">
-              <h2 className="text-xl md:text-2xl">Logros recientes</h2>
+                <div className="bg-slate-900/95 rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-800/70">
+              <h2 className="text-xl md:text-2xl text-white">Logros recientes</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 {achievements.map((item) => (
                   <div key={item.title} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
