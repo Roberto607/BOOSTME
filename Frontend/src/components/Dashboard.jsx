@@ -223,13 +223,6 @@ const Dashboard = () => {
               <Gift className="h-4 w-4" />
               <span>Bonos</span>
             </button>
-            <button
-              onClick={() => setCurrentView('tasks')}
-              className="flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)]"
-            >
-              <Target className="h-4 w-4" />
-              <span>Tareas</span>
-            </button>
           </div>
         </nav>
       </header>
