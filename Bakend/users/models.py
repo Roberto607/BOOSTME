@@ -8,6 +8,7 @@ class User(AbstractUser):
     email = models.EmailField(unique=True)
     is_email_verified = models.BooleanField(default=False)
     wallet_address = models.CharField(max_length=66, blank=True, null=True, unique=True)
+    wallet_network = models.CharField(max_length=20, blank=True, null=True, default='polygon')
     is_wallet_verified = models.BooleanField(default=False)
     wallet_nonce = models.CharField(max_length=128, blank=True, null=True)
     wallet_nonce_created_at = models.DateTimeField(null=True, blank=True)

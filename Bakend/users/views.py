@@ -105,6 +105,31 @@ def _verify_wallet_signature(wallet_address: str, nonce: str, signature: str) ->
         logger.exception('Error verifying wallet signature: %s', exc)
         return False
 
+SUPPORTED_WALLET_NETWORKS = ('polygon', 'bsc', 'tron', 'omni')
+
+
+def _normalize_wallet_address(wallet_address: str, wallet_network: str) -> str:
+    wallet_address = (wallet_address or '').strip()
+    wallet_network = (wallet_network or '').strip().lower()
+
+    if wallet_network in ('polygon', 'bsc'):
+        if not re.match(r'^0x[a-fA-F0-9]{40}$', wallet_address):
+            raise ValueError('La dirección debe comenzar con 0x y tener 42 caracteres hexadecimales.')
+        return wallet_address.lower()
+
+    if wallet_network == 'tron':
+        if not re.match(r'^T[1-9A-HJ-NP-Za-km-z]{33}$', wallet_address):
+            raise ValueError('Dirección TRON inválida.')
+        return wallet_address
+
+    if wallet_network == 'omni':
+        if not re.match(r'^(1|3|bc1)[A-Za-z0-9]{25,64}$', wallet_address, re.IGNORECASE):
+            raise ValueError('Dirección Bitcoin/Omni inválida.')
+        return wallet_address
+
+    raise ValueError('Red de wallet no soportada.')
+
+
 def _attach_jwt_cookies(resp, access_token, refresh_token, access_max_age, refresh_max_age):
     secure_access = settings.SIMPLE_JWT.get('AUTH_COOKIE_SECURE', False)
     secure_refresh = settings.SIMPLE_JWT.get('AUTH_COOKIE_REFRESH_TOKEN_SECURE', False)
@@ -213,10 +238,11 @@ class RegisterView(APIView):
             email = request.data.get('email', '').strip().lower()
             username = request.data.get('username', '').strip()
             password = request.data.get('password', '')
-            wallet_address = (request.data.get('wallet_address') or '').strip().lower()
+            wallet_address_raw = (request.data.get('wallet_address') or '').strip()
+            wallet_network = (request.data.get('wallet_network') or '').strip().lower()
 
             # Validaciones básicas
-            if not all([email, username, password]):
+            if not all([email, username, password, wallet_address_raw, wallet_network]):
                 return Response({
                     "error": "Todos los campos son requeridos",
                     "code": "missing_fields"
@@ -276,24 +302,26 @@ class RegisterView(APIView):
                 }, status=status.HTTP_400_BAD_REQUEST)
 
             # Validar wallet y exigirla para el registro
-            if not wallet_address:
+            if not wallet_address_raw:
                 return Response({
                     "error": "La dirección de wallet es requerida",
                     "code": "missing_wallet_address"
                 }, status=status.HTTP_400_BAD_REQUEST)
 
-            if not wallet_address.startswith('0x') or len(wallet_address) != 42:
+            if wallet_network not in SUPPORTED_WALLET_NETWORKS:
                 return Response({
-                    "error": "La dirección de wallet debe comenzar con 0x y tener 42 caracteres",
-                    "code": "invalid_wallet_address"
+                    "error": "Red de wallet no soportada",
+                    "code": "invalid_wallet_network"
                 }, status=status.HTTP_400_BAD_REQUEST)
+
             try:
-                int(wallet_address[2:], 16)
-            except ValueError:
+                wallet_address = _normalize_wallet_address(wallet_address_raw, wallet_network)
+            except ValueError as exc:
                 return Response({
-                    "error": "La dirección de wallet debe ser hexadecimal",
+                    "error": str(exc),
                     "code": "invalid_wallet_address"
                 }, status=status.HTTP_400_BAD_REQUEST)
+
             if User.objects.filter(wallet_address=wallet_address).exists():
                 return Response({
                     "error": "Esta dirección de wallet ya está en uso",
@@ -312,7 +340,8 @@ class RegisterView(APIView):
                         is_active=False,
                         is_email_verified=False,
                         has_financial_activation=False,
-                        wallet_address=wallet_address
+                        wallet_address=wallet_address,
+                        wallet_network=wallet_network
                     )
 
                     # Generar tokens JWT
@@ -359,11 +388,13 @@ class RegisterView(APIView):
                             "next_step": "verify_wallet",
                             "wallet_verification_nonce": user.wallet_nonce,
                             "wallet_address": wallet_address,
+                            "wallet_network": wallet_network,
                         })
                     else:
                         response_data.update({
                             "message": "Registro exitoso. Dirección guardada sin verificación en-chain.",
                             "wallet_address": wallet_address,
+                            "wallet_network": wallet_network,
                         })
 
                     # Crear respuesta y configurar cookies

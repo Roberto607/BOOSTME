@@ -12,6 +12,7 @@ const RegisterForm = () => {
     const [confirmPassword, setConfirmPassword] = useState("");
     const [username, setUsername] = useState("");
     const [walletAddress, setWalletAddress] = useState("");
+    const [walletNetwork, setWalletNetwork] = useState("polygon");
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const [loading, setLoading] = useState(false);
@@ -68,10 +69,22 @@ const RegisterForm = () => {
         }
 
         const addr = walletAddress.trim();
-        if (!(isValidEVM(addr) || isValidTron(addr) || isValidBTC(addr))) {
-            return setError("La dirección de la billetera no es válida. Acepte: EVM (0x...), TRON (T...), o Bitcoin (1/3/bc1).");
+        if (walletNetwork === 'polygon' || walletNetwork === 'bsc') {
+            if (!isValidEVM(addr)) {
+                return setError("La dirección debe ser un formato EVM válido (0x...)");
+            }
+        } else if (walletNetwork === 'tron') {
+            if (!isValidTron(addr)) {
+                return setError("La dirección debe ser un formato TRON válido (T...)");
+            }
+        } else if (walletNetwork === 'omni') {
+            if (!isValidBTC(addr)) {
+                return setError("La dirección debe ser un formato Bitcoin/Omni válido (1... o bc1...)");
+            }
+        } else {
+            return setError("Red de wallet no soportada.");
         }
-        
+
         if (password.length < 8) {
             return setError("La contraseña debe tener al menos 8 caracteres");
         }
@@ -108,6 +121,7 @@ const RegisterForm = () => {
                     username: username.trim(),
                     email: email.trim().toLowerCase(),
                     password,
+                    wallet_network: walletNetwork,
                     // Preserve case for non-EVM addresses. Backend will normalize EVM addresses.
                     wallet_address: walletAddress.trim()
                 }),
@@ -252,12 +266,27 @@ const RegisterForm = () => {
                     className="w-full p-3 mb-4 rounded-lg border border-gray-300 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition"
                 />
 
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                    Red de wallet
+                    <select
+                        value={walletNetwork}
+                        onChange={(e) => setWalletNetwork(e.target.value)}
+                        disabled={loading}
+                        className="mt-2 w-full rounded-lg border border-gray-300 bg-white px-3 py-3 text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100 transition"
+                    >
+                        <option value="polygon">Polygon (USDT ERC-20)</option>
+                        <option value="bsc">BSC (USDT BEP-20)</option>
+                        <option value="tron">TRON (USDT TRC-20)</option>
+                        <option value="omni">Bitcoin/Omni</option>
+                    </select>
+                </label>
+
                 <input
                     id="walletAddress"
                     name="walletAddress"
                     type="text"
                     autoComplete="off"
-                    placeholder="Dirección de la billetera (0x...)"
+                    placeholder={walletNetwork === 'tron' ? 'T...' : walletNetwork === 'omni' ? '1... or bc1...' : '0x...'}
                     value={walletAddress}
                     onChange={(e) => setWalletAddress(e.target.value)}
                     required

@@ -45,6 +45,7 @@ class UserSerializer(serializers.ModelSerializer):
             'is_email_verified',
             'is_wallet_verified',
             'wallet_address',
+            'wallet_network',
             'is_verified',
             'has_financial_activation',
             'balance',
@@ -139,10 +140,11 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(write_only=True)
     wallet_address = serializers.CharField(required=True, allow_blank=False)
+    wallet_network = serializers.ChoiceField(choices=[('polygon', 'Polygon'), ('bsc', 'BSC'), ('tron', 'TRON'), ('omni', 'Bitcoin/Omni')], default='polygon')
 
     class Meta:
         model = User
-        fields = ('email', 'username', 'password', 'password2', 'wallet_address')
+        fields = ('email', 'username', 'password', 'password2', 'wallet_address', 'wallet_network')
 
     def validate_wallet_address(self, value):
         if not value:
@@ -177,6 +179,23 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate(self, data):
         if data['password'] != data['password2']:
             raise serializers.ValidationError("Las contraseñas no coinciden")
+
+        wallet_network = data.get('wallet_network')
+        wallet_address = data.get('wallet_address')
+
+        if wallet_network not in ('polygon', 'bsc', 'tron', 'omni'):
+            raise serializers.ValidationError({'wallet_network': 'Red de wallet no soportada.'})
+
+        if wallet_network in ('polygon', 'bsc'):
+            if not re.match(r'^0x[a-fA-F0-9]{40}$', wallet_address or ''):
+                raise serializers.ValidationError({'wallet_address': 'La dirección debe ser un formato EVM válido (0x...).'})
+        elif wallet_network == 'tron':
+            if not re.match(r'^T[1-9A-HJ-NP-Za-km-z]{33}$', wallet_address or ''):
+                raise serializers.ValidationError({'wallet_address': 'Dirección TRON inválida.'})
+        elif wallet_network == 'omni':
+            if not re.match(r'^(1|3|bc1)[A-Za-z0-9]{25,64}$', wallet_address or '', re.IGNORECASE):
+                raise serializers.ValidationError({'wallet_address': 'Dirección Bitcoin/Omni inválida.'})
+
         return data
 
     def create(self, validated_data):
@@ -189,7 +208,8 @@ class RegisterSerializer(serializers.ModelSerializer):
                 is_active=False,
                 is_email_verified=False,
                 has_financial_activation=False,
-                wallet_address=validated_data['wallet_address']
+                wallet_address=validated_data['wallet_address'],
+                wallet_network=validated_data.get('wallet_network', 'polygon')
             )
             return user
         except RecursionError as e:
@@ -198,6 +218,7 @@ class RegisterSerializer(serializers.ModelSerializer):
                 username=validated_data['username'],
                 email=validated_data['email'],
                 wallet_address=validated_data['wallet_address'],
+                wallet_network=validated_data.get('wallet_network', 'polygon'),
                 is_active=False,
                 is_email_verified=False,
                 has_financial_activation=False

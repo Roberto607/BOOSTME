@@ -67,6 +67,8 @@ class RegistrationFailureHandlingTests(TestCase):
                 'username': 'planfailuser',
                 'email': 'planfailuser@example.com',
                 'password': 'Password123!',
+                'wallet_address': '0x1111111111111111111111111111111111111111',
+                'wallet_network': 'polygon'
             }, format='json')
 
         self.assertEqual(response.status_code, 201)
@@ -84,6 +86,8 @@ class RegisterVerificationLinkTests(TestCase):
                 'username': 'serializerfailuser',
                 'email': 'serializerfailuser@example.com',
                 'password': 'Password123!',
+                'wallet_address': '0x1111111111111111111111111111111111111111',
+                'wallet_network': 'polygon'
             }, format='json')
 
         self.assertEqual(response.status_code, 201)
@@ -102,6 +106,37 @@ class RegisterVerificationLinkTests(TestCase):
         self.assertEqual(response.status_code, 201)
         self.assertIn('verification_link', response.data)
         self.assertTrue(response.data['verification_link'].startswith('http'))
+
+    def test_register_accepts_tron_wallet_network(self):
+        client = APIClient()
+        User = get_user_model()
+
+        response = client.post('/api/users/register/', {
+            'username': 'tronuser',
+            'email': 'tronuser@example.com',
+            'password': 'Password123!',
+            'wallet_address': 'TQ5LFpM4grzY2Qan9P6zGt3kJKRQ4uBeeN',
+            'wallet_network': 'tron'
+        }, format='json')
+
+        self.assertEqual(response.status_code, 201)
+        self.assertTrue(User.objects.filter(email='tronuser@example.com').exists())
+        self.assertEqual(response.data.get('wallet_address'), 'TQ5LFpM4grzY2Qan9P6zGt3kJKRQ4uBeeN')
+        self.assertEqual(response.data.get('wallet_network'), 'tron')
+
+    def test_register_rejects_invalid_wallet_network(self):
+        client = APIClient()
+
+        response = client.post('/api/users/register/', {
+            'username': 'badnetwork',
+            'email': 'badnetwork@example.com',
+            'password': 'Password123!',
+            'wallet_address': '0x1111111111111111111111111111111111111111',
+            'wallet_network': 'solana'
+        }, format='json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.data.get('code'), 'invalid_wallet_network')
 
 
 class LoginViewTests(TestCase):
