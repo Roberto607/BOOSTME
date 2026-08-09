@@ -155,7 +155,7 @@ const Dashboard = () => {
 
           <div className="flex items-center gap-2 sm:gap-3">
             {(user?.has_financial_activation || userPlan.name !== 'Free') && (
-              <span className="rounded-full px-3 py-1 text-sm font-semibold" style={{ background: 'rgba(56,189,248,0.14)', color: 'var(--brand-900)' }}>
+              <span className="rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700 shadow-sm">
                 Plan {userPlan.name}
               </span>
             )}
@@ -344,28 +344,28 @@ const Dashboard = () => {
               <h2 className="text-xl md:text-2xl">Resumen de hoy</h2>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-2 text-blue-600 mb-2">
-                    <Flame size={18} />
-                    <span className="font-semibold">Racha</span>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-sky-700">
+                    <Flame size={16} />
+                    <span>Racha</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-800">{streakValue} días</p>
-                  <p className="text-sm text-gray-500">Tu progreso sigue en marcha</p>
+                  <p className="text-2xl font-bold text-slate-900">{streakValue} días</p>
+                  <p className="text-sm text-slate-500">Tu progreso sigue en marcha</p>
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-2 text-emerald-600 mb-2">
-                    <TrendingUp size={18} />
-                    <span className="font-semibold">Progreso semanal</span>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-emerald-50 px-3 py-1 text-sm font-semibold text-emerald-700">
+                    <TrendingUp size={16} />
+                    <span>Progreso semanal</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-800">{progressPercent}%</p>
-                  <p className="text-sm text-gray-500">Meta de BOOST acumulado</p>
+                  <p className="text-2xl font-bold text-slate-900">{progressPercent}%</p>
+                  <p className="text-sm text-slate-500">Meta de BOOST acumulado</p>
                 </div>
                 <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                  <div className="flex items-center gap-2 text-amber-600 mb-2">
-                    <Clock3 size={18} />
-                    <span className="font-semibold">Próximo retiro</span>
+                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-amber-50 px-3 py-1 text-sm font-semibold text-amber-700">
+                    <Clock3 size={16} />
+                    <span>Próximo retiro</span>
                   </div>
-                  <p className="text-2xl font-bold text-gray-800">{userBalance.nextWithdrawalDate || '—'}</p>
-                  <p className="text-sm text-gray-500">Revisa tu disponibilidad</p>
+                  <p className="text-2xl font-bold text-slate-900">{userBalance.nextWithdrawalDate || '—'}</p>
+                  <p className="text-sm text-slate-500">Revisa tu disponibilidad</p>
                 </div>
                 </div>
                 </div>
@@ -377,13 +377,13 @@ const Dashboard = () => {
                   <button
                     key={item.title}
                     onClick={item.action}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 text-left hover:-translate-y-1 transition"
+                    className="group bg-white rounded-2xl p-4 shadow-sm border border-sky-100 text-left transition hover:-translate-y-1 hover:border-sky-200 hover:bg-sky-50"
                   >
                     <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-gray-800">{item.title}</h3>
-                      <ArrowRight className="text-blue-600" size={16} />
+                      <h3 className="font-semibold text-slate-900 group-hover:text-[var(--brand-900)]">{item.title}</h3>
+                      <ArrowRight className="text-[var(--brand-700)] transition group-hover:text-[var(--brand-900)]" size={16} />
                     </div>
-                    <p className="text-sm text-gray-500">{item.description}</p>
+                    <p className="text-sm text-slate-500">{item.description}</p>
                   </button>
                 ))}
                 </div>
@@ -408,28 +408,28 @@ const Dashboard = () => {
               <h2 className="text-xl md:text-2xl">Acciones Rápidas</h2>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <button 
-                  className="flex flex-col items-center gap-1 bg-gray-100 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200 hover:bg-[rgba(56,189,248,0.12)]"
+                  className="flex flex-col items-center gap-1 rounded-xl p-4 cursor-pointer font-semibold text-slate-900 transition-all duration-200 border border-slate-200 bg-sky-50 hover:bg-sky-100"
                   onClick={handleDepositClick}
                 >
                   <Crown className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
                   <span className="text-xs md:text-sm">Planes</span>
                 </button>
                 <button 
-                  className="flex flex-col items-center gap-1 bg-gray-100 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200 hover:bg-[rgba(56,189,248,0.12)]" 
+                  className="flex flex-col items-center gap-1 rounded-xl p-4 cursor-pointer font-semibold text-slate-900 transition-all duration-200 border border-slate-200 bg-sky-50 hover:bg-sky-100" 
                   onClick={() => setCurrentView('bonuses')}
                 >
                   <Gift className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
                   <span className="text-xs md:text-sm">Bonos</span>
                 </button>
                 <button 
-                  className="flex flex-col items-center gap-1 bg-gray-100 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200 hover:bg-[rgba(56,189,248,0.12)]"
+                  className="flex flex-col items-center gap-1 rounded-xl p-4 cursor-pointer font-semibold text-slate-900 transition-all duration-200 border border-slate-200 bg-sky-50 hover:bg-sky-100"
                   onClick={() => setCurrentView('referrals')}
                 >
                   <Users className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
                   <span className="text-xs md:text-sm">Referidos</span>
                 </button>
                 <button 
-                  className="flex flex-col items-center gap-1 bg-gray-100 rounded-xl p-4 cursor-pointer font-semibold text-gray-900 transition-all duration-200 hover:bg-[rgba(56,189,248,0.12)]"
+                  className="flex flex-col items-center gap-1 rounded-xl p-4 cursor-pointer font-semibold text-slate-900 transition-all duration-200 border border-slate-200 bg-sky-50 hover:bg-sky-100"
                   onClick={() => setCurrentView('tasks')}
                 >
                   <Trophy className="text-[var(--brand-700)] w-6 h-6 md:w-8 md:h-8" />
