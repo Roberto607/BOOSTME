@@ -285,35 +285,24 @@ const Dashboard = () => {
           <Users className="mr-2 h-5 w-5" /> Perfil
         </button>
 
-        <div className="mt-4 grid grid-cols-2 gap-3">
-          <button
-            onClick={() => {
-              handleDepositClick();
-              setMenuOpen(false);
-            }}
-            className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
-          >
-            Planes
-          </button>
-          <button
-            onClick={() => {
-              setCurrentView('bonuses');
-              setMenuOpen(false);
-            }}
-            className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
-          >
-            Bonos
-          </button>
-          <button
-            onClick={() => {
-              setCurrentView('tasks');
-              setMenuOpen(false);
-            }}
-            className="rounded-2xl bg-sky-50 px-3 py-3 text-sm font-semibold text-[var(--brand-900)] transition hover:bg-sky-100"
-          >
-            Tareas
-          </button>
-        </div>
+        <button
+          onClick={() => {
+            handleDepositClick();
+            setMenuOpen(false);
+          }}
+          className="flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 font-medium"
+        >
+          <Crown className="mr-2 h-5 w-5" /> Planes
+        </button>
+        <button
+          onClick={() => {
+            setCurrentView('bonuses');
+            setMenuOpen(false);
+          }}
+          className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'bonuses' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
+        >
+          <Gift className="mr-2 h-5 w-5" /> Bonos
+        </button>
 
         <button className="rounded-xl bg-[var(--brand-900)] px-3 py-3 text-sm font-semibold text-white transition hover:bg-[#111c33]" onClick={handleLogout}>Cerrar Sesión</button>
       </aside>

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { useAuth } from "../../contexts/AuthContext";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useLocation } from "react-router-dom";
 import { API_BASE_URL, PLANS_API_BASE_URL } from "../../Base";
-import { Wallet, Star, Check, ArrowRight, Mail, Loader2, AlertCircle } from "lucide-react";
+import { Wallet, Target, Gift, Users, Crown, Star, Check, ArrowRight, Mail, Loader2, AlertCircle } from "lucide-react";
 import Web3 from "web3";
 
 const buildPlansUrl = () => `${PLANS_API_BASE_URL}/plans/`;
@@ -208,19 +208,80 @@ const Plans = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-white max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
+  const location = useLocation();
 
-      {/* HEADER */}
-      <div className="text-center">
-        <h1 className="text-2xl font-bold text-blue-600 mb-1">
-          ¡Bienvenido a BoostMe!
-        </h1>
-        <p className="text-gray-500">
-          {user?.has_financial_activation
-            ? "Actualiza tu plan"
-            : "Explora los planes y activa tu cuenta cuando quieras."}
-        </p>
+  return (
+    <div className="min-h-screen bg-white">
+      <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-4 md:px-8">
+          <div className="flex items-center gap-3">
+            <img src="/static/Logo Boostme.png" alt="BoostMe logo" className="h-10 w-auto rounded-2xl" />
+            <div>
+              <h1 className="text-xl font-bold text-[var(--brand-900)] sm:text-2xl">BoostMe</h1>
+              <p className="text-sm text-slate-500">Tu panel diario</p>
+            </div>
+          </div>
+
+          <div className="hidden md:flex items-center gap-2">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname.startsWith('/dashboard') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Wallet className="h-4 w-4" />
+              Inicio
+            </button>
+            <button
+              onClick={() => navigate('/dashboard')}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname.startsWith('/dashboard') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Target className="h-4 w-4" />
+              Tareas
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/referidos')}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname.includes('/referidos') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Users className="h-4 w-4" />
+              Referidos
+            </button>
+            <button
+              onClick={() => navigate('/Profile')}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname === '/Profile' ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Users className="h-4 w-4" />
+              Perfil
+            </button>
+            <button
+              onClick={() => navigate('/deposit')}
+              className="flex items-center gap-2 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-slate-200 hover:text-[var(--brand-900)]"
+            >
+              <Crown className="h-4 w-4" />
+              Planes
+            </button>
+            <button
+              onClick={() => navigate('/bonuses')}
+              className="flex items-center gap-2 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-slate-200 hover:text-[var(--brand-900)]"
+            >
+              <Gift className="h-4 w-4" />
+              Bonos
+            </button>
+          </div>
+        </div>
+      </header>
+
+      <div className="max-w-7xl mx-auto px-4 py-8 md:px-8">
+        <div className="bg-white max-w-3xl mx-auto px-4 py-8 flex flex-col gap-6">
+
+          {/* HEADER */}
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-blue-600 mb-1">
+              ¡Bienvenido a BoostMe!
+            </h1>
+            <p className="text-gray-500">
+              {user?.has_financial_activation
+                ? "Actualiza tu plan"
+                : "Explora los planes y activa tu cuenta cuando quieras."}
+            </p>
 
         {user?.has_financial_activation && (
           <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
@@ -369,6 +430,8 @@ const Plans = () => {
         </form>
       )}
     </div>
+  </div>
+</div>
   );
 };
 
