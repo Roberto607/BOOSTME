@@ -10,6 +10,7 @@ const buildPlansUrl = () => `${PLANS_API_BASE_URL}/plans/`;
 const Plans = () => {
   const { user, loading, isAuthenticated, setUser, setAccessToken, setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -208,8 +209,6 @@ const Plans = () => {
     );
   }
 
-  const location = useLocation();
-
   return (
     <div className="min-h-screen bg-white">
       <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/90 backdrop-blur-xl">
@@ -222,31 +221,31 @@ const Plans = () => {
             </div>
           </div>
 
-          <div className="hidden md:flex items-center gap-2">
+          <div className="flex flex-wrap items-center justify-center gap-2">
             <button
               onClick={() => navigate('/dashboard')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname.startsWith('/dashboard') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname === '/dashboard' ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
               <Wallet className="h-4 w-4" />
               Inicio
             </button>
             <button
-              onClick={() => navigate('/dashboard')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname.startsWith('/dashboard') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+              onClick={() => navigate('/dashboard/tasks')}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname === '/dashboard/tasks' ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
               <Target className="h-4 w-4" />
               Tareas
             </button>
             <button
               onClick={() => navigate('/dashboard/referidos')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname.includes('/referidos') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/referidos' || location.pathname === '/referidos') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
               <Users className="h-4 w-4" />
               Referidos
             </button>
             <button
-              onClick={() => navigate('/Profile')}
-              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${location.pathname === '/Profile' ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+              onClick={() => navigate('/dashboard/profile')}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/profile' || location.pathname === '/Profile') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
               <Users className="h-4 w-4" />
               Perfil
@@ -259,8 +258,8 @@ const Plans = () => {
               Planes
             </button>
             <button
-              onClick={() => navigate('/bonuses')}
-              className="flex items-center gap-2 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition hover:border-slate-200 hover:text-[var(--brand-900)]"
+              onClick={() => navigate('/dashboard/bonuses')}
+              className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/bonuses' || location.pathname === '/bonuses') ? 'border border-slate-900 text-[var(--brand-900)]' : 'border border-transparent text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
             >
               <Gift className="h-4 w-4" />
               Bonos

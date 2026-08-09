@@ -44,6 +44,9 @@ const AppRoutes = () => {
       <Route path="/revisar-correo" element={<RevisarCorreo />} />
       <Route path="/login" element={<Login />} />
       <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard/tasks" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard/bonuses" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+      <Route path="/dashboard/profile" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       <Route path="/withdraw" element={<ProtectedRoute><Withdraw /></ProtectedRoute>} />
       <Route path="/forgot-password" element={<ForgotPassword />} />
       <Route path="/reset-password/:uidb64/:token" element={<ResetPassword />} />

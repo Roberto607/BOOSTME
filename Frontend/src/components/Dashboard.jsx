@@ -89,8 +89,19 @@ const Dashboard = () => {
 
   useEffect(() => {
     const path = location.pathname.toLowerCase();
-    if (path.includes('/referidos') || path.includes('/dashboard/referrals')) {
+
+    if (path === '/dashboard') {
+      setCurrentView('dashboard');
+    } else if (path === '/dashboard/tasks') {
+      setCurrentView('tasks');
+    } else if (path === '/dashboard/bonuses') {
+      setCurrentView('bonuses');
+    } else if (path === '/dashboard/referidos' || path === '/dashboard/referrals') {
       setCurrentView('referrals');
+    } else if (path === '/dashboard/profile') {
+      setCurrentView('profile');
+    } else {
+      setCurrentView('dashboard');
     }
 
     const loadUserData = async () => {
@@ -182,28 +193,28 @@ const Dashboard = () => {
           <div className="flex flex-wrap items-center justify-center gap-3">
             <button 
               className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${currentView === 'dashboard' ? 'text-[var(--brand-900)]' : ''}`}
-              onClick={() => setCurrentView('dashboard')}
+              onClick={() => navigate('/dashboard')}
             >
               <Wallet className="h-5 w-5" />
               <span>Inicio</span>
             </button>
             <button 
               className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${currentView === 'tasks' ? 'text-[var(--brand-900)]' : ''}`}
-              onClick={() => setCurrentView('tasks')}
+              onClick={() => navigate('/dashboard/tasks')}
             >
               <Target className="h-5 w-5" />
               <span>Tareas</span>
             </button>
             <button 
               className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${currentView === 'referrals' ? 'text-[var(--brand-900)]' : ''}`}
-              onClick={() => setCurrentView('referrals')}
+              onClick={() => navigate('/dashboard/referidos')}
             >
               <Users className="h-5 w-5" />
               <span>Referidos</span>
             </button>
             <button 
               className={`flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)] ${currentView === 'profile' ? 'text-[var(--brand-900)]' : ''}`}
-              onClick={() => setCurrentView('profile')}
+              onClick={() => navigate('/dashboard/profile')}
             >
               <Users className="h-5 w-5" />
               <span>Perfil</span>
@@ -216,7 +227,7 @@ const Dashboard = () => {
               <span>Planes</span>
             </button>
             <button
-              onClick={() => setCurrentView('bonuses')}
+              onClick={() => navigate('/dashboard/bonuses')}
               className="flex items-center gap-1 rounded-full border border-transparent bg-white px-4 py-2 text-sm font-semibold text-gray-600 transition-all duration-200 hover:border-slate-200 hover:text-[var(--brand-900)]"
             >
               <Gift className="h-4 w-4" />
@@ -242,7 +253,7 @@ const Dashboard = () => {
         <button 
           className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'dashboard' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
-            setCurrentView('dashboard');
+            navigate('/dashboard');
             setMenuOpen(false);
           }}
         >
@@ -251,7 +262,7 @@ const Dashboard = () => {
         <button 
           className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'tasks' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
-            setCurrentView('tasks');
+            navigate('/dashboard/tasks');
             setMenuOpen(false);
           }}
         >
@@ -260,7 +271,7 @@ const Dashboard = () => {
         <button 
           className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'referrals' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
-            setCurrentView('referrals');
+            navigate('/dashboard/referidos');
             setMenuOpen(false);
           }}
         >
@@ -278,7 +289,7 @@ const Dashboard = () => {
         <button 
           className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'profile' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
-            setCurrentView('profile');
+            navigate('/dashboard/profile');
             setMenuOpen(false);
           }}
         >
@@ -296,7 +307,7 @@ const Dashboard = () => {
         </button>
         <button
           onClick={() => {
-            setCurrentView('bonuses');
+            navigate('/dashboard/bonuses');
             setMenuOpen(false);
           }}
           className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'bonuses' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
