@@ -65,6 +65,12 @@ const VerifyWallet = () => {
     }
   }, [walletAddress, nonce, walletNetwork]);
 
+  useEffect(() => {
+    if (isMobileDevice() && walletAddress && nonce) {
+      setShowOpenInApp(true);
+    }
+  }, [walletAddress, nonce]);
+
   const handleOpenInWalletApp = () => {
     const currentUrl = window.location.href;
     const fallbackMessage = walletNetwork === 'tron'
