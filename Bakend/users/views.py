@@ -105,7 +105,7 @@ def _verify_wallet_signature(wallet_address: str, nonce: str, signature: str) ->
         logger.exception('Error verifying wallet signature: %s', exc)
         return False
 
-SUPPORTED_WALLET_NETWORKS = ('polygon', 'bsc', 'tron', 'omni')
+SUPPORTED_WALLET_NETWORKS = ('polygon', 'bsc', 'tron')
 
 
 def _normalize_wallet_address(wallet_address: str, wallet_network: str) -> str:
@@ -120,11 +120,6 @@ def _normalize_wallet_address(wallet_address: str, wallet_network: str) -> str:
     if wallet_network == 'tron':
         if not re.match(r'^T[1-9A-HJ-NP-Za-km-z]{33}$', wallet_address):
             raise ValueError('Dirección TRON inválida.')
-        return wallet_address
-
-    if wallet_network == 'omni':
-        if not re.match(r'^(1|3|bc1)[A-Za-z0-9]{25,64}$', wallet_address, re.IGNORECASE):
-            raise ValueError('Dirección Bitcoin/Omni inválida.')
         return wallet_address
 
     raise ValueError('Red de wallet no soportada.')

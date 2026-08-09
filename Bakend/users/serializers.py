@@ -140,7 +140,7 @@ class UserSerializer(serializers.ModelSerializer):
 class RegisterSerializer(serializers.ModelSerializer):
     password2 = serializers.CharField(write_only=True)
     wallet_address = serializers.CharField(required=True, allow_blank=False)
-    wallet_network = serializers.ChoiceField(choices=[('polygon', 'Polygon'), ('bsc', 'BSC'), ('tron', 'TRON'), ('omni', 'Bitcoin/Omni')], default='polygon')
+    wallet_network = serializers.ChoiceField(choices=[('polygon', 'Polygon'), ('bsc', 'BSC'), ('tron', 'TRON')], default='polygon')
 
     class Meta:
         model = User
@@ -183,7 +183,7 @@ class RegisterSerializer(serializers.ModelSerializer):
         wallet_network = data.get('wallet_network')
         wallet_address = data.get('wallet_address')
 
-        if wallet_network not in ('polygon', 'bsc', 'tron', 'omni'):
+        if wallet_network not in ('polygon', 'bsc', 'tron'):
             raise serializers.ValidationError({'wallet_network': 'Red de wallet no soportada.'})
 
         if wallet_network in ('polygon', 'bsc'):
@@ -192,9 +192,6 @@ class RegisterSerializer(serializers.ModelSerializer):
         elif wallet_network == 'tron':
             if not re.match(r'^T[1-9A-HJ-NP-Za-km-z]{33}$', wallet_address or ''):
                 raise serializers.ValidationError({'wallet_address': 'Dirección TRON inválida.'})
-        elif wallet_network == 'omni':
-            if not re.match(r'^(1|3|bc1)[A-Za-z0-9]{25,64}$', wallet_address or '', re.IGNORECASE):
-                raise serializers.ValidationError({'wallet_address': 'Dirección Bitcoin/Omni inválida.'})
 
         return data
 

@@ -77,10 +77,6 @@ const RegisterForm = () => {
             if (!isValidTron(addr)) {
                 return setError("La dirección debe ser un formato TRON válido (T...)");
             }
-        } else if (walletNetwork === 'omni') {
-            if (!isValidBTC(addr)) {
-                return setError("La dirección debe ser un formato Bitcoin/Omni válido (1... o bc1...)");
-            }
         } else {
             return setError("Red de wallet no soportada.");
         }
@@ -277,7 +273,6 @@ const RegisterForm = () => {
                         <option value="polygon">Polygon (USDT ERC-20)</option>
                         <option value="bsc">BSC (USDT BEP-20)</option>
                         <option value="tron">TRON (USDT TRC-20)</option>
-                        <option value="omni">Bitcoin/Omni</option>
                     </select>
                 </label>
 
@@ -286,7 +281,7 @@ const RegisterForm = () => {
                     name="walletAddress"
                     type="text"
                     autoComplete="off"
-                    placeholder={walletNetwork === 'tron' ? 'T...' : walletNetwork === 'omni' ? '1... or bc1...' : '0x...'}
+                    placeholder={walletNetwork === 'tron' ? 'T...' : '0x...'}
                     value={walletAddress}
                     onChange={(e) => setWalletAddress(e.target.value)}
                     required
