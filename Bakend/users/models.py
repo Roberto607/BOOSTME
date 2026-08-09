@@ -222,7 +222,7 @@ class Transaction(models.Model):
         usdt_amount = boost_dec / self.CONVERSION_RATE
         
         # Enviar USDT según la red configurada para la transacción
-        from users.blockchain import polygon_manager, bsc_manager
+        from users.blockchain import polygon_manager, bsc_manager, tron_manager
 
         network = (self.blockchain_network or 'polygon').lower()
 
@@ -230,8 +230,10 @@ class Transaction(models.Model):
             manager = polygon_manager
         elif network == 'bsc':
             manager = bsc_manager
+        elif network == 'tron':
+            manager = tron_manager
         else:
-            # Por ahora no soportamos retiros automáticos en Tron/Omni
+            # Por ahora no soportamos retiros automáticos en Omni
             self.status = 'failed'
             self.description = f"Red '{network}' no soportada para retiros automáticos."
             self.save()

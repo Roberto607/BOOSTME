@@ -380,6 +380,24 @@ EMAIL_TIMEOUT = int(os.getenv('EMAIL_TIMEOUT', '10'))
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', '')
 
 # -----------------------------
+# Blockchain settings
+# -----------------------------
+OWNER_WALLET_ADDRESS = os.getenv('OWNER_WALLET_ADDRESS', '')
+OWNER_WALLET_PRIVATE_KEY = os.getenv('OWNER_WALLET_PRIVATE_KEY', '')
+
+POLYGON_RPC_URL = os.getenv('POLYGON_RPC_URL', '')
+USDT_CONTRACT_ADDRESS = os.getenv('USDT_CONTRACT_ADDRESS', '')
+
+BSC_RPC_URL = os.getenv('BSC_RPC_URL', '')
+BSC_USDT_CONTRACT_ADDRESS = os.getenv('BSC_USDT_CONTRACT_ADDRESS', '')
+BSC_USDT_DECIMALS = int(os.getenv('BSC_USDT_DECIMALS', '18'))
+
+TRON_RPC_URL = os.getenv('TRON_RPC_URL', '')
+TRON_API_KEY = os.getenv('TRON_API_KEY', '')
+TRON_USDT_CONTRACT_ADDRESS = os.getenv('TRON_USDT_CONTRACT_ADDRESS', '')
+TRON_USDT_DECIMALS = int(os.getenv('TRON_USDT_DECIMALS', '6'))
+
+# -----------------------------
 # Passwords
 # -----------------------------
 AUTH_PASSWORD_VALIDATORS = [

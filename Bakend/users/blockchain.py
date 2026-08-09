@@ -4,6 +4,9 @@ Módulo para interactuar con Polygon blockchain y procesar retiros de USDT.
 from web3 import Web3
 from django.conf import settings
 import logging
+from tronpy import Tron
+from tronpy.keys import PrivateKey
+from tronpy.providers import HTTPProvider
 
 logger = logging.getLogger(__name__)
 
@@ -236,8 +239,81 @@ class BscManager:
             return {"success": False, "tx_hash": None, "error": str(e)}
 
 
+class TronManager:
+    """Gestiona transacciones de USDT en TRON (TRC-20)."""
+
+    def __init__(self):
+        self.rpc_url = getattr(settings, 'TRON_RPC_URL', None) or None
+        self.api_key = getattr(settings, 'TRON_API_KEY', None) or None
+        self.owner_address = settings.OWNER_WALLET_ADDRESS
+        self.owner_private_key = getattr(settings, 'OWNER_WALLET_PRIVATE_KEY', None)
+        self.usdt_contract_address = getattr(settings, 'TRON_USDT_CONTRACT_ADDRESS', None)
+        self.usdt_decimals = getattr(settings, 'TRON_USDT_DECIMALS', 6)
+
+        if not self.usdt_contract_address:
+            logger.warning('TRON USDT contract address not configured; TRON manager disabled')
+            self.client = None
+            return
+
+        if not self.owner_private_key:
+            logger.warning('TRON owner private key no configurada; TRON manager disabled')
+            self.client = None
+            return
+
+        if self.rpc_url:
+            provider = HTTPProvider(self.rpc_url, api_key=self.api_key)
+        elif self.api_key:
+            provider = HTTPProvider(api_key=self.api_key)
+        else:
+            provider = HTTPProvider()
+
+        self.client = Tron(provider=provider)
+
+        if not self.client.is_address(self.owner_address):
+            raise ValueError(f"Dirección del propietario inválida: {self.owner_address}")
+        if not self.client.is_address(self.usdt_contract_address):
+            raise ValueError(f"Dirección USDT inválida: {self.usdt_contract_address}")
+
+        logger.info("✅ Conectado a TRON")
+
+    def get_contract(self):
+        if not self.client:
+            raise Exception('TRON client no inicializado')
+        return self.client.get_contract(self.usdt_contract_address)
+
+    def send_usdt(self, to_address, usdt_amount):
+        try:
+            if not self.client:
+                return {"success": False, "error": "TRON manager no inicializado"}
+
+            if not self.client.is_address(to_address):
+                return {"success": False, "error": f"Dirección inválida: {to_address}"}
+
+            to_address = self.client.to_base58check_address(to_address)
+            owner_address = self.client.to_base58check_address(self.owner_address)
+            usdt_wei = int(usdt_amount * 10**self.usdt_decimals)
+            contract = self.get_contract()
+            tx = contract.functions.transfer(to_address, usdt_wei).with_owner(owner_address).build()
+            priv_key = PrivateKey.fromhex(self.owner_private_key)
+            signed_tx = tx.sign(priv_key)
+            tx_ret = signed_tx.broadcast()
+            tx_hash = tx_ret.txid
+
+            logger.info(f"✅ Transacción TRON enviada: {tx_hash}")
+            return {"success": True, "tx_hash": tx_hash, "error": None}
+        except Exception as e:
+            logger.error(f"❌ Error enviando USDT en TRON: {e}")
+            return {"success": False, "tx_hash": None, "error": str(e)}
+
+
 try:
     bsc_manager = BscManager()
 except Exception as e:
     logger.error(f"No se pudo inicializar BscManager: {e}")
     bsc_manager = None
+
+try:
+    tron_manager = TronManager()
+except Exception as e:
+    logger.error(f"No se pudo inicializar TronManager: {e}")
+    tron_manager = None
