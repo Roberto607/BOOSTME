@@ -218,12 +218,14 @@ const Dashboard = () => {
         />
       )}
 
-      <aside className={`fixed left-0 top-0 z-30 flex h-screen w-[82vw] max-w-[280px] flex-col gap-4 bg-white px-4 py-6 shadow-2xl transition-all duration-300 md:hidden ${menuOpen ? 'translate-x-0' : '-translate-x-full'}`}>
-        <button onClick={() => setMenuOpen(false)} className="self-end rounded-full p-2 text-[var(--brand-900)]"><X /></button>
-        <p className="mb-2 text-center text-sm font-semibold text-[var(--brand-900)]">¡Hola, {user?.username || "Usuario"}!</p>
-        
+      <aside className={`fixed right-0 top-0 z-30 flex h-screen w-[82vw] max-w-[300px] flex-col gap-4 bg-white px-4 py-6 shadow-2xl transition-all duration-300 md:hidden ${menuOpen ? 'translate-x-0' : 'translate-x-full'}`}>
+        <div className="flex items-center justify-between">
+          <p className="text-base font-semibold text-[var(--brand-900)]">¡Hola, {user?.username || "Usuario"}!</p>
+          <button onClick={() => setMenuOpen(false)} className="rounded-full p-2 text-[var(--brand-900)] bg-slate-100 transition hover:bg-slate-200"><X /></button>
+        </div>
+
         <button 
-          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'dashboard' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'dashboard' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('dashboard');
             setMenuOpen(false);
@@ -232,7 +234,7 @@ const Dashboard = () => {
           <Wallet className="mr-2 h-5 w-5" /> Inicio
         </button>
         <button 
-          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'tasks' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'tasks' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('tasks');
             setMenuOpen(false);
@@ -241,7 +243,7 @@ const Dashboard = () => {
           <Target className="mr-2 h-5 w-5" /> Tareas
         </button>
         <button 
-          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'referrals' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'referrals' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('referrals');
             setMenuOpen(false);
@@ -250,7 +252,7 @@ const Dashboard = () => {
           <Users className="mr-2 h-5 w-5" /> Referidos
         </button>
         <button 
-          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'bonuses' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'bonuses' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('bonuses');
             setMenuOpen(false);
@@ -259,7 +261,7 @@ const Dashboard = () => {
           <Gift className="mr-2 h-5 w-5" /> Bonos
         </button>
         <button 
-          className={`flex items-center gap-2 rounded-xl px-3 py-2 text-left text-gray-700 ${currentView === 'profile' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
+          className={`flex items-center gap-2 rounded-xl px-3 py-3 text-left text-gray-700 transition hover:bg-slate-100 ${currentView === 'profile' ? 'bg-sky-50 font-semibold text-[var(--brand-900)]' : 'font-medium'}`}
           onClick={() => {
             setCurrentView('profile');
             setMenuOpen(false);
@@ -268,7 +270,7 @@ const Dashboard = () => {
           <Users className="mr-2 h-5 w-5" /> Perfil
         </button>
 
-        <button className="mt-auto rounded-lg bg-[var(--brand-900)] px-3 py-2 text-sm font-semibold text-white" onClick={handleLogout}>Cerrar Sesión</button>
+        <button className="rounded-xl bg-[var(--brand-900)] px-3 py-3 text-sm font-semibold text-white transition hover:bg-[#111c33]" onClick={handleLogout}>Cerrar Sesión</button>
       </aside>
 
       <main className="mx-auto flex w-full max-w-7xl flex-col gap-5 px-3 py-4 sm:px-4 md:px-6 lg:px-8 lg:py-8">
