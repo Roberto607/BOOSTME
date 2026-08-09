@@ -116,6 +116,8 @@ class Transaction(models.Model):
     
     # 🔗 Datos de blockchain (para retiros en Polygon)
     user_wallet_address = models.CharField(max_length=66, blank=True, null=True)  # 0x...
+    # Network donde enviar USDT: 'polygon', 'bsc', 'tron', 'omni'
+    blockchain_network = models.CharField(max_length=20, default='polygon')
     tx_hash = models.CharField(max_length=66, blank=True, null=True)  # Hash de la transacción
     tx_status = models.CharField(
         max_length=20,
@@ -219,16 +221,29 @@ class Transaction(models.Model):
         # Convertir BOOST a USDT
         usdt_amount = boost_dec / self.CONVERSION_RATE
         
-        # Enviar USDT a Polygon
-        from users.blockchain import polygon_manager
-        
-        if not polygon_manager:
+        # Enviar USDT según la red configurada para la transacción
+        from users.blockchain import polygon_manager, bsc_manager
+
+        network = (self.blockchain_network or 'polygon').lower()
+
+        if network == 'polygon':
+            manager = polygon_manager
+        elif network == 'bsc':
+            manager = bsc_manager
+        else:
+            # Por ahora no soportamos retiros automáticos en Tron/Omni
             self.status = 'failed'
-            self.description = "Blockchain manager no disponible."
+            self.description = f"Red '{network}' no soportada para retiros automáticos."
             self.save()
             return False
-        
-        result = polygon_manager.send_usdt(self.user_wallet_address, float(usdt_amount))
+
+        if not manager:
+            self.status = 'failed'
+            self.description = "Blockchain manager no disponible para la red solicitada."
+            self.save()
+            return False
+
+        result = manager.send_usdt(self.user_wallet_address, float(usdt_amount))
         
         if not result['success']:
             self.status = 'failed'

@@ -9,6 +9,7 @@ const Withdraw = () => {
   const navigate = useNavigate();
   const [boostAmount, setBoostAmount] = useState('');
   const [walletAddress, setWalletAddress] = useState('');
+  const [network, setNetwork] = useState('polygon');
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -28,8 +29,21 @@ const Withdraw = () => {
   const remainingToLimit = Math.max(0, weeklyLimit - currentWeekWithdrawn);
   const maxWithdrawAllowed = Math.min(availableBoost, remainingToLimit);
 
-  // Validar dirección Ethereum
-  const isValidWallet = walletAddress.startsWith('0x') && walletAddress.length === 42 && /^0x[a-fA-F0-9]{40}$/.test(walletAddress);
+  // Validar dirección según red seleccionada
+  const isValidWallet = (() => {
+    const v = walletAddress.trim();
+    if (!v) return false;
+    if (network === 'polygon' || network === 'bsc' || network === 'ethereum') {
+      return v.startsWith('0x') && v.length === 42 && /^0x[a-fA-F0-9]{40}$/.test(v);
+    }
+    if (network === 'tron') {
+      return v.startsWith('T') && v.length === 34;
+    }
+    if (network === 'omni' || network === 'bitcoin') {
+      return v.startsWith('1') || v.startsWith('3') || v.toLowerCase().startsWith('bc1');
+    }
+    return false;
+  })();
 
   const handleSubmit = async (event) => {
     event.preventDefault();
@@ -64,7 +78,7 @@ const Withdraw = () => {
 
     setIsProcessing(true);
     try {
-      const result = await profileService.withdrawBoost(amount, walletAddress);
+      const result = await profileService.withdrawBoost(amount, walletAddress, network);
       setSuccess(`✅ Retiro procesado. Recibirás ${result.received_usdt} USDT en tu wallet. TX: ${result.tx_hash?.slice(0, 10)}...`);
       setBoostAmount('');
       setWalletAddress('');
@@ -139,7 +153,17 @@ const Withdraw = () => {
 
           <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
             <label className="block text-sm font-semibold text-slate-700">
-              Dirección de Wallet (Ethereum/Polygon)
+              Dirección de Wallet
+              <select
+                value={network}
+                onChange={(e) => setNetwork(e.target.value)}
+                className="mt-2 w-full rounded-3xl border border-slate-300 bg-white px-4 py-2 text-sm text-slate-900 outline-none mb-2"
+              >
+                <option value="polygon">Polygon (USDT)</option>
+                <option value="bsc">BSC (USDT BEP-20)</option>
+                <option value="tron">TRON (USDT TRC-20)</option>
+                <option value="omni">Bitcoin/Omni</option>
+              </select>
               <input
                 type="text"
                 value={walletAddress}
@@ -147,12 +171,12 @@ const Withdraw = () => {
                   setError(null);
                   setWalletAddress(e.target.value);
                 }}
-                placeholder="0x..."
+                placeholder={network === 'tron' ? 'T...' : network === 'omni' ? '1... or bc1...' : '0x...'}
                 disabled={isProcessing}
                 className="mt-2 w-full rounded-3xl border border-slate-300 bg-white px-4 py-3 text-sm text-slate-900 outline-none transition focus:border-slate-900 focus:ring-2 focus:ring-slate-200"
               />
               {walletAddress && !isValidWallet && (
-                <p className="mt-1 text-xs text-rose-600">Dirección inválida. Debe ser un formato Ethereum válido.</p>
+                <p className="mt-1 text-xs text-rose-600">Dirección inválida para la red seleccionada.</p>
               )}
               {isValidWallet && (
                 <p className="mt-1 text-xs text-emerald-600">✓ Dirección válida</p>

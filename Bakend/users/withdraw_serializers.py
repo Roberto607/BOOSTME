@@ -14,18 +14,37 @@ class WithdrawSerializer(serializers.Serializer):
         min_value=1,
         help_text="Cantidad de BOOST a retirar"
     )
+    network = serializers.CharField(max_length=20, required=False, default='polygon')
     
     def validate_wallet_address(self, value):
-        """Valida que sea una dirección Ethereum válida."""
-        if not value.startswith('0x'):
-            raise serializers.ValidationError("La dirección debe comenzar con '0x'")
-        if len(value) != 42:
-            raise serializers.ValidationError("La dirección debe tener 42 caracteres")
-        try:
-            int(value[2:], 16)  # Validar hexadecimal
-        except ValueError:
-            raise serializers.ValidationError("Dirección hexadecimal inválida")
+        """Valida la dirección según el tipo de red si se proporciona en el contexto de validación."""
+        # Note: the 'network' field is validated separately in validate()
         return value
+
+    def validate(self, data):
+        wallet = data.get('wallet_address', '').strip()
+        network = (data.get('network') or 'polygon').lower()
+
+        if network in ('polygon', 'bsc', 'ethereum', 'evm'):
+            if not wallet.startswith('0x') or len(wallet) != 42:
+                raise serializers.ValidationError({'wallet_address': "La dirección debe comenzar con 0x y tener 42 caracteres"})
+            try:
+                int(wallet[2:], 16)
+            except ValueError:
+                raise serializers.ValidationError({'wallet_address': "Dirección hexadecimal inválida"})
+
+        elif network == 'tron':
+            if not wallet.startswith('T') or len(wallet) != 34:
+                raise serializers.ValidationError({'wallet_address': "Dirección TRON inválida"})
+
+        elif network == 'omni' or network == 'bitcoin':
+            if not (wallet.startswith('1') or wallet.startswith('3') or wallet.lower().startswith('bc1')):
+                raise serializers.ValidationError({'wallet_address': "Dirección Bitcoin/Omni inválida"})
+
+        else:
+            raise serializers.ValidationError({'network': 'Red desconocida'})
+
+        return data
     
     def validate_boost_amount(self, value):
         """Valida el monto mínimo."""

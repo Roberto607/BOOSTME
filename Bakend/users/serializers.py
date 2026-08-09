@@ -147,14 +147,32 @@ class RegisterSerializer(serializers.ModelSerializer):
     def validate_wallet_address(self, value):
         if not value:
             raise serializers.ValidationError('La dirección de wallet es requerida.')
+
         value = value.strip()
-        if not value.startswith('0x') or len(value) != 42:
-            raise serializers.ValidationError('La dirección de wallet debe comenzar con 0x y tener 42 caracteres.')
-        try:
-            int(value[2:], 16)
-        except ValueError:
-            raise serializers.ValidationError('La dirección de wallet debe ser hexadecimal.')
-        return value.lower()
+
+        # EVM / BSC / Polygon (0x...)
+        if value.startswith('0x'):
+            if len(value) != 42:
+                raise serializers.ValidationError('La dirección de wallet debe comenzar con 0x y tener 42 caracteres.')
+            try:
+                int(value[2:], 16)
+            except ValueError:
+                raise serializers.ValidationError('La dirección de wallet debe ser hexadecimal.')
+            return value.lower()
+
+        # TRON (simple validation: starts with T and length 34, base58-like chars)
+        if value.startswith('T') and len(value) == 34:
+            if not re.match(r'^T[1-9A-HJ-NP-Za-km-z]{33}$', value):
+                raise serializers.ValidationError('Dirección TRON inválida.')
+            return value
+
+        # Bitcoin / Omni basic validation (starts with 1,3 or bc1)
+        if value.startswith('1') or value.startswith('3') or value.lower().startswith('bc1'):
+            if not re.match(r'^(1|3|bc1)[A-Za-z0-9]{25,64}$', value):
+                raise serializers.ValidationError('Dirección Bitcoin/Omni inválida.')
+            return value
+
+        raise serializers.ValidationError('Formato de dirección no soportado. Use EVM (0x...), TRON (T...) o Bitcoin (1/3/bc1).')
 
     def validate(self, data):
         if data['password'] != data['password2']:

@@ -59,8 +59,17 @@ const RegisterForm = () => {
             return setError("El nombre de usuario debe tener entre 3 y 20 caracteres y solo puede contener letras, números y guiones bajos");
         }
 
-        if (!walletAddress || !/^0x[a-fA-F0-9]{40}$/.test(walletAddress.trim())) {
-            return setError("La dirección de la billetera es requerida y debe ser una dirección válida de 42 caracteres que comience con 0x.");
+        const isValidEVM = (v) => /^0x[a-fA-F0-9]{40}$/.test(v);
+        const isValidTron = (v) => /^T[1-9A-HJ-NP-Za-km-z]{33}$/.test(v);
+        const isValidBTC = (v) => /^(1|3|bc1)[A-Za-z0-9]{25,64}$/.test(v);
+
+        if (!walletAddress) {
+            return setError("La dirección de la billetera es requerida.");
+        }
+
+        const addr = walletAddress.trim();
+        if (!(isValidEVM(addr) || isValidTron(addr) || isValidBTC(addr))) {
+            return setError("La dirección de la billetera no es válida. Acepte: EVM (0x...), TRON (T...), o Bitcoin (1/3/bc1).");
         }
         
         if (password.length < 8) {
@@ -99,7 +108,8 @@ const RegisterForm = () => {
                     username: username.trim(),
                     email: email.trim().toLowerCase(),
                     password,
-                    wallet_address: walletAddress.trim().toLowerCase()
+                    // Preserve case for non-EVM addresses. Backend will normalize EVM addresses.
+                    wallet_address: walletAddress.trim()
                 }),
                 credentials: 'include' // Importante para manejar cookies
             });

@@ -46,13 +46,14 @@ export const profileService = {
         }
     },
 
-    withdrawBoost: async (boostAmount, walletAddress) => {
+    withdrawBoost: async (boostAmount, walletAddress, network = 'polygon') => {
         try {
             const response = await fetchWithAuth(`${API_BASE_URL}/withdraw/`, {
                 method: 'POST',
                 body: JSON.stringify({ 
                     boost_amount: boostAmount,
-                    wallet_address: walletAddress 
+                    wallet_address: walletAddress,
+                    network
                 })
             });
 

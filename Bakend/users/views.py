@@ -320,18 +320,17 @@ class RegisterView(APIView):
                     access_token = str(refresh.access_token)
                     refresh_token = str(refresh)
 
-                    user.wallet_nonce = _generate_wallet_nonce()
-                    user.wallet_nonce_created_at = timezone.now()
-                    user.save(update_fields=['wallet_nonce', 'wallet_nonce_created_at'])
+                    # Para direcciones EVM (0x...) generamos un nonce y pedimos firma.
+                    # Para otras direcciones (TRON, BTC/Omni) registramos la dirección
+                    # pero no exigimos la verificación por firma en este paso.
+                    if wallet_address.startswith('0x'):
+                        user.wallet_nonce = _generate_wallet_nonce()
+                        user.wallet_nonce_created_at = timezone.now()
+                        user.save(update_fields=['wallet_nonce', 'wallet_nonce_created_at'])
 
                     # Nota: el flujo de verificación por email está temporalmente deshabilitado
                     # because email sending currently falla en producción sin un dominio propio.
-                    # El registro ahora se completa solo con wallet.
-                    # token = account_activation_token.make_token(user)
-                    # uidb64 = urlsafe_base64_encode(force_bytes(user.pk))
-                    # frontend_url = _resolve_frontend_base_url(request)
-                    # verification_link = urljoin(frontend_url, f"/verify-email/{uidb64}/{token}/")
-                    # email_sent, email_error = _send_html_mail(...)
+                    # El registro ahora se completa con wallet (y posible verificación por firma para EVM).
 
                     # Serializar el usuario completo
                     try:
@@ -349,14 +348,23 @@ class RegisterView(APIView):
                     
                     # Devolver respuesta completa con usuario serializado
                     response_data = {
-                        "message": "Registro exitoso. Firma el nonce para verificar tu wallet.",
                         "user": user_data,
                         "access": str(access_token),
                         "refresh": str(refresh),
-                        "next_step": "verify_wallet",
-                        "wallet_verification_nonce": user.wallet_nonce,
-                        "wallet_address": wallet_address,
                     }
+
+                    if wallet_address.startswith('0x'):
+                        response_data.update({
+                            "message": "Registro exitoso. Firma el nonce para verificar tu wallet.",
+                            "next_step": "verify_wallet",
+                            "wallet_verification_nonce": user.wallet_nonce,
+                            "wallet_address": wallet_address,
+                        })
+                    else:
+                        response_data.update({
+                            "message": "Registro exitoso. Dirección guardada sin verificación en-chain.",
+                            "wallet_address": wallet_address,
+                        })
 
                     # Crear respuesta y configurar cookies
                     resp = Response(response_data, status=status.HTTP_201_CREATED)
@@ -960,6 +968,7 @@ class WithdrawView(APIView):
             serializer.is_valid(raise_exception=True)
             boost_amount = serializer.validated_data['boost_amount']
             wallet_address = serializer.validated_data['wallet_address']
+            network = (serializer.validated_data.get('network') or 'polygon').lower()
 
             user = request.user
             if not user.can_withdraw:
@@ -991,6 +1000,7 @@ class WithdrawView(APIView):
                 transaction_type='withdrawal',
                 boost_amount=boost_amount,
                 user_wallet_address=wallet_address,
+                blockchain_network=network,
                 status='pending',
                 description='Solicitud de retiro BOOST a USDT'
             )
