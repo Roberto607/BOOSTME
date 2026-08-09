@@ -228,7 +228,7 @@ const Plans = () => {
           </div>
 
           <div className="flex items-center gap-3">
-            <span className="rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.08em] text-slate-700">
+            <span className="inline-flex items-center rounded-full border border-slate-200 bg-slate-50 px-3 py-1.5 text-[0.65rem] font-semibold tracking-[0.06em] text-slate-700 leading-none">
               {user?.plan_name ? `Plan ${user.plan_name}` : 'Plan Free'}
             </span>
             <button
