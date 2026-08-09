@@ -67,18 +67,31 @@ const VerifyWallet = () => {
 
   const handleOpenInWalletApp = () => {
     const currentUrl = window.location.href;
+    const fallbackMessage = walletNetwork === 'tron'
+      ? "Instala TronLink o usa WalletConnect desde la app de tu wallet."
+      : "Instala MetaMask, Trust Wallet, OKX o Coinbase Wallet, o usa WalletConnect desde la app.";
 
-    if (walletNetwork === 'tron') {
-      const tronLinkUrl = `https://link.tronlink.org/open?target=${encodeURIComponent(currentUrl)}`;
-      window.location.href = tronLinkUrl;
-      return;
+    try {
+      if (walletNetwork === 'tron') {
+        const tronLinkUrl = `https://link.tronlink.org/open?target=${encodeURIComponent(currentUrl)}`;
+        window.location.href = tronLinkUrl;
+        window.setTimeout(() => {
+          setError(`No se pudo abrir la app. ${fallbackMessage}`);
+        }, 1800);
+        return;
+      }
+
+      const metamaskUrl = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
+      const trustWalletUrl = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(currentUrl)}`;
+
+      const primaryUrl = /Android/i.test(window.navigator.userAgent) ? metamaskUrl : trustWalletUrl;
+      window.location.href = primaryUrl;
+      window.setTimeout(() => {
+        setError(`No se pudo abrir la app. ${fallbackMessage}`);
+      }, 1800);
+    } catch {
+      setError(`No se pudo abrir la app. ${fallbackMessage}`);
     }
-
-    const metamaskUrl = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
-    const trustWalletUrl = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(currentUrl)}`;
-
-    const primaryUrl = /Android/i.test(window.navigator.userAgent) ? metamaskUrl : trustWalletUrl;
-    window.location.href = primaryUrl;
   };
 
   const handleSignWallet = async () => {
@@ -182,7 +195,7 @@ const VerifyWallet = () => {
         {showOpenInApp && (
           <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 px-4 py-3 rounded mb-4">
             <p className="font-medium mb-2">No se detectó tu wallet en este navegador.</p>
-            <p className="mb-3">Abre esta página desde la app de tu wallet usando la opción “Abrir en la app” para verificar tu dirección.</p>
+            <p className="mb-3">Abre esta página desde la app de tu wallet usando la opción “Abrir en la app”. Si la app no se abre, instala la wallet compatible o usa WalletConnect desde la app.</p>
             <button
               type="button"
               onClick={handleOpenInWalletApp}
