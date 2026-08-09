@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { Instagram, Send, Twitter, Youtube } from 'lucide-react';
+import { Instagram, Send, Twitter, Youtube, Menu, X } from 'lucide-react';
 import brandLogo from '../../static/Logo Boostme.png';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -116,6 +116,7 @@ const Home = () => {
   const location = useLocation();
   useAuth();
   const [showVerificationMessage, setShowVerificationMessage] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
 
   useEffect(() => {
     if (location.state?.showVerificationMessage) {
@@ -146,6 +147,14 @@ const Home = () => {
             <button onClick={handleOpenBonuses} className="rounded-none border-b border-transparent px-2 py-2 transition hover:border-sky-500 hover:text-slate-950">Bonos</button>
           </nav>
 
+          <button
+            className="inline-flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 bg-white text-slate-900 transition hover:bg-slate-100 md:hidden"
+            onClick={() => setMenuOpen(!menuOpen)}
+            aria-label="Abrir menú"
+          >
+            {menuOpen ? <X size={18} /> : <Menu size={18} />}
+          </button>
+
           <div className="flex items-center gap-2">
             <button
               onClick={() => navigate('/login')}
@@ -162,6 +171,60 @@ const Home = () => {
           </div>
         </div>
       </header>
+
+      {menuOpen && (
+        <div className="md:hidden">
+          <div className="absolute inset-x-0 top-full z-40 bg-white shadow-lg">
+            <div className="mx-4 flex flex-col gap-1 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+              <button
+                onClick={() => {
+                  navigate('/how-it-works');
+                  setMenuOpen(false);
+                }}
+                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+              >
+                Cómo funciona
+              </button>
+              <button
+                onClick={() => {
+                  handleOpenPlans();
+                  setMenuOpen(false);
+                }}
+                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+              >
+                Planes
+              </button>
+              <button
+                onClick={() => {
+                  handleOpenBonuses();
+                  setMenuOpen(false);
+                }}
+                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+              >
+                Bonos
+              </button>
+              <button
+                onClick={() => {
+                  navigate('/login');
+                  setMenuOpen(false);
+                }}
+                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+              >
+                Iniciar Sesión
+              </button>
+              <button
+                onClick={() => {
+                  navigate('/register');
+                  setMenuOpen(false);
+                }}
+                className="text-left text-sm font-semibold text-slate-900 hover:text-sky-700"
+              >
+                Registrarse
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {showVerificationMessage && (
         <div className="mx-4 mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 px-4 py-3 text-center text-sm text-emerald-700 md:mx-6 lg:mx-8">
