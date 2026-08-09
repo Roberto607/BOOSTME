@@ -11,6 +11,7 @@ const Plans = () => {
   const { user, loading, isAuthenticated, setUser, setAccessToken, setIsAuthenticated } = useAuth();
   const navigate = useNavigate();
   const location = useLocation();
+  const isLoggedIn = Boolean(user && isAuthenticated && !loading);
 
   const [selectedPlan, setSelectedPlan] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -273,43 +274,81 @@ const Plans = () => {
 
           {/* HEADER */}
           <div className="text-center">
-            <h1 className="text-2xl font-bold text-blue-600 mb-1">
-              ¡Bienvenido a BoostMe!
+            <h1 className="text-2xl font-bold text-[var(--brand-900)] mb-1">
+              {isLoggedIn ? "Planes BoostMe" : "¡Bienvenido a BoostMe!"}
             </h1>
             <p className="text-gray-500">
-              {user?.has_financial_activation
-                ? "Actualiza tu plan"
+              {isLoggedIn
+                ? "Elige el plan que mejor se adapte a tu crecimiento."
                 : "Explora los planes y activa tu cuenta cuando quieras."}
             </p>
-
-        {user?.has_financial_activation && (
-          <div className="mt-3 inline-flex items-center justify-center gap-2 rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-sm font-medium text-slate-700">
-            <Star className="h-4 w-4 text-blue-600" />
-            <span>Plan actual: {user.plan_name}</span>
           </div>
-        )}
 
-        {!walletConnected && (
-          <button
-            onClick={connectWallet}
-            className="mt-4 rounded-lg bg-slate-900 px-6 py-3 text-white transition hover:bg-slate-800"
-          >
-            Conectar Trust Wallet
-          </button>
-        )}
+          <nav className="flex flex-wrap items-center justify-center gap-2">
+            <button
+              onClick={() => navigate('/dashboard')}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${location.pathname === '/dashboard' ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Wallet className="h-4 w-4" /> Inicio
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/tasks')}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${location.pathname === '/dashboard/tasks' ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Target className="h-4 w-4" /> Tareas
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/referidos')}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/referidos' || location.pathname === '/referidos') ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Users className="h-4 w-4" /> Referidos
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/profile')}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/profile' || location.pathname === '/Profile') ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Users className="h-4 w-4" /> Perfil
+            </button>
+            <button
+              onClick={() => navigate('/deposit')}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${location.pathname === '/deposit' ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Crown className="h-4 w-4" /> Planes
+            </button>
+            <button
+              onClick={() => navigate('/dashboard/bonuses')}
+              className={`flex items-center gap-2 rounded-full border px-4 py-2 text-sm font-semibold transition ${(location.pathname === '/dashboard/bonuses' || location.pathname === '/bonuses') ? 'border-slate-900 bg-slate-100 text-[var(--brand-900)]' : 'border-transparent bg-white text-gray-600 hover:border-slate-200 hover:text-[var(--brand-900)]'}`}
+            >
+              <Gift className="h-4 w-4" /> Bonos
+            </button>
+          </nav>
 
-        {walletConnected && (
-          <div className="mt-3 inline-flex items-center gap-2 rounded-full border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm font-semibold text-emerald-700">
-            <Check className="h-4 w-4" />
-            Wallet conectada: {account.slice(0, 6)}...{account.slice(-4)}
+          <div className="grid gap-4 sm:grid-cols-2">
+            {user?.has_financial_activation && (
+              <div className="rounded-2xl border border-slate-200 bg-slate-50 px-4 py-3 text-center text-sm text-slate-700">
+                <div className="inline-flex items-center gap-2">
+                  <Star className="h-4 w-4 text-blue-600" />
+                  <span>Plan actual: {user.plan_name}</span>
+                </div>
+              </div>
+            )}
+
+            {isLoggedIn && !walletConnected && (
+              <button
+                onClick={connectWallet}
+                className="rounded-2xl bg-slate-900 px-6 py-3 text-white transition hover:bg-slate-800"
+              >
+                Conectar Trust Wallet
+              </button>
+            )}
+
+            {!isLoggedIn && (
+              <div className="rounded-2xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
+                Mira los planes aquí. Inicia sesión para activar uno y empezar a usar tus beneficios.
+              </div>
+            )}
           </div>
-        )}
-
-        {!isAuthenticated && (
-          <div className="mt-4 rounded-xl border border-blue-100 bg-blue-50 px-4 py-3 text-sm text-blue-700">
-            Mira los planes aquí. Inicia sesión para activar uno y empezar a usar tus beneficios.
-          </div>
-        )}
+        </div>
       </div>
 
       {/* PLANES */}
@@ -429,8 +468,6 @@ const Plans = () => {
         </form>
       )}
     </div>
-  </div>
-</div>
   );
 };
 
