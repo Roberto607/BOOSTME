@@ -405,71 +405,70 @@ const Dashboard = () => {
             </div>
 
             <div className="w-full space-y-6">
-                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-200">
-              <h2 className="text-xl md:text-2xl text-[var(--brand-900)]">Resumen de hoy</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-[var(--brand-900)]">
-                    <Flame className="text-[var(--brand-700)]" size={16} />
-                    <span>Racha</span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">{streakValue} días</p>
-                  <p className="text-sm text-slate-500">Tu progreso sigue en marcha</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-[var(--brand-900)]">
-                    <TrendingUp className="text-[var(--brand-700)]" size={16} />
-                    <span>Progreso semanal</span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">{progressPercent}%</p>
-                  <p className="text-sm text-slate-500">Meta de BOOST acumulado</p>
-                </div>
-                <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
-                  <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-[var(--brand-900)]">
-                    <Clock3 className="text-[var(--brand-700)]" size={16} />
-                    <span>Próximo retiro</span>
-                  </div>
-                  <p className="text-2xl font-bold text-slate-900">{userBalance.nextWithdrawalDate || '—'}</p>
-                  <p className="text-sm text-slate-500">Revisa tu disponibilidad</p>
-                </div>
-                </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-200">
-              <h2 className="text-xl md:text-2xl text-[var(--brand-900)]">Acciones recomendadas</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                {recommendedActions.map((item) => (
-                  <button
-                    key={item.title}
-                    onClick={item.action}
-                    className="group bg-white rounded-2xl p-4 shadow-sm border border-sky-100 text-left transition hover:-translate-y-1 hover:border-sky-200 hover:bg-sky-50"
-                  >
-                    <div className="flex items-center justify-between mb-2">
-                      <h3 className="font-semibold text-slate-900 group-hover:text-[var(--brand-900)]">{item.title}</h3>
-                      <ArrowRight className="text-[var(--brand-700)] transition group-hover:text-[var(--brand-900)]" size={16} />
+              <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-200">
+                <h2 className="text-xl md:text-2xl text-[var(--brand-900)]">Resumen de hoy</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-[var(--brand-900)]">
+                      <Flame className="text-[var(--brand-700)]" size={16} />
+                      <span>Racha</span>
                     </div>
-                    <p className="text-sm text-slate-500">{item.description}</p>
-                  </button>
-                ))}
-                </div>
-                </div>
-
-                <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-200">
-              <h2 className="text-xl md:text-2xl text-[var(--brand-900)]">Logros recientes</h2>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
-                {achievements.map((item) => (
-                  <div key={item.title} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
-                    <CheckCircle2 className="text-emerald-500 mt-1" size={18} />
-                    <div>
-                      <p className="font-semibold text-gray-800">{item.title}</p>
-                      <p className="text-sm text-gray-500">{item.text}</p>
-                    </div>
+                    <p className="text-2xl font-bold text-slate-900">{streakValue} días</p>
+                    <p className="text-sm text-slate-500">Tu progreso sigue en marcha</p>
                   </div>
-                ))}
+                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-[var(--brand-900)]">
+                      <TrendingUp className="text-[var(--brand-700)]" size={16} />
+                      <span>Progreso semanal</span>
+                    </div>
+                    <p className="text-2xl font-bold text-slate-900">{progressPercent}%</p>
+                    <p className="text-sm text-slate-500">Meta de BOOST acumulado</p>
+                  </div>
+                  <div className="bg-white rounded-2xl p-4 shadow-sm border border-slate-200">
+                    <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-sky-50 px-3 py-1 text-sm font-semibold text-[var(--brand-900)]">
+                      <Clock3 className="text-[var(--brand-700)]" size={16} />
+                      <span>Próximo retiro</span>
+                    </div>
+                    <p className="text-2xl font-bold text-slate-900">{userBalance.nextWithdrawalDate || '—'}</p>
+                    <p className="text-sm text-slate-500">Revisa tu disponibilidad</p>
+                  </div>
+                </div>
               </div>
+
+              <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-200">
+                <h2 className="text-xl md:text-2xl text-[var(--brand-900)]">Acciones recomendadas</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  {recommendedActions.map((item) => (
+                    <button
+                      key={item.title}
+                      onClick={item.action}
+                      className="group bg-white rounded-2xl p-4 shadow-sm border border-sky-100 text-left transition hover:-translate-y-1 hover:border-sky-200 hover:bg-sky-50"
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <h3 className="font-semibold text-slate-900 group-hover:text-[var(--brand-900)]">{item.title}</h3>
+                        <ArrowRight className="text-[var(--brand-700)] transition group-hover:text-[var(--brand-900)]" size={16} />
+                      </div>
+                      <p className="text-sm text-slate-500">{item.description}</p>
+                    </button>
+                  ))}
                 </div>
+              </div>
 
-
+              <div className="bg-white rounded-2xl shadow-sm p-4 md:p-6 w-full border border-slate-200">
+                <h2 className="text-xl md:text-2xl text-[var(--brand-900)]">Logros recientes</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-4">
+                  {achievements.map((item) => (
+                    <div key={item.title} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-start gap-3">
+                      <CheckCircle2 className="text-emerald-500 mt-1" size={18} />
+                      <div>
+                        <p className="font-semibold text-gray-800">{item.title}</p>
+                        <p className="text-sm text-gray-500">{item.text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </>
         )}
 
