@@ -205,18 +205,23 @@ const RegisterForm = () => {
                 const refreshToken = data?.refresh || null;
 
                 setUser(userData);
-                setIsAuthenticated(true);
+                if (token) {
+                    setAccessToken(token);
+                }
 
                 if (data?.next_step === 'verify_wallet') {
                     const verificationData = {
                         wallet_address: data.wallet_address,
                         wallet_verification_nonce: data.wallet_verification_nonce,
+                        wallet_network: data.wallet_network,
                     };
                     sessionStorage.setItem('walletVerificationData', JSON.stringify(verificationData));
+                    setIsAuthenticated(false);
                     navigate('/verify-wallet', { replace: true, state: verificationData });
                     return;
                 }
 
+                setIsAuthenticated(true);
                 setSuccess(data?.message || "Registro exitoso. Continúa al siguiente paso.");
             } else {
                 // Manejar códigos de error específicos del backend
