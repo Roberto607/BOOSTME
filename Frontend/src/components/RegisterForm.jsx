@@ -216,6 +216,7 @@ const RegisterForm = () => {
                         wallet_network: data.wallet_network,
                     };
                     sessionStorage.setItem('walletVerificationData', JSON.stringify(verificationData));
+                    localStorage.setItem('walletVerificationData', JSON.stringify(verificationData));
                     setIsAuthenticated(false);
                     navigate('/verify-wallet', { replace: true, state: verificationData });
                     return;

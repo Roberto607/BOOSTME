@@ -33,14 +33,16 @@ const VerifyWallet = () => {
 
   useEffect(() => {
     const stateData = location.state || {};
-    const stored = sessionStorage.getItem("walletVerificationData");
-    const savedData = stored ? JSON.parse(stored) : null;
+    const storedSession = sessionStorage.getItem("walletVerificationData");
+    const storedLocal = localStorage.getItem("walletVerificationData");
+    const savedData = storedSession ? JSON.parse(storedSession) : (storedLocal ? JSON.parse(storedLocal) : null);
 
     if (stateData.wallet_address && stateData.wallet_verification_nonce) {
       setWalletAddress(stateData.wallet_address);
       setWalletNetwork(stateData.wallet_network || 'polygon');
       setNonce(stateData.wallet_verification_nonce);
       sessionStorage.setItem("walletVerificationData", JSON.stringify(stateData));
+      localStorage.setItem("walletVerificationData", JSON.stringify(stateData));
       return;
     }
 
@@ -65,6 +67,10 @@ const VerifyWallet = () => {
 
   const handleOpenInWalletApp = () => {
     const currentUrl = window.location.href;
+    const verificationData = { wallet_address: walletAddress, wallet_verification_nonce: nonce, wallet_network: walletNetwork };
+    sessionStorage.setItem("walletVerificationData", JSON.stringify(verificationData));
+    localStorage.setItem("walletVerificationData", JSON.stringify(verificationData));
+
     const fallbackMessage = walletNetwork === 'tron'
       ? "Instala Trust Wallet o TronLink, o usa WalletConnect desde la app de tu wallet."
       : "Instala MetaMask, Trust Wallet, OKX o Coinbase Wallet, o usa WalletConnect desde la app.";
