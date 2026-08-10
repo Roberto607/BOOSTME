@@ -73,25 +73,39 @@ const VerifyWallet = () => {
 
     try {
       if (walletNetwork === 'tron') {
-        const trustWalletAppUrl = `trust://browser?url=${encodeURIComponent(currentUrl)}`;
-        const trustWalletBrowserUrl = `https://link.trustwallet.com/open_url?coin_id=195&url=${encodeURIComponent(currentUrl)}`;
-        const tronLinkAppUrl = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
+        const deepLinks = [
+          `trust://browser?url=${encodeURIComponent(currentUrl)}`,
+          `tronlink://open?target=${encodeURIComponent(currentUrl)}`,
+          `tronlink://navigate?url=${encodeURIComponent(currentUrl)}`,
+        ];
 
-        window.location.href = trustWalletAppUrl;
-        window.setTimeout(() => {
-          window.location.href = tronLinkAppUrl;
+        let index = 0;
+        const tryNextDeepLink = () => {
+          if (index >= deepLinks.length) {
+            setError("No se pudo abrir Trust Wallet o TronLink.");
+            setSuccess("");
+            return;
+          }
+
+          const url = deepLinks[index];
+          index += 1;
+
+          const link = document.createElement("a");
+          link.href = url;
+          link.style.display = "none";
+          document.body.appendChild(link);
+          link.click();
+          document.body.removeChild(link);
+
           window.setTimeout(() => {
-            window.location.href = trustWalletBrowserUrl;
-            window.setTimeout(() => {
-              setError("No se pudo abrir Trust Wallet o TronLink.");
-              setSuccess("");
-            }, 1500);
+            tryNextDeepLink();
           }, 1200);
-        }, 1200);
+        };
 
         setSuccess("Abre Trust Wallet o TronLink y firma.");
         setError("");
         setShowOpenInApp(false);
+        tryNextDeepLink();
         return;
       }
 
