@@ -71,47 +71,43 @@ const VerifyWallet = () => {
     sessionStorage.setItem("walletVerificationData", JSON.stringify(verificationData));
     localStorage.setItem("walletVerificationData", JSON.stringify(verificationData));
 
-    const fallbackMessage = walletNetwork === 'tron'
-      ? "Instala Trust Wallet o TronLink, o usa WalletConnect desde la app de tu wallet."
-      : "Instala MetaMask, Trust Wallet, OKX o Coinbase Wallet, o usa WalletConnect desde la app.";
-
     try {
       if (walletNetwork === 'tron') {
-        const trustWalletInstalled = /Android/i.test(window.navigator.userAgent) ? document.location.protocol === 'https:' : true;
         const trustWalletAppUrl = `trust://browser?url=${encodeURIComponent(currentUrl)}`;
+        const trustWalletBrowserUrl = `https://link.trustwallet.com/open_url?coin_id=195&url=${encodeURIComponent(currentUrl)}`;
         const tronLinkAppUrl = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
-        const trustWalletDeepLink = `https://link.trustwallet.com/open_url?coin_id=195&url=${encodeURIComponent(currentUrl)}`;
 
-        if (trustWalletInstalled) {
-          window.location.href = trustWalletAppUrl;
-        } else {
-          window.location.href = trustWalletDeepLink;
-        }
-
+        window.location.href = trustWalletAppUrl;
         window.setTimeout(() => {
           window.location.href = tronLinkAppUrl;
           window.setTimeout(() => {
-            setError(`No se pudo abrir la app. ${fallbackMessage}`);
-          }, 1200);
+            window.location.href = trustWalletBrowserUrl;
+            window.setTimeout(() => {
+              setError("No se pudo abrir la wallet TRON instalada. Instala Trust Wallet o TronLink y vuelve a abrir esta pantalla para firmar el nonce.");
+            }, 1200);
+          }, 1000);
         }, 1200);
 
-        setSuccess("Se intentó abrir tu wallet. Si la app se abrió, acepta la firma del nonce dentro de la wallet y vuelve a esta pantalla.");
+        setSuccess("Abre tu Trust Wallet o TronLink. Dentro de la app te aparecerá la solicitud para firmar el nonce.");
         setShowOpenInApp(false);
         return;
       }
 
       const metamaskUrl = `https://metamask.app.link/dapp/${window.location.host}${window.location.pathname}`;
       const trustWalletUrl = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(currentUrl)}`;
-
       const primaryUrl = /Android/i.test(window.navigator.userAgent) ? metamaskUrl : trustWalletUrl;
+
       window.location.href = primaryUrl;
-      setSuccess("Se intentó abrir tu wallet. Si la app se abrió, acepta la firma del nonce dentro de la wallet.");
+      setSuccess("Se intentó abrir tu wallet. Dentro de la app te aparecerá la solicitud para firmar el nonce.");
       setShowOpenInApp(false);
       window.setTimeout(() => {
-        setError(`No se pudo abrir la app. ${fallbackMessage}`);
+        setError("No se pudo abrir la app. Instala MetaMask, Trust Wallet, OKX o Coinbase Wallet, o usa WalletConnect desde la app.");
       }, 1800);
     } catch {
-      setError(`No se pudo abrir la app. ${fallbackMessage}`);
+      const fallbackText = walletNetwork === 'tron'
+        ? "Instala Trust Wallet o TronLink y vuelve a abrir esta pantalla para firmar el nonce."
+        : "Instala MetaMask, Trust Wallet, OKX o Coinbase Wallet, o usa WalletConnect desde la app.";
+      setError(`No se pudo abrir la app. ${fallbackText}`);
     }
   };
 
