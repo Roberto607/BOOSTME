@@ -55,20 +55,17 @@ const VerifyWallet = () => {
   }, [location.state]);
 
   useEffect(() => {
-    if (!walletAddress || !nonce) return;
-    const hasWallet = walletNetwork === 'tron'
-      ? !!(window.tronWeb || window.tronLink?.tronWeb)
-      : !!(getEvmWalletProvider() || (window.web3 && window.web3.currentProvider));
-
-    if (isMobileDevice() && !hasWallet) {
-      setShowOpenInApp(true);
+    if (!walletAddress || !nonce) {
+      setShowOpenInApp(false);
+      return;
     }
-  }, [walletAddress, nonce, walletNetwork]);
 
-  useEffect(() => {
-    if (isMobileDevice() && walletAddress && nonce) {
+    if (isMobileDevice()) {
       setShowOpenInApp(true);
+      return;
     }
+
+    setShowOpenInApp(false);
   }, [walletAddress, nonce]);
 
   const handleOpenInWalletApp = () => {
@@ -120,7 +117,7 @@ const VerifyWallet = () => {
         const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
         if (!tronWeb || !tronWeb.ready) {
           setShowOpenInApp(isMobileDevice());
-          throw new Error("Tu wallet TRON no está disponible en este navegador. Abre esta página desde la app de tu wallet usando \"Abrir en la app\".");
+          throw new Error("Tu wallet TRON no está disponible en este navegador. Abre esta página desde la app de tu wallet y usa \"Abrir en la app\".");
         }
         const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
         if (!currentAddress || currentAddress !== walletAddress) {
@@ -135,7 +132,7 @@ const VerifyWallet = () => {
         const provider = getEvmWalletProvider() || (window.web3 && window.web3.currentProvider);
         if (!provider) {
           setShowOpenInApp(isMobileDevice());
-          throw new Error("Tu wallet no está disponible en este navegador. Abre esta página desde la app de tu wallet usando \"Abrir en la app\" y vuelve a verificar.");
+          throw new Error("Tu wallet no está disponible en este navegador. Abre esta página desde la app de tu wallet y usa \"Abrir en la app\".");
         }
 
         const web3 = new Web3(provider);
