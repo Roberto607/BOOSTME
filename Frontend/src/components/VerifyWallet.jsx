@@ -77,23 +77,19 @@ const VerifyWallet = () => {
 
     try {
       if (walletNetwork === 'tron') {
-        const trustWalletUrl = `https://link.trustwallet.com/open_url?coin_id=195&url=${encodeURIComponent(currentUrl)}`;
-        const trc20Url = `trust://wc?url=${encodeURIComponent(currentUrl)}`;
-        const tronLinkUrl = `https://link.tronlink.org/open?target=${encodeURIComponent(currentUrl)}`;
-        const tronDirectUrl = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
+        const trustWalletAppUrl = `trust://browser?url=${encodeURIComponent(currentUrl)}`;
+        const tronLinkAppUrl = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
 
-        const primaryUrl = /Android/i.test(window.navigator.userAgent) ? trc20Url : trustWalletUrl;
-        window.location.href = primaryUrl;
-
+        window.location.href = trustWalletAppUrl;
         window.setTimeout(() => {
-          window.location.href = tronLinkUrl;
+          window.location.href = tronLinkAppUrl;
           window.setTimeout(() => {
-            window.location.href = tronDirectUrl;
-            window.setTimeout(() => {
-              setError(`No se pudo abrir la app. ${fallbackMessage}`);
-            }, 1200);
-          }, 1000);
+            setError(`No se pudo abrir la app. ${fallbackMessage}`);
+          }, 1200);
         }, 1200);
+
+        setSuccess("Se intentó abrir tu wallet. Si la app se abrió, acepta la firma del nonce dentro de la wallet y vuelve a esta pantalla.");
+        setShowOpenInApp(false);
         return;
       }
 
@@ -102,6 +98,8 @@ const VerifyWallet = () => {
 
       const primaryUrl = /Android/i.test(window.navigator.userAgent) ? metamaskUrl : trustWalletUrl;
       window.location.href = primaryUrl;
+      setSuccess("Se intentó abrir tu wallet. Si la app se abrió, acepta la firma del nonce dentro de la wallet.");
+      setShowOpenInApp(false);
       window.setTimeout(() => {
         setError(`No se pudo abrir la app. ${fallbackMessage}`);
       }, 1800);
