@@ -77,10 +77,17 @@ const VerifyWallet = () => {
 
     try {
       if (walletNetwork === 'tron') {
+        const trustWalletInstalled = /Android/i.test(window.navigator.userAgent) ? document.location.protocol === 'https:' : true;
         const trustWalletAppUrl = `trust://browser?url=${encodeURIComponent(currentUrl)}`;
         const tronLinkAppUrl = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
+        const trustWalletDeepLink = `https://link.trustwallet.com/open_url?coin_id=195&url=${encodeURIComponent(currentUrl)}`;
 
-        window.location.href = trustWalletAppUrl;
+        if (trustWalletInstalled) {
+          window.location.href = trustWalletAppUrl;
+        } else {
+          window.location.href = trustWalletDeepLink;
+        }
+
         window.setTimeout(() => {
           window.location.href = tronLinkAppUrl;
           window.setTimeout(() => {
