@@ -66,20 +66,27 @@ const VerifyWallet = () => {
   const handleOpenInWalletApp = () => {
     const currentUrl = window.location.href;
     const fallbackMessage = walletNetwork === 'tron'
-      ? "Instala TronLink o usa WalletConnect desde la app de tu wallet."
+      ? "Instala Trust Wallet o TronLink, o usa WalletConnect desde la app de tu wallet."
       : "Instala MetaMask, Trust Wallet, OKX o Coinbase Wallet, o usa WalletConnect desde la app.";
 
     try {
       if (walletNetwork === 'tron') {
+        const trustWalletUrl = `https://link.trustwallet.com/open_url?coin_id=195&url=${encodeURIComponent(currentUrl)}`;
+        const trc20Url = `trust://wc?url=${encodeURIComponent(currentUrl)}`;
+        const tronLinkUrl = `https://link.tronlink.org/open?target=${encodeURIComponent(currentUrl)}`;
         const tronDirectUrl = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
-        const tronBrowserUrl = `https://link.tronlink.org/open?target=${encodeURIComponent(currentUrl)}`;
 
-        window.location.href = tronDirectUrl;
+        const primaryUrl = /Android/i.test(window.navigator.userAgent) ? trc20Url : trustWalletUrl;
+        window.location.href = primaryUrl;
+
         window.setTimeout(() => {
-          window.location.href = tronBrowserUrl;
+          window.location.href = tronLinkUrl;
           window.setTimeout(() => {
-            setError(`No se pudo abrir la app. ${fallbackMessage}`);
-          }, 1200);
+            window.location.href = tronDirectUrl;
+            window.setTimeout(() => {
+              setError(`No se pudo abrir la app. ${fallbackMessage}`);
+            }, 1200);
+          }, 1000);
         }, 1200);
         return;
       }
@@ -202,14 +209,14 @@ const VerifyWallet = () => {
 
         {showOpenInApp && (
           <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 px-4 py-3 rounded mb-4">
-            <p className="font-medium mb-2">No se detectó tu wallet en este navegador.</p>
-            <p className="mb-3">Abre esta página desde la app de tu wallet usando la opción “Abrir en la app”. Si la app no se abre, instala la wallet compatible o usa WalletConnect desde la app.</p>
+            <p className="font-medium mb-2">Tu wallet TRON no está disponible desde este navegador.</p>
+            <p className="mb-3">Pulsa “Abrir en la app” para abrir tu Trust Wallet o TronLink instalada en el móvil y confirmar la dirección que registraste. Si no tienes ninguna de las dos apps, descárgala primero o usa WalletConnect desde la app.</p>
             <button
               type="button"
               onClick={handleOpenInWalletApp}
               className="w-full py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600 transition"
             >
-              Abrir en la app
+              Abrir en la app para verificar la dirección
             </button>
           </div>
         )}
