@@ -60,11 +60,6 @@ const VerifyWallet = () => {
       return;
     }
 
-    if (isMobileDevice()) {
-      setShowOpenInApp(true);
-      return;
-    }
-
     setShowOpenInApp(false);
   }, [walletAddress, nonce]);
 
@@ -100,11 +95,16 @@ const VerifyWallet = () => {
   const handleSignWallet = async () => {
     setError("");
     setSuccess("");
-    setShowOpenInApp(false);
 
     if (!walletAddress || !nonce) {
       setError("Falta la dirección de wallet o el nonce de verificación.");
       return;
+    }
+
+    if (isMobileDevice()) {
+      setShowOpenInApp(true);
+    } else {
+      setShowOpenInApp(false);
     }
 
     const message = `BoostMe verification nonce: ${nonce}`;
@@ -116,7 +116,7 @@ const VerifyWallet = () => {
       if (walletNetwork === 'tron') {
         const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
         if (!tronWeb || !tronWeb.ready) {
-          setShowOpenInApp(isMobileDevice());
+          setShowOpenInApp(true);
           throw new Error("Tu wallet TRON no está disponible en este navegador. Abre esta página desde la app de tu wallet y usa \"Abrir en la app\".");
         }
         const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
@@ -131,7 +131,7 @@ const VerifyWallet = () => {
       } else {
         const provider = getEvmWalletProvider() || (window.web3 && window.web3.currentProvider);
         if (!provider) {
-          setShowOpenInApp(isMobileDevice());
+          setShowOpenInApp(true);
           throw new Error("Tu wallet no está disponible en este navegador. Abre esta página desde la app de tu wallet y usa \"Abrir en la app\".");
         }
 
