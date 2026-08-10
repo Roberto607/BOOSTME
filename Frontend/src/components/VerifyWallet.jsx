@@ -83,12 +83,14 @@ const VerifyWallet = () => {
           window.setTimeout(() => {
             window.location.href = trustWalletBrowserUrl;
             window.setTimeout(() => {
-              setError("No se pudo abrir la wallet TRON instalada. Instala Trust Wallet o TronLink y vuelve a abrir esta pantalla para firmar el nonce.");
-            }, 1200);
-          }, 1000);
+              setError("No se pudo abrir Trust Wallet o TronLink.");
+              setSuccess("");
+            }, 1500);
+          }, 1200);
         }, 1200);
 
-        setSuccess("Abre tu Trust Wallet o TronLink. Dentro de la app te aparecerá la solicitud para firmar el nonce.");
+        setSuccess("Abre Trust Wallet o TronLink y firma.");
+        setError("");
         setShowOpenInApp(false);
         return;
       }
@@ -98,16 +100,19 @@ const VerifyWallet = () => {
       const primaryUrl = /Android/i.test(window.navigator.userAgent) ? metamaskUrl : trustWalletUrl;
 
       window.location.href = primaryUrl;
-      setSuccess("Se intentó abrir tu wallet. Dentro de la app te aparecerá la solicitud para firmar el nonce.");
+      setSuccess("Abre tu wallet y firma.");
+      setError("");
       setShowOpenInApp(false);
       window.setTimeout(() => {
-        setError("No se pudo abrir la app. Instala MetaMask, Trust Wallet, OKX o Coinbase Wallet, o usa WalletConnect desde la app.");
+        setError("No se pudo abrir la wallet.");
+        setSuccess("");
       }, 1800);
     } catch {
       const fallbackText = walletNetwork === 'tron'
-        ? "Instala Trust Wallet o TronLink y vuelve a abrir esta pantalla para firmar el nonce."
-        : "Instala MetaMask, Trust Wallet, OKX o Coinbase Wallet, o usa WalletConnect desde la app.";
+        ? "Instala Trust Wallet o TronLink."
+        : "Instala una wallet compatible.";
       setError(`No se pudo abrir la app. ${fallbackText}`);
+      setSuccess("");
     }
   };
 
@@ -216,14 +221,13 @@ const VerifyWallet = () => {
 
         {showOpenInApp && (
           <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 px-4 py-3 rounded mb-4">
-            <p className="font-medium mb-2">Tu wallet TRON no está disponible desde este navegador.</p>
-            <p className="mb-3">Primero abre tu Trust Wallet o TronLink desde el móvil. Dentro de la app te aparecerá el mensaje para firmar el nonce de verificación. Luego regresa a esta pantalla y pulsa “Firmar nonce y verificar wallet”. Si no tienes ninguna app instalada, descárgala primero o usa WalletConnect desde la app.</p>
+            <p className="font-medium">Abre Trust Wallet o TronLink y firma.</p>
             <button
               type="button"
               onClick={handleOpenInWalletApp}
-              className="w-full py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600 transition"
+              className="w-full py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600 transition mt-3"
             >
-              Abrir en la app para verificar la dirección
+              Abrir en la app
             </button>
           </div>
         )}

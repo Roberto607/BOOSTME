@@ -342,7 +342,7 @@ const RegisterForm = () => {
 
                 {walletNetwork === 'tron' && (
                     <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                        Para TRON usa una dirección de Trust Wallet o TronLink. MetaMask no aplica para esta red.
+                        Para TRON la dirección debe venir de Trust Wallet o TronLink.
                     </div>
                 )}
 
