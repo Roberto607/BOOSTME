@@ -210,7 +210,7 @@ const VerifyWallet = () => {
         {showOpenInApp && (
           <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 px-4 py-3 rounded mb-4">
             <p className="font-medium mb-2">Tu wallet TRON no está disponible desde este navegador.</p>
-            <p className="mb-3">Pulsa “Abrir en la app” para abrir tu Trust Wallet o TronLink instalada en el móvil y confirmar la dirección que registraste. Si no tienes ninguna de las dos apps, descárgala primero o usa WalletConnect desde la app.</p>
+            <p className="mb-3">Primero abre tu Trust Wallet o TronLink desde el móvil. Dentro de la app te aparecerá el mensaje para firmar el nonce de verificación. Luego regresa a esta pantalla y pulsa “Firmar nonce y verificar wallet”. Si no tienes ninguna app instalada, descárgala primero o usa WalletConnect desde la app.</p>
             <button
               type="button"
               onClick={handleOpenInWalletApp}
