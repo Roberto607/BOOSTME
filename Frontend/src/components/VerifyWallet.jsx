@@ -71,11 +71,16 @@ const VerifyWallet = () => {
 
     try {
       if (walletNetwork === 'tron') {
-        const tronLinkUrl = `https://link.tronlink.org/open?target=${encodeURIComponent(currentUrl)}`;
-        window.location.href = tronLinkUrl;
+        const tronDirectUrl = `tronlink://open?target=${encodeURIComponent(currentUrl)}`;
+        const tronBrowserUrl = `https://link.tronlink.org/open?target=${encodeURIComponent(currentUrl)}`;
+
+        window.location.href = tronDirectUrl;
         window.setTimeout(() => {
-          setError(`No se pudo abrir la app. ${fallbackMessage}`);
-        }, 1800);
+          window.location.href = tronBrowserUrl;
+          window.setTimeout(() => {
+            setError(`No se pudo abrir la app. ${fallbackMessage}`);
+          }, 1200);
+        }, 1200);
         return;
       }
 
