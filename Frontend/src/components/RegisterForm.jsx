@@ -35,15 +35,19 @@ const RegisterForm = () => {
         return providers.find(Boolean) || null;
     };
 
-    const ensureWalletIsConnected = async (address, network) => {
+    const validateConnectedWalletIfAvailable = async (address, network) => {
         if (network === 'tron') {
             const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
             if (!tronWeb || !tronWeb.ready) {
-                throw new Error("Para registrarte debes abrir esta página desde la app de tu wallet y usar la opción 'Abrir en la app'.");
+                return; // El usuario puede registrarse y verificar luego desde la app
             }
 
             const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
-            if (!currentAddress || currentAddress.toLowerCase() !== address.toLowerCase()) {
+            if (!currentAddress) {
+                return;
+            }
+
+            if (currentAddress.toLowerCase() !== address.toLowerCase()) {
                 throw new Error("La wallet TRON conectada debe coincidir exactamente con la dirección que estás registrando.");
             }
             return;
@@ -51,11 +55,7 @@ const RegisterForm = () => {
 
         const provider = getEvmWalletProvider() || (window.web3 && window.web3.currentProvider);
         if (!provider) {
-            if (isMobileDevice()) {
-                throw new Error("No se detectó tu wallet en este navegador. Abre esta página desde la app de tu wallet usando 'Abrir en la app' y luego intenta registrar.");
-            }
-
-            throw new Error("Debes tener conectada una wallet EVM compatible antes de registrarte.");
+            return; // El registro queda pendiente; la verificación se hará en la pantalla de wallet
         }
 
         const accounts = await provider.request ? await provider.request({ method: 'eth_requestAccounts' }) : [];
@@ -63,7 +63,7 @@ const RegisterForm = () => {
         const connectedWallet = account || (window.ethereum && window.ethereum.selectedAddress) || (window.trustwallet && window.trustwallet.selectedAddress);
 
         if (!connectedWallet) {
-            throw new Error("Conecta tu wallet antes de continuar con el registro.");
+            return;
         }
 
         if (connectedWallet.toLowerCase() !== address.toLowerCase()) {
@@ -134,9 +134,9 @@ const RegisterForm = () => {
         }
 
         try {
-            await ensureWalletIsConnected(addr, walletNetwork);
+            await validateConnectedWalletIfAvailable(addr, walletNetwork);
         } catch (walletError) {
-            return setError(walletError.message || "Debes conectar tu wallet antes de continuar.");
+            return setError(walletError.message || "La wallet conectada no coincide con la dirección del registro.");
         }
 
         if (password.length < 8) {
