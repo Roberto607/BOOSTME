@@ -53,6 +53,60 @@ const VerifyWallet = () => {
 
   const isMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window.navigator.userAgent);
 
+  // Auto-run TRON diagnostic when requested via URL param ?boostme_debug_tron=1
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const debug = params.get('boostme_debug_tron');
+    if (!debug) return;
+
+    let stopped = false;
+    const runDebug = async () => {
+      const start = Date.now();
+      while (Date.now() - start < 15000 && !stopped) {
+        const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
+        if (tronWeb) {
+          try {
+            const nonceParam = params.get('wallet_verification_nonce') || params.get('nonce') || window.__boostme_nonce || '';
+            const nonce = nonceParam;
+            const message = 'BoostMe verification nonce: ' + nonce;
+            console.log('[BoostMe] AUTO-DEBUG tronWebPresent', !!tronWeb);
+            console.log('[BoostMe] AUTO-DEBUG tronWeb summary', {
+              defaultAddress: tronWeb.defaultAddress,
+              hasToHex: typeof tronWeb.toHex === 'function',
+              keys: Object.keys(tronWeb).slice(0, 20),
+            });
+            console.log('[BoostMe] AUTO-DEBUG defaultAddress', tronWeb.defaultAddress);
+            console.log('[BoostMe] AUTO-DEBUG trx.sign type', typeof tronWeb.trx?.sign);
+            console.log('[BoostMe] AUTO-DEBUG trx.signString type', typeof tronWeb.trx?.signString);
+            console.log('[BoostMe] AUTO-DEBUG toHex type', typeof tronWeb.toHex);
+            console.log('[BoostMe] AUTO-DEBUG try msg:', message);
+
+            try { const r = await tronWeb.trx?.signString?.(message); console.log('[BoostMe] AUTO-DEBUG signString result', r); } catch(e){ console.error('[BoostMe] AUTO-DEBUG signString error', e); }
+            try { const r = await tronWeb.trx?.sign?.(message); console.log('[BoostMe] AUTO-DEBUG sign(raw) result', r); } catch(e){ console.error('[BoostMe] AUTO-DEBUG sign(raw) error', e); }
+            try {
+              const hex = tronWeb.toHex ? tronWeb.toHex(message) : null;
+              console.log('[BoostMe] AUTO-DEBUG toHex', hex);
+              if (hex) {
+                try { const r = await tronWeb.trx.sign(hex.replace(/^0x/,'')); console.log('[BoostMe] AUTO-DEBUG sign(hex no0x) result', r); } catch(e){ console.error('[BoostMe] AUTO-DEBUG sign(hex no0x) error', e); }
+                try { const r = await tronWeb.trx.sign(hex); console.log('[BoostMe] AUTO-DEBUG sign(hex with0x) result', r); } catch(e){ console.error('[BoostMe] AUTO-DEBUG sign(hex with0x) error', e); }
+              }
+            } catch(e){ console.error('[BoostMe] AUTO-DEBUG hex attempt error', e); }
+
+            console.log('[BoostMe] AUTO-DEBUG DONE');
+          } catch (e) {
+            console.error('[BoostMe] AUTO-DEBUG unexpected error', e);
+          }
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 700));
+      }
+      console.warn('[BoostMe] AUTO-DEBUG timeout waiting for tronWeb');
+    };
+
+    runDebug();
+    return () => { stopped = true; };
+  }, []);
+
   const getEvmWalletProvider = () => {
     const providers = [
       window.ethereum,
@@ -429,18 +483,49 @@ const VerifyWallet = () => {
             messageHex = message;
           }
 
-          // Try signing the hex message
+          // Try multiple signing strategies to accommodate different providers
+          const candidates = [];
           try {
-            console.log('[BoostMe] Signing messageHex:', messageHex);
-            signature = await tronWeb.trx.sign(messageHex);
-          } catch (signErr) {
-            console.warn('[BoostMe] Tron trx.sign without params failed, retrying with address:', signErr);
+            candidates.push({ label: 'raw', value: message });
+            candidates.push({ label: 'hex_0x', value: messageHex });
+            const hexNo0x = messageHex && String(messageHex).startsWith('0x') ? String(messageHex).slice(2) : String(messageHex);
+            candidates.push({ label: 'hex_no0x', value: hexNo0x });
+            // bytes as hex (no 0x)
+            let bytesHex = '';
+            for (let i = 0; i < message.length; i++) bytesHex += message.charCodeAt(i).toString(16).padStart(2, '0');
+            candidates.push({ label: 'bytes_hex', value: bytesHex });
+          } catch (cErr) {
+            console.warn('[BoostMe] preparing candidates failed', cErr);
+          }
+
+          let lastError = null;
+          for (const c of candidates) {
+            if (!c || !c.value) continue;
             try {
-              signature = await tronWeb.trx.sign(messageHex, currentAddress);
-            } catch (signErr2) {
-              console.error('[BoostMe] Retry signing with address also failed', signErr2);
-              throw signErr2;
+              console.log('[BoostMe] Trying sign candidate:', c.label, c.value);
+              // try sign without address
+              signature = await tronWeb.trx.sign(c.value);
+              console.log('[BoostMe] Signature succeeded with candidate:', c.label);
+              break;
+            } catch (err1) {
+              console.warn('[BoostMe] sign failed for', c.label, err1);
+              lastError = err1;
+              try {
+                // try with address
+                signature = await tronWeb.trx.sign(c.value, currentAddress);
+                console.log('[BoostMe] Signature succeeded with candidate+address:', c.label);
+                break;
+              } catch (err2) {
+                console.warn('[BoostMe] sign with address failed for', c.label, err2);
+                lastError = err2;
+                continue;
+              }
             }
+          }
+
+          if (!signature) {
+            console.error('[BoostMe] All signing strategies failed', lastError);
+            throw lastError || new Error('Signing failed for all strategies');
           }
         } catch (errSign) {
           console.error('[BoostMe] Signing failed on tronWeb:', errSign);
