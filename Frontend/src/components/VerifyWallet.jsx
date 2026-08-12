@@ -418,7 +418,11 @@ const VerifyWallet = () => {
               // simple fallback: convert string to hex
               let h = '';
               for (let i = 0; i < message.length; i++) h += message.charCodeAt(i).toString(16).padStart(2, '0');
-              messageHex = h;
+              messageHex = '0x' + h;
+            }
+            // ensure hex string has 0x prefix
+            if (messageHex && !String(messageHex).startsWith('0x')) {
+              messageHex = '0x' + messageHex;
             }
           } catch (convErr) {
             console.warn('[BoostMe] toHex conversion failed, using raw message', convErr);
@@ -427,10 +431,16 @@ const VerifyWallet = () => {
 
           // Try signing the hex message
           try {
+            console.log('[BoostMe] Signing messageHex:', messageHex);
             signature = await tronWeb.trx.sign(messageHex);
           } catch (signErr) {
             console.warn('[BoostMe] Tron trx.sign without params failed, retrying with address:', signErr);
-            signature = await tronWeb.trx.sign(messageHex, currentAddress);
+            try {
+              signature = await tronWeb.trx.sign(messageHex, currentAddress);
+            } catch (signErr2) {
+              console.error('[BoostMe] Retry signing with address also failed', signErr2);
+              throw signErr2;
+            }
           }
         } catch (errSign) {
           console.error('[BoostMe] Signing failed on tronWeb:', errSign);
