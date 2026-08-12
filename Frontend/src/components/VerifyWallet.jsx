@@ -117,8 +117,33 @@ const VerifyWallet = () => {
       setShowOpenInApp(false);
       return;
     }
-
     setShowOpenInApp(false);
+
+    // If TRON on mobile, poll for tronWeb readiness so we don't show an error loop
+    if (walletNetwork === 'tron' && isMobileDevice()) {
+      setCheckingTron(true);
+      setTronReady(false);
+      setInstruction('Esperando a que la wallet cargue dentro de la app...');
+      const start = Date.now();
+      const intervalId = setInterval(() => {
+        const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
+        if (tronWeb && (tronWeb.ready || tronWeb.defaultAddress)) {
+          console.log('[BoostMe] tronWeb detected');
+          setTronReady(true);
+          setInstruction('Wallet detectada. Puedes pulsar "Firmar nonce y verificar".');
+          setCheckingTron(false);
+          clearInterval(intervalId);
+          return;
+        }
+        if (Date.now() - start > 15000) {
+          // timeout after 15s
+          setCheckingTron(false);
+          setInstruction('No se detectó la wallet dentro de la app. Abre Trust Wallet/TronLink → Browser y carga esta URL.');
+          clearInterval(intervalId);
+          return;
+        }
+      }, 700);
+    }
   }, [walletAddress, nonce]);
 
   const handleOpenInWalletApp = () => {
@@ -257,6 +282,9 @@ const VerifyWallet = () => {
   };
   const [lastSignature, setLastSignature] = useState(null);
   const [lastResponseText, setLastResponseText] = useState(null);
+  const [tronReady, setTronReady] = useState(false);
+  const [checkingTron, setCheckingTron] = useState(false);
+  const [instruction, setInstruction] = useState('');
 
   const handleSignWallet = async () => {
     setError("");
@@ -291,8 +319,11 @@ const VerifyWallet = () => {
         const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
         console.log("[BoostMe] Tron provider disponible:", !!tronWeb, tronWeb?.ready);
         if (!tronWeb || !tronWeb.ready) {
+          // Do not throw — guide the user instead and avoid showing error in the form.
           setShowOpenInApp(true);
-          throw new Error("Tu wallet TRON no está disponible en este navegador. Abre esta página desde la app de tu wallet y usa \"Abrir en la app\".");
+          setInstruction('Tu wallet TRON no está disponible en este navegador. Abre esta página dentro de Trust Wallet/TronLink (DApp browser) y espera a que cargue.');
+          setLoading(false);
+          return;
         }
         const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
         console.log("[BoostMe] Tron currentAddress:", currentAddress, "walletAddress:", walletAddress);
