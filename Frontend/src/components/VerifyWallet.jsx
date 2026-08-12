@@ -274,13 +274,6 @@ const VerifyWallet = () => {
     }
   };
 
-  const getIntentForDisplay = (packageName = 'com.wallet.crypto.trustapp') => {
-    try {
-      return buildIntentUrl(packageName);
-    } catch (e) {
-      return '';
-    }
-  };
 
   const [showQr, setShowQr] = useState(false);
   const copyUrlToClipboard = async () => {
@@ -457,29 +450,11 @@ const VerifyWallet = () => {
 
               <button
                 type="button"
-                onClick={() => handleOpenIntent('com.wallet.crypto.trustapp')}
+                onClick={handleOpenInWalletApp}
                 className="w-full py-2 bg-amber-400 text-white font-semibold rounded-lg hover:bg-amber-500 transition"
               >
-                Abrir con Chrome (Intent)
+                Abrir Wallet instalada
               </button>
-              
-              <div className="mt-2">
-                <label className="block text-xs text-gray-700 mb-1">Intent URI (pega en Chrome si es necesario)</label>
-                <div className="flex">
-                  <input
-                    readOnly
-                    value={getIntentForDisplay()}
-                    className="flex-1 p-2 text-xs border border-gray-200 rounded-l bg-white"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => navigator.clipboard.writeText(getIntentForDisplay()).then(()=>setSuccess('Intent copiado al portapapeles')).catch(()=>setError('No se pudo copiar el intent'))}
-                    className="py-2 px-3 bg-white border border-gray-200 text-gray-700 rounded-r hover:bg-gray-50 text-xs"
-                  >
-                    Copiar Intent
-                  </button>
-                </div>
-              </div>
 
               <div className="flex space-x-2">
                 <button
