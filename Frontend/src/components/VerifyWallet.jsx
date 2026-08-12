@@ -70,6 +70,11 @@ const VerifyWallet = () => {
 
   useEffect(() => {
     const stateData = location.state || {};
+    // Also support query params so the DApp browser keeps verification data
+    const params = new URLSearchParams(window.location.search);
+    const q_wallet_address = params.get('wallet_address');
+    const q_wallet_verification_nonce = params.get('wallet_verification_nonce');
+    const q_wallet_network = params.get('wallet_network');
     const storedSession = sessionStorage.getItem("walletVerificationData");
     const storedLocal = localStorage.getItem("walletVerificationData");
     const savedData = storedSession ? JSON.parse(storedSession) : (storedLocal ? JSON.parse(storedLocal) : null);
@@ -80,6 +85,18 @@ const VerifyWallet = () => {
       setNonce(stateData.wallet_verification_nonce);
       sessionStorage.setItem("walletVerificationData", JSON.stringify(stateData));
       localStorage.setItem("walletVerificationData", JSON.stringify(stateData));
+      if (isMobileDevice()) setShowOpenInApp(true);
+      return;
+    }
+
+    // If URL contains verification data, prefer it and persist
+    if (q_wallet_address && q_wallet_verification_nonce) {
+      const urlData = { wallet_address: q_wallet_address, wallet_verification_nonce: q_wallet_verification_nonce, wallet_network: q_wallet_network || 'polygon' };
+      setWalletAddress(urlData.wallet_address);
+      setWalletNetwork(urlData.wallet_network || 'polygon');
+      setNonce(urlData.wallet_verification_nonce);
+      sessionStorage.setItem("walletVerificationData", JSON.stringify(urlData));
+      localStorage.setItem("walletVerificationData", JSON.stringify(urlData));
       if (isMobileDevice()) setShowOpenInApp(true);
       return;
     }
@@ -183,8 +200,25 @@ const VerifyWallet = () => {
   };
 
   // Intent URL builder for Chrome on Android
+  const getCurrentUrlWithParams = () => {
+    const url = new URL(window.location.href);
+    // ensure wallet params are present in URL so the DApp browser loads them
+    const stored = sessionStorage.getItem('walletVerificationData') || localStorage.getItem('walletVerificationData');
+    if (stored) {
+      try {
+        const parsed = JSON.parse(stored);
+        if (parsed.wallet_address) url.searchParams.set('wallet_address', parsed.wallet_address);
+        if (parsed.wallet_verification_nonce) url.searchParams.set('wallet_verification_nonce', parsed.wallet_verification_nonce);
+        if (parsed.wallet_network) url.searchParams.set('wallet_network', parsed.wallet_network);
+      } catch (e) {
+        // ignore
+      }
+    }
+    return url.toString();
+  };
+
   const buildIntentUrl = (packageName) => {
-    const currentUrl = window.location.href;
+    const currentUrl = getCurrentUrlWithParams();
     const encoded = encodeURIComponent(currentUrl);
     // browser_fallback_url: open the same URL if app not available
     const fallback = encodeURIComponent(currentUrl);
