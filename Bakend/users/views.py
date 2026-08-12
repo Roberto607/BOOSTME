@@ -122,11 +122,38 @@ def _verify_tron_message_signature(wallet_address: str, nonce: str, signature: s
         raise ImportError('tronpy is required for TRON signature verification')
     try:
         msg = f"BoostMe verification nonce: {nonce}"
-        msg_hash = tron_hash_message(msg)
-        sig = Signature.fromhex(signature) if isinstance(signature, str) else Signature(signature)
-        pub = sig.recover_public_key_from_msg_hash(msg_hash)
-        signer_addr = pub.to_base58check_address()
-        return signer_addr == wallet_address
+        # Normalize signature string
+        sig_hex = signature
+        if isinstance(sig_hex, str) and sig_hex.startswith('0x'):
+            sig_hex = sig_hex[2:]
+
+        # Try recovery with tronpy's hash helper first
+        try:
+            msg_hash = tron_hash_message(msg)
+            sig = Signature.fromhex(sig_hex) if isinstance(sig_hex, str) else Signature(sig_hex)
+            pub = sig.recover_public_key_from_msg_hash(msg_hash)
+            signer_addr = pub.to_base58check_address()
+            if signer_addr == wallet_address:
+                return True
+        except Exception:
+            # fall through to alternative attempt
+            logger.debug('Primary tron message recovery failed; trying alternative hash', exc_info=True)
+
+        # Alternative: some providers use plain sha256 of the message bytes
+        try:
+            import hashlib
+            msg_bytes = msg.encode('utf-8')
+            sha_hash = hashlib.sha256(msg_bytes).digest()
+            sig2 = Signature.fromhex(sig_hex) if isinstance(sig_hex, str) else Signature(sig_hex)
+            pub2 = sig2.recover_public_key_from_msg_hash(sha_hash)
+            signer_addr2 = pub2.to_base58check_address()
+            if signer_addr2 == wallet_address:
+                return True
+        except Exception:
+            logger.debug('Alternative sha256 recovery failed', exc_info=True)
+
+        logger.warning('TRON message signature did not match expected address. provided=%s expected=%s', signature, wallet_address)
+        return False
     except Exception as exc:
         logger.exception('Error verifying TRON message signature: %s', exc)
         return False
