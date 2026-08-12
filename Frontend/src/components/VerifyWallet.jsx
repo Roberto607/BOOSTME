@@ -254,18 +254,31 @@ const VerifyWallet = () => {
     try {
       const intentUrl = buildIntentUrl(packageName);
       console.log('[BoostMe] Intent URL:', intentUrl);
-      // use an anchor click to let mobile Chrome handle the intent
-      const a = document.createElement('a');
-      a.href = intentUrl;
-      a.style.display = 'none';
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      // First try assigning location (works in many Chrome versions)
+      try {
+        window.location.href = intentUrl;
+      } catch (e) {
+        // fallback to anchor click
+        const a = document.createElement('a');
+        a.href = intentUrl;
+        a.style.display = 'none';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+      }
       setSuccess('Intent enviado. Si la app está instalada, debería abrirla.');
       setError('');
     } catch (e) {
       console.error('[BoostMe] Error opening intent:', e);
       setError('No se pudo intentar abrir la app con Intent.');
+    }
+  };
+
+  const getIntentForDisplay = (packageName = 'com.wallet.crypto.trustapp') => {
+    try {
+      return buildIntentUrl(packageName);
+    } catch (e) {
+      return '';
     }
   };
 
@@ -449,6 +462,24 @@ const VerifyWallet = () => {
               >
                 Abrir con Chrome (Intent)
               </button>
+              
+              <div className="mt-2">
+                <label className="block text-xs text-gray-700 mb-1">Intent URI (pega en Chrome si es necesario)</label>
+                <div className="flex">
+                  <input
+                    readOnly
+                    value={getIntentForDisplay()}
+                    className="flex-1 p-2 text-xs border border-gray-200 rounded-l bg-white"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => navigator.clipboard.writeText(getIntentForDisplay()).then(()=>setSuccess('Intent copiado al portapapeles')).catch(()=>setError('No se pudo copiar el intent'))}
+                    className="py-2 px-3 bg-white border border-gray-200 text-gray-700 rounded-r hover:bg-gray-50 text-xs"
+                  >
+                    Copiar Intent
+                  </button>
+                </div>
+              </div>
 
               <div className="flex space-x-2">
                 <button
