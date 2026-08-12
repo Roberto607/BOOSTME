@@ -80,6 +80,7 @@ const VerifyWallet = () => {
       setNonce(stateData.wallet_verification_nonce);
       sessionStorage.setItem("walletVerificationData", JSON.stringify(stateData));
       localStorage.setItem("walletVerificationData", JSON.stringify(stateData));
+      if (isMobileDevice()) setShowOpenInApp(true);
       return;
     }
 
@@ -87,6 +88,7 @@ const VerifyWallet = () => {
       setWalletAddress(savedData.wallet_address);
       setWalletNetwork(savedData.wallet_network || 'polygon');
       setNonce(savedData.wallet_verification_nonce);
+      if (isMobileDevice()) setShowOpenInApp(true);
       return;
     }
 
