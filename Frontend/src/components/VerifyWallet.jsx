@@ -335,6 +335,22 @@ const VerifyWallet = () => {
       isMobile: isMobileDevice(),
     });
 
+    // Helper: wait for a provider to appear for a limited time
+    const waitForProvider = async (timeout = 10000, interval = 700) => {
+      const start = Date.now();
+      while (Date.now() - start < timeout) {
+        if (walletNetwork === 'tron') {
+          const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
+          if (tronWeb && (tronWeb.ready || tronWeb.defaultAddress)) return tronWeb;
+        } else {
+          const provider = getEvmWalletProvider() || (window.web3 && window.web3.currentProvider);
+          if (provider) return provider;
+        }
+        await new Promise((r) => setTimeout(r, interval));
+      }
+      return null;
+    };
+
     if (!walletAddress || !nonce) {
       console.error("[BoostMe] Faltan walletAddress o nonce.");
       setError("Falta la dirección de wallet o el nonce de verificación.");
@@ -345,6 +361,22 @@ const VerifyWallet = () => {
       setShowOpenInApp(true);
     } else {
       setShowOpenInApp(false);
+    }
+
+    // If user is in a wallet DApp browser, wait a bit for provider to appear
+    let provider = null;
+    try {
+      provider = await waitForProvider(12000, 600);
+    } catch (e) {
+      provider = null;
+    }
+
+    if (!provider) {
+      // No provider available: show fallback and instruct user
+      setShowOpenInApp(true);
+      setInstruction('No se detectó la wallet en este navegador. Abre esta página dentro de la app/wallet o usa "Copiar URL".');
+      setLoading(false);
+      return;
     }
 
     const message = `BoostMe verification nonce: ${nonce}`;
