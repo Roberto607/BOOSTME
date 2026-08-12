@@ -130,9 +130,20 @@ const VerifyWallet = () => {
         if (tronWeb && (tronWeb.ready || tronWeb.defaultAddress)) {
           console.log('[BoostMe] tronWeb detected');
           setTronReady(true);
-          setInstruction('Wallet detectada. Puedes pulsar "Firmar nonce y verificar".');
+          setInstruction('Wallet detectada. Procediendo a firmar...');
           setCheckingTron(false);
           clearInterval(intervalId);
+          // auto-trigger signing once when opened inside DApp browser
+          if (!attemptedAutoSign && walletAddress && nonce) {
+            setAttemptedAutoSign(true);
+            setTimeout(() => {
+              try {
+                handleSignWallet();
+              } catch (e) {
+                console.error('[BoostMe] auto sign failed', e);
+              }
+            }, 600);
+          }
           return;
         }
         if (Date.now() - start > 15000) {
