@@ -32,6 +32,25 @@ const VerifyWallet = () => {
     }
   }, []);
 
+  const loadErudaAndOpen = () => {
+    try {
+      if (window.eruda) { window.eruda.show(); return; }
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.async = true;
+      s.onload = () => {
+        try {
+          window.eruda && window.eruda.init();
+          window.eruda && window.eruda.show();
+        } catch (e) { console.error('[BoostMe] eruda open failed', e); }
+      };
+      document.body.appendChild(s);
+    } catch (e) {
+      console.error('[BoostMe] failed to load eruda', e);
+      setError('No se pudo abrir la consola en esta página.');
+    }
+  };
+
   const isMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window.navigator.userAgent);
 
   const getEvmWalletProvider = () => {
@@ -273,6 +292,16 @@ const VerifyWallet = () => {
     <div className="flex items-center justify-center min-h-screen p-5 bg-gray-100">
       <div className="bg-white rounded-2xl shadow-xl p-8 md:p-10 w-full max-w-lg animate-fadeIn">
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Verificar Wallet</h2>
+        <div className="flex justify-between items-center mb-3">
+          <h2 className="text-2xl font-semibold text-gray-800">Verificar Wallet</h2>
+          <button
+            type="button"
+            onClick={loadErudaAndOpen}
+            className="ml-4 py-1 px-3 text-sm bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+          >
+            Abrir consola
+          </button>
+        </div>
 
         {error && (
           <div className="bg-red-100 border-l-4 border-red-600 text-red-700 px-4 py-3 rounded mb-4">
