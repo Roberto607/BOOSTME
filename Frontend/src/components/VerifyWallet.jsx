@@ -374,6 +374,7 @@ const VerifyWallet = () => {
   };
   const [lastSignature, setLastSignature] = useState(null);
   const [lastResponseText, setLastResponseText] = useState(null);
+  const [signRequested, setSignRequested] = useState(false);
   const [tronReady, setTronReady] = useState(false);
   const [checkingTron, setCheckingTron] = useState(false);
   const [instruction, setInstruction] = useState('');
@@ -382,6 +383,12 @@ const VerifyWallet = () => {
   const handleSignWallet = async () => {
     setError("");
     setSuccess("");
+
+    if (signRequested) {
+      console.log('[BoostMe] Firma ya en progreso, ignorando petición duplicada');
+      setError('Firma ya en progreso. Espera un momento.');
+      return;
+    }
 
     console.log("[BoostMe] Iniciando firma de wallet:", {
       walletNetwork,
@@ -438,6 +445,7 @@ const VerifyWallet = () => {
 
     try {
       setLoading(true);
+      setSignRequested(true);
       let signature;
 
       if (walletNetwork === 'tron') {
@@ -575,7 +583,11 @@ const VerifyWallet = () => {
 
               if (signedTx) {
                 console.log('[BoostMe] Transacción firmada (fallback):', signedTx);
-                setLastSignature(JSON.stringify(signedTx));
+                try {
+                  setLastSignature(typeof signedTx === 'string' ? signedTx : JSON.stringify(signedTx));
+                } catch (e) {
+                  setLastSignature(String(signedTx));
+                }
 
                 // Send signed transaction object to backend as fallback verification
                 const resp = await fetch(`${API_BASE_URL}/verify-wallet/`, {
@@ -646,30 +658,64 @@ const VerifyWallet = () => {
       }
 
       console.log("[BoostMe] Firma generada correctamente:", signature);
-      setLastSignature(signature);
 
-      const response = await fetch(`${API_BASE_URL}/verify-wallet/`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ wallet_address: walletAddress, wallet_network: walletNetwork, nonce, signature }),
-        credentials: "include",
-      });
+      // Normalize signature / signed_tx for TRON providers
+      const isUint8 = (v) => (typeof Uint8Array !== 'undefined') && (v instanceof Uint8Array || (v && v.buffer && v.buffer instanceof ArrayBuffer));
+      const toHex = (buf) => {
+        try {
+          if (typeof buf === 'string') return buf;
+          if (isUint8(buf)) {
+            return '0x' + Array.from(buf).map((b) => b.toString(16).padStart(2, '0')).join('');
+          }
+          if (buf && typeof buf === 'object' && buf.signature) return buf.signature;
+          return JSON.stringify(buf);
+        } catch (e) { return String(buf); }
+      };
 
+      try {
+        if (walletNetwork === 'tron' && (typeof signature === 'object' || isUint8(signature) || (typeof signature === 'string' && /^0x?[0-9a-fA-F]{64,}$/.test(String(signature).replace(/^0x/,''))))) {
+          // Signed transaction / raw signature: send as signed_tx
+          try { setLastSignature(typeof signature === 'string' ? signature : toHex(signature)); } catch(e){ setLastSignature(String(signature)); }
+          const response = await fetch(`${API_BASE_URL}/verify-wallet/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ wallet_address: walletAddress, wallet_network: walletNetwork, nonce, signed_tx: signature }),
+            credentials: "include",
+          });
+
+          var responseForParsing = response;
+        } else {
+          try { setLastSignature(signature); } catch(e){ setLastSignature(String(signature)); }
+          const response = await fetch(`${API_BASE_URL}/verify-wallet/`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ wallet_address: walletAddress, wallet_network: walletNetwork, nonce, signature }),
+            credentials: "include",
+          });
+
+          var responseForParsing = response;
+        }
+      } catch (fetchErr) {
+        console.error('[BoostMe] Error enviando firma al backend:', fetchErr);
+        setError('Error comunicándose con el servidor. Inténtalo de nuevo.');
+        setLoading(false);
+        return;
+      }
       let data = null;
       try {
-        data = await response.json();
+        data = await responseForParsing.json();
       } catch (e) {
-        // fallback to text if not json
-        const text = await response.text();
+        const text = await responseForParsing.text();
         setLastResponseText(text);
         console.warn('[BoostMe] Backend response not JSON:', text);
       }
 
-      console.log("[BoostMe] Respuesta del backend:", response.status, data || lastResponseText);
-      if (!response.ok) {
+      console.log("[BoostMe] Respuesta del backend:", responseForParsing.status, data || lastResponseText);
+      if (!responseForParsing.ok) {
         const errMsg = (data && (data.error || data.detail)) || lastResponseText || 'Error al verificar la wallet.';
         setError(errMsg);
         setLoading(false);
+        setSignRequested(false);
         return;
       }
 
@@ -684,6 +730,7 @@ const VerifyWallet = () => {
       setError(err?.message || 'Error al firmar el nonce.');
     } finally {
       setLoading(false);
+      setSignRequested(false);
     }
   };
 
