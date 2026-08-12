@@ -419,11 +419,7 @@ const VerifyWallet = () => {
       return;
     }
 
-    if (isMobileDevice()) {
-      setShowOpenInApp(true);
-    } else {
-      setShowOpenInApp(false);
-    }
+    // Do not show the "open in app" fallback immediately; only show it when no provider is present
 
     // If user is in a wallet DApp browser, wait a bit for provider to appear
     let provider = null;
@@ -491,66 +487,49 @@ const VerifyWallet = () => {
             messageHex = message;
           }
 
-          // Build ordered attempts to try provider-specific APIs and fallbacks
-          const hexNo0x = messageHex && String(messageHex).startsWith('0x') ? String(messageHex).slice(2) : String(messageHex);
-          const attempts = [
-            { label: 'signString', fn: async () => (typeof tronWeb.trx?.signString === 'function' ? await tronWeb.trx.signString(message) : null) },
-            { label: 'sign Uint8Array', fn: async () => { const bytes = new Uint8Array(message.split('').map((c) => c.charCodeAt(0))); return await tronWeb.trx.sign(bytes); } },
-            { label: 'sign object {message}', fn: async () => await tronWeb.trx.sign({ message: hexNo0x }) },
-            { label: 'raw', fn: async () => await tronWeb.trx.sign(message) },
-            { label: 'hex_no0x', fn: async () => await tronWeb.trx.sign(hexNo0x) },
-            { label: 'hex_with0x', fn: async () => await tronWeb.trx.sign(messageHex) },
-            { label: 'raw+address', fn: async () => await tronWeb.trx.sign(message, currentAddress) },
-            { label: 'hex_no0x+address', fn: async () => await tronWeb.trx.sign(hexNo0x, currentAddress) },
-          ];
-
-          let lastError = null;
-          for (const a of attempts) {
-            try {
-              console.log('[BoostMe] Trying attempt:', a.label);
-              const r = await a.fn();
-              if (r) {
-                signature = r;
-                console.log('[BoostMe] Signature succeeded with attempt:', a.label);
-                break;
+            // Choose a single best signing method to avoid multiple provider modals.
+            const hexNo0x = messageHex && String(messageHex).startsWith('0x') ? String(messageHex).slice(2) : String(messageHex);
+            const trySingleSign = async () => {
+              // 1) prefer signString if available (less likely to open modal repeatedly)
+              if (typeof tronWeb.trx?.signString === 'function') {
+                console.log('[BoostMe] Using tronWeb.trx.signString');
+                return await tronWeb.trx.signString(message);
               }
-            } catch (eAttempt) {
-              console.warn('[BoostMe] attempt failed', a.label, eAttempt);
-              lastError = eAttempt;
-            }
-          }
 
-          if (!signature) {
-            console.error('[BoostMe] All signing strategies failed', lastError);
+              // 2) try provider.request with tron_signMessage (many wallets implement this RPC style)
+              try {
+                if (window.tronLink && typeof window.tronLink.request === 'function') {
+                  console.log('[BoostMe] Using window.tronLink.request tron_signMessage');
+                  return await window.tronLink.request({ method: 'tron_signMessage', params: [hexNo0x] });
+                }
+                if (window.tronWeb && typeof window.tronWeb.request === 'function') {
+                  console.log('[BoostMe] Using window.tronWeb.request tron_signMessage');
+                  return await window.tronWeb.request({ method: 'tron_signMessage', params: [hexNo0x] });
+                }
+              } catch (reqErr) {
+                console.warn('[BoostMe] provider.request tron_signMessage failed', reqErr);
+              }
 
-            // Provider RPC-style fallbacks: some wallets expose a request() method
-            try {
-              const hexNo0x = messageHex && String(messageHex).startsWith('0x') ? String(messageHex).slice(2) : String(messageHex);
-              const requestAttempts = [
-                { label: 'tronLink.request tron_signMessage', fn: async () => window.tronLink && window.tronLink.request ? await window.tronLink.request({ method: 'tron_signMessage', params: [hexNo0x] }) : null },
-                { label: 'tronLink.request tron_sign', fn: async () => window.tronLink && window.tronLink.request ? await window.tronLink.request({ method: 'tron_sign', params: [hexNo0x] }) : null },
-                { label: 'tronWeb.request tron_signMessage', fn: async () => window.tronWeb && window.tronWeb.request ? await window.tronWeb.request({ method: 'tron_signMessage', params: [hexNo0x] }) : null },
-                { label: 'tronWeb.request sign', fn: async () => window.tronWeb && window.tronWeb.request ? await window.tronWeb.request({ method: 'sign', params: [hexNo0x] }) : null },
-              ];
-
-              for (const ra of requestAttempts) {
+              // 3) last resort: single call to tronWeb.trx.sign with hex (this will open the wallet modal once)
+              if (typeof tronWeb.trx?.sign === 'function') {
                 try {
-                  console.log('[BoostMe] Trying provider request attempt:', ra.label);
-                  const r = await ra.fn();
-                  console.log('[BoostMe] provider request result', ra.label, r);
-                  if (r) { signature = r; break; }
-                } catch (eReq) {
-                  console.warn('[BoostMe] provider request attempt failed', ra.label, eReq);
+                  console.log('[BoostMe] Using tronWeb.trx.sign with hexNo0x');
+                  return await tronWeb.trx.sign(hexNo0x);
+                } catch (eSignRaw) {
+                  console.warn('[BoostMe] tronWeb.trx.sign(hex) failed', eSignRaw);
                 }
               }
-            } catch (reqErr) {
-              console.warn('[BoostMe] provider request fallbacks failed', reqErr);
-            }
 
-            if (!signature) {
-              throw lastError || new Error('Signing failed for all strategies');
+              return null;
+            };
+
+            // Hide open-in-app UI while attempting the sign to avoid ugly fallback UI during modal
+            setShowOpenInApp(false);
+            const singleResult = await trySingleSign();
+            if (singleResult) {
+              signature = singleResult;
+              console.log('[BoostMe] Signature succeeded with single attempt');
             }
-          }
         } catch (errSign) {
           console.error('[BoostMe] Signing failed on tronWeb:', errSign);
           setLastResponseText(errSign?.stack || JSON.stringify(errSign));
@@ -740,13 +719,15 @@ const VerifyWallet = () => {
         <h2 className="text-2xl font-semibold text-gray-800 mb-6 text-center">Verificar Wallet</h2>
         <div className="flex justify-between items-center mb-3">
           <h2 className="text-2xl font-semibold text-gray-800">Verificar Wallet</h2>
-          <button
-            type="button"
-            onClick={loadErudaAndOpen}
-            className="ml-4 py-1 px-3 text-sm bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
-          >
-            Abrir consola
-          </button>
+          {!signRequested && (
+            <button
+              type="button"
+              onClick={loadErudaAndOpen}
+              className="ml-4 py-1 px-3 text-sm bg-gray-200 text-gray-800 rounded hover:bg-gray-300"
+            >
+              Abrir consola
+            </button>
+          )}
         </div>
 
         {error && (
@@ -755,7 +736,7 @@ const VerifyWallet = () => {
           </div>
         )}
 
-        {showOpenInApp && (
+        {showOpenInApp && !signRequested && (
           <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 px-4 py-3 rounded mb-4">
             <p className="font-medium">Abre Trust Wallet o TronLink y firma.</p>
             <div className="grid grid-cols-1 gap-2 mt-3">
@@ -812,7 +793,7 @@ const VerifyWallet = () => {
           </div>
         )}
 
-        {(lastSignature || lastResponseText) && (
+        {(!signRequested && (lastSignature || lastResponseText)) && (
           <div className="bg-gray-50 border-l-4 border-gray-300 text-gray-800 px-4 py-3 rounded mb-4">
             <p className="font-medium">Debug: firma / respuesta cruda</p>
             {lastSignature && (
