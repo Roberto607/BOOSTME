@@ -658,15 +658,26 @@ class VerifyWalletSignatureView(APIView):
     permission_classes = [AllowAny]
 
     def post(self, request):
-        wallet_address = (request.data.get('wallet_address') or '').strip().lower()
+        wallet_address_raw = (request.data.get('wallet_address') or '').strip()
         wallet_network = (request.data.get('wallet_network') or 'polygon').strip().lower()
-        nonce = request.data.get('nonce', '').strip()
-        signature = request.data.get('signature', '').strip()
+        nonce = (request.data.get('nonce') or '').strip()
+        signature = request.data.get('signature')
+        signed_tx = request.data.get('signed_tx')
 
-        if not wallet_address or not nonce or not signature:
+        # Basic required fields
+        if not wallet_address_raw or not nonce:
             return Response({
-                'error': 'wallet_address, nonce y signature son requeridos',
+                'error': 'wallet_address y nonce son requeridos',
                 'code': 'missing_fields'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Normalize/validate address according to network
+        try:
+            wallet_address = _normalize_wallet_address(wallet_address_raw, wallet_network)
+        except ValueError as exc:
+            return Response({
+                'error': str(exc),
+                'code': 'invalid_wallet_address'
             }, status=status.HTTP_400_BAD_REQUEST)
 
         try:
@@ -695,21 +706,27 @@ class VerifyWalletSignatureView(APIView):
                 'code': 'nonce_expired'
             }, status=status.HTTP_400_BAD_REQUEST)
 
+        # Network-specific verification
         if wallet_network in ('polygon', 'bsc'):
+            if not signature:
+                return Response({
+                    'error': 'signature es requerido para redes EVM',
+                    'code': 'missing_signature'
+                }, status=status.HTTP_400_BAD_REQUEST)
             if not _verify_wallet_signature(wallet_address, nonce, signature):
                 return Response({
                     'error': 'Firma inválida',
                     'code': 'invalid_signature'
                 }, status=status.HTTP_400_BAD_REQUEST)
+
         elif wallet_network == 'tron':
             if not re.match(r'^T[1-9A-HJ-NP-Za-km-z]{33}$', wallet_address):
                 return Response({
                     'error': 'Dirección TRON inválida',
                     'code': 'invalid_wallet_address'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            signed_tx = request.data.get('signed_tx')
 
-            # Prefer message signature if provided (tron message signing), otherwise accept a signed transaction
+            # Prefer message signature if present; otherwise allow signed_tx
             if signature:
                 if not _verify_tron_message_signature(wallet_address, nonce, signature):
                     return Response({
@@ -728,6 +745,13 @@ class VerifyWalletSignatureView(APIView):
                     'code': 'missing_tron_signature'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
+        else:
+            return Response({
+                'error': 'Red de wallet no soportada',
+                'code': 'invalid_wallet_network'
+            }, status=status.HTTP_400_BAD_REQUEST)
+
+        # Mark user as verified and active
         user.is_wallet_verified = True
         user.is_active = True
         user.wallet_nonce = ''

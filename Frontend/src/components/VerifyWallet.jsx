@@ -465,6 +465,16 @@ const VerifyWallet = () => {
         }
 
         console.log("[BoostMe] Tron currentAddress:", currentAddress, "walletAddress:", walletAddress);
+        // If the wallet's currently selected account is present but doesn't match the expected walletAddress,
+        // stop and ask the user to switch accounts in their wallet app to avoid provider errors like "usuario no encontrado".
+        if (currentAddress && walletAddress && currentAddress !== walletAddress) {
+          console.warn('[BoostMe] Cuenta seleccionada en la wallet no coincide con la dirección esperada');
+          setError('La cuenta activa en tu wallet no coincide con la dirección registrada. Cambia a la cuenta correcta en TronLink/Trust Wallet y vuelve a intentar.');
+          setInstruction(`Cuenta activa en la wallet: ${currentAddress}`);
+          setLoading(false);
+          setShowOpenInApp(false);
+          return;
+        }
         // If the provider exists but the address is not yet available, still attempt signing; the wallet app will prompt for account/permission
         try {
           // Convert message to hex because some tron providers expect hex input
