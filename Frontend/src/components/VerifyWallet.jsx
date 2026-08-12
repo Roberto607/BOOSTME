@@ -14,6 +14,24 @@ const VerifyWallet = () => {
   const [loading, setLoading] = useState(false);
   const [showOpenInApp, setShowOpenInApp] = useState(false);
 
+  // In-page mobile console for debugging (Eruda). Loads only on mobile.
+  useEffect(() => {
+    try {
+      const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window.navigator.userAgent);
+      if (!isMobile) return;
+      if (window.eruda) return;
+      const s = document.createElement('script');
+      s.src = 'https://cdn.jsdelivr.net/npm/eruda';
+      s.async = true;
+      s.onload = () => {
+        try { window.eruda && window.eruda.init(); } catch (e) { console.error('[BoostMe] eruda init failed', e); }
+      };
+      document.body.appendChild(s);
+    } catch (e) {
+      console.error('[BoostMe] failed to inject eruda', e);
+    }
+  }, []);
+
   const isMobileDevice = () => /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(window.navigator.userAgent);
 
   const getEvmWalletProvider = () => {
@@ -71,6 +89,14 @@ const VerifyWallet = () => {
     sessionStorage.setItem("walletVerificationData", JSON.stringify(verificationData));
     localStorage.setItem("walletVerificationData", JSON.stringify(verificationData));
 
+    console.log("[BoostMe] Intentando abrir wallet:", {
+      walletNetwork,
+      walletAddress,
+      nonce,
+      currentUrl,
+      userAgent: window.navigator.userAgent,
+    });
+
     try {
       if (walletNetwork === 'tron') {
         const deepLinks = [
@@ -82,6 +108,7 @@ const VerifyWallet = () => {
         let index = 0;
         const tryNextDeepLink = () => {
           if (index >= deepLinks.length) {
+            console.error("[BoostMe] Falló la apertura de Trust Wallet / TronLink con todos los deep links.");
             setError("No se pudo abrir Trust Wallet o TronLink.");
             setSuccess("");
             return;
@@ -89,6 +116,8 @@ const VerifyWallet = () => {
 
           const url = deepLinks[index];
           index += 1;
+
+          console.log("[BoostMe] Intentando deep link:", url);
 
           const link = document.createElement("a");
           link.href = url;
@@ -113,6 +142,7 @@ const VerifyWallet = () => {
       const trustWalletUrl = `https://link.trustwallet.com/open_url?coin_id=60&url=${encodeURIComponent(currentUrl)}`;
       const primaryUrl = /Android/i.test(window.navigator.userAgent) ? metamaskUrl : trustWalletUrl;
 
+      console.log("[BoostMe] Deep link EVM:", { primaryUrl, currentUrl });
       window.location.href = primaryUrl;
       setSuccess("Abre tu wallet y firma.");
       setError("");
@@ -121,7 +151,8 @@ const VerifyWallet = () => {
         setError("No se pudo abrir la wallet.");
         setSuccess("");
       }, 1800);
-    } catch {
+    } catch (err) {
+      console.error("[BoostMe] Error al abrir wallet:", err);
       const fallbackText = walletNetwork === 'tron'
         ? "Instala Trust Wallet o TronLink."
         : "Instala una wallet compatible.";
@@ -134,7 +165,15 @@ const VerifyWallet = () => {
     setError("");
     setSuccess("");
 
+    console.log("[BoostMe] Iniciando firma de wallet:", {
+      walletNetwork,
+      walletAddress,
+      nonce,
+      isMobile: isMobileDevice(),
+    });
+
     if (!walletAddress || !nonce) {
+      console.error("[BoostMe] Faltan walletAddress o nonce.");
       setError("Falta la dirección de wallet o el nonce de verificación.");
       return;
     }
@@ -153,21 +192,25 @@ const VerifyWallet = () => {
 
       if (walletNetwork === 'tron') {
         const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
+        console.log("[BoostMe] Tron provider disponible:", !!tronWeb, tronWeb?.ready);
         if (!tronWeb || !tronWeb.ready) {
           setShowOpenInApp(true);
           throw new Error("Tu wallet TRON no está disponible en este navegador. Abre esta página desde la app de tu wallet y usa \"Abrir en la app\".");
         }
         const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
+        console.log("[BoostMe] Tron currentAddress:", currentAddress, "walletAddress:", walletAddress);
         if (!currentAddress || currentAddress !== walletAddress) {
           throw new Error("La wallet TRON conectada no coincide con la dirección registrada.");
         }
         try {
           signature = await tronWeb.trx.sign(message);
-        } catch {
+        } catch (signErr) {
+          console.warn("[BoostMe] Tron trx.sign sin parámetros falló, reintentando:", signErr);
           signature = await tronWeb.trx.sign(message, currentAddress);
         }
       } else {
         const provider = getEvmWalletProvider() || (window.web3 && window.web3.currentProvider);
+        console.log("[BoostMe] EVM provider disponible:", !!provider);
         if (!provider) {
           setShowOpenInApp(true);
           throw new Error("Tu wallet no está disponible en este navegador. Abre esta página desde la app de tu wallet y usa \"Abrir en la app\".");
@@ -179,6 +222,7 @@ const VerifyWallet = () => {
           throw new Error("Conecta primero la cuenta correcta en tu wallet para continuar.");
         }
         const account = accounts[0];
+        console.log("[BoostMe] EVM account:", account, "walletAddress:", walletAddress);
         if (account.toLowerCase() !== walletAddress.toLowerCase()) {
           throw new Error(`La wallet conectada no coincide con la dirección registrada (${walletAddress}). Conecta la misma cuenta que usaste al registrarte.`);
         }
@@ -195,6 +239,8 @@ const VerifyWallet = () => {
         }
       }
 
+      console.log("[BoostMe] Firma generada correctamente:", signature);
+
       const response = await fetch(`${API_BASE_URL}/verify-wallet/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -203,6 +249,7 @@ const VerifyWallet = () => {
       });
 
       const data = await response.json();
+      console.log("[BoostMe] Respuesta del backend:", response.status, data);
       if (!response.ok) {
         setError(data?.error || data?.detail || "Error al verificar la wallet.");
         setLoading(false);
@@ -215,7 +262,7 @@ const VerifyWallet = () => {
         navigate("/dashboard", { replace: true });
       }, 1200);
     } catch (err) {
-      console.error(err);
+      console.error("[BoostMe] Error final en la verificación:", err);
       setError(err.message || "Error al firmar el nonce.");
     } finally {
       setLoading(false);
