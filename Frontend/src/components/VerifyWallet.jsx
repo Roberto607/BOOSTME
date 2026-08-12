@@ -182,6 +182,46 @@ const VerifyWallet = () => {
     }
   };
 
+  // Intent URL builder for Chrome on Android
+  const buildIntentUrl = (packageName) => {
+    const currentUrl = window.location.href;
+    const encoded = encodeURIComponent(currentUrl);
+    // browser_fallback_url: open the same URL if app not available
+    const fallback = encodeURIComponent(currentUrl);
+    return `intent://browser?url=${encoded}#Intent;package=${packageName};scheme=trust;S.browser_fallback_url=${fallback};end`;
+  };
+
+  const handleOpenIntent = (packageName) => {
+    try {
+      const intentUrl = buildIntentUrl(packageName);
+      console.log('[BoostMe] Intent URL:', intentUrl);
+      // use an anchor click to let mobile Chrome handle the intent
+      const a = document.createElement('a');
+      a.href = intentUrl;
+      a.style.display = 'none';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setSuccess('Intent enviado. Si la app está instalada, debería abrirla.');
+      setError('');
+    } catch (e) {
+      console.error('[BoostMe] Error opening intent:', e);
+      setError('No se pudo intentar abrir la app con Intent.');
+    }
+  };
+
+  const [showQr, setShowQr] = useState(false);
+  const copyUrlToClipboard = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setSuccess('URL copiada al portapapeles. Ábrela desde Trust Wallet → Browser → Pegar.');
+      setError('');
+    } catch (e) {
+      console.error('[BoostMe] copy failed', e);
+      setError('No se pudo copiar la URL automáticamente. Copia manualmente: ' + window.location.href);
+    }
+  };
+
   const handleSignWallet = async () => {
     setError("");
     setSuccess("");
@@ -314,13 +354,51 @@ const VerifyWallet = () => {
         {showOpenInApp && (
           <div className="bg-amber-100 border-l-4 border-amber-500 text-amber-800 px-4 py-3 rounded mb-4">
             <p className="font-medium">Abre Trust Wallet o TronLink y firma.</p>
-            <button
-              type="button"
-              onClick={handleOpenInWalletApp}
-              className="w-full py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600 transition mt-3"
-            >
-              Abrir en la app
-            </button>
+            <div className="grid grid-cols-1 gap-2 mt-3">
+              <button
+                type="button"
+                onClick={handleOpenInWalletApp}
+                className="w-full py-2 bg-amber-500 text-white font-semibold rounded-lg hover:bg-amber-600 transition"
+              >
+                Abrir en la app
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleOpenIntent('com.wallet.crypto.trustapp')}
+                className="w-full py-2 bg-amber-400 text-white font-semibold rounded-lg hover:bg-amber-500 transition"
+              >
+                Abrir con Chrome (Intent)
+              </button>
+
+              <div className="flex space-x-2">
+                <button
+                  type="button"
+                  onClick={copyUrlToClipboard}
+                  className="flex-1 py-2 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  Copiar URL
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setShowQr(!showQr)}
+                  className="py-2 px-3 bg-white border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition"
+                >
+                  {showQr ? 'Ocultar QR' : 'Mostrar QR'}
+                </button>
+              </div>
+
+              {showQr && (
+                <div className="mt-3 flex justify-center">
+                  <img
+                    alt="QR URL"
+                    src={`https://chart.googleapis.com/chart?cht=qr&chs=240x240&chl=${encodeURIComponent(window.location.href)}`}
+                    className="rounded-md border"
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
 
