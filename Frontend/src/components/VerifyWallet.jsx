@@ -255,6 +255,8 @@ const VerifyWallet = () => {
       setError('No se pudo copiar la URL automáticamente. Copia manualmente: ' + window.location.href);
     }
   };
+  const [lastSignature, setLastSignature] = useState(null);
+  const [lastResponseText, setLastResponseText] = useState(null);
 
   const handleSignWallet = async () => {
     setError("");
@@ -335,6 +337,7 @@ const VerifyWallet = () => {
       }
 
       console.log("[BoostMe] Firma generada correctamente:", signature);
+      setLastSignature(signature);
 
       const response = await fetch(`${API_BASE_URL}/verify-wallet/`, {
         method: "POST",
@@ -343,10 +346,20 @@ const VerifyWallet = () => {
         credentials: "include",
       });
 
-      const data = await response.json();
-      console.log("[BoostMe] Respuesta del backend:", response.status, data);
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (e) {
+        // fallback to text if not json
+        const text = await response.text();
+        setLastResponseText(text);
+        console.warn('[BoostMe] Backend response not JSON:', text);
+      }
+
+      console.log("[BoostMe] Respuesta del backend:", response.status, data || lastResponseText);
       if (!response.ok) {
-        setError(data?.error || data?.detail || "Error al verificar la wallet.");
+        const errMsg = (data && (data.error || data.detail)) || lastResponseText || 'Error al verificar la wallet.';
+        setError(errMsg);
         setLoading(false);
         return;
       }
@@ -358,7 +371,8 @@ const VerifyWallet = () => {
       }, 1200);
     } catch (err) {
       console.error("[BoostMe] Error final en la verificación:", err);
-      setError(err.message || "Error al firmar el nonce.");
+      setLastResponseText(err?.stack || JSON.stringify(err));
+      setError(err?.message || 'Error al firmar el nonce.');
     } finally {
       setLoading(false);
     }
@@ -439,6 +453,24 @@ const VerifyWallet = () => {
         {success && (
           <div className="bg-green-100 border-l-4 border-green-600 text-green-700 px-4 py-3 rounded mb-4">
             {success}
+          </div>
+        )}
+
+        {(lastSignature || lastResponseText) && (
+          <div className="bg-gray-50 border-l-4 border-gray-300 text-gray-800 px-4 py-3 rounded mb-4">
+            <p className="font-medium">Debug: firma / respuesta cruda</p>
+            {lastSignature && (
+              <div className="mt-2 text-sm break-words">
+                <strong>Firma:</strong>
+                <div className="mt-1 p-2 bg-white border rounded text-xs text-gray-700">{String(lastSignature)}</div>
+              </div>
+            )}
+            {lastResponseText && (
+              <div className="mt-2 text-sm break-words">
+                <strong>Respuesta cruda:</strong>
+                <div className="mt-1 p-2 bg-white border rounded text-xs text-gray-700 whitespace-pre-wrap">{String(lastResponseText)}</div>
+              </div>
+            )}
           </div>
         )}
 
