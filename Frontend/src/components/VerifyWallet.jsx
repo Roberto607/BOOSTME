@@ -483,43 +483,32 @@ const VerifyWallet = () => {
             messageHex = message;
           }
 
-          // Try multiple signing strategies to accommodate different providers
-          const candidates = [];
-          try {
-            candidates.push({ label: 'raw', value: message });
-            candidates.push({ label: 'hex_0x', value: messageHex });
-            const hexNo0x = messageHex && String(messageHex).startsWith('0x') ? String(messageHex).slice(2) : String(messageHex);
-            candidates.push({ label: 'hex_no0x', value: hexNo0x });
-            // bytes as hex (no 0x)
-            let bytesHex = '';
-            for (let i = 0; i < message.length; i++) bytesHex += message.charCodeAt(i).toString(16).padStart(2, '0');
-            candidates.push({ label: 'bytes_hex', value: bytesHex });
-          } catch (cErr) {
-            console.warn('[BoostMe] preparing candidates failed', cErr);
-          }
+          // Build ordered attempts to try provider-specific APIs and fallbacks
+          const hexNo0x = messageHex && String(messageHex).startsWith('0x') ? String(messageHex).slice(2) : String(messageHex);
+          const attempts = [
+            { label: 'signString', fn: async () => (typeof tronWeb.trx?.signString === 'function' ? await tronWeb.trx.signString(message) : null) },
+            { label: 'sign Uint8Array', fn: async () => { const bytes = new Uint8Array(message.split('').map((c) => c.charCodeAt(0))); return await tronWeb.trx.sign(bytes); } },
+            { label: 'sign object {message}', fn: async () => await tronWeb.trx.sign({ message: hexNo0x }) },
+            { label: 'raw', fn: async () => await tronWeb.trx.sign(message) },
+            { label: 'hex_no0x', fn: async () => await tronWeb.trx.sign(hexNo0x) },
+            { label: 'hex_with0x', fn: async () => await tronWeb.trx.sign(messageHex) },
+            { label: 'raw+address', fn: async () => await tronWeb.trx.sign(message, currentAddress) },
+            { label: 'hex_no0x+address', fn: async () => await tronWeb.trx.sign(hexNo0x, currentAddress) },
+          ];
 
           let lastError = null;
-          for (const c of candidates) {
-            if (!c || !c.value) continue;
+          for (const a of attempts) {
             try {
-              console.log('[BoostMe] Trying sign candidate:', c.label, c.value);
-              // try sign without address
-              signature = await tronWeb.trx.sign(c.value);
-              console.log('[BoostMe] Signature succeeded with candidate:', c.label);
-              break;
-            } catch (err1) {
-              console.warn('[BoostMe] sign failed for', c.label, err1);
-              lastError = err1;
-              try {
-                // try with address
-                signature = await tronWeb.trx.sign(c.value, currentAddress);
-                console.log('[BoostMe] Signature succeeded with candidate+address:', c.label);
+              console.log('[BoostMe] Trying attempt:', a.label);
+              const r = await a.fn();
+              if (r) {
+                signature = r;
+                console.log('[BoostMe] Signature succeeded with attempt:', a.label);
                 break;
-              } catch (err2) {
-                console.warn('[BoostMe] sign with address failed for', c.label, err2);
-                lastError = err2;
-                continue;
               }
+            } catch (eAttempt) {
+              console.warn('[BoostMe] attempt failed', a.label, eAttempt);
+              lastError = eAttempt;
             }
           }
 
