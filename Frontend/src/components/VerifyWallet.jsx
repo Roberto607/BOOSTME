@@ -387,25 +387,42 @@ const VerifyWallet = () => {
       let signature;
 
       if (walletNetwork === 'tron') {
+        // Prefer any available tron provider even if tronWeb.ready is falsy
         const tronWeb = window.tronWeb || window.tronLink?.tronWeb;
         console.log("[BoostMe] Tron provider disponible:", !!tronWeb, tronWeb?.ready);
-        if (!tronWeb || !tronWeb.ready) {
-          // Do not throw — guide the user instead and avoid showing error in the form.
+        if (!tronWeb) {
+          // No provider at all -> fallback
           setShowOpenInApp(true);
-          setInstruction('Tu wallet TRON no está disponible en este navegador. Abre esta página dentro de Trust Wallet/TronLink (DApp browser) y espera a que cargue.');
+          setInstruction('Tu wallet TRON no está disponible en este navegador. Abre esta página dentro de Trust Wallet/TronLink (DApp browser) y vuelve a intentar.');
           setLoading(false);
           return;
         }
-        const currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
-        console.log("[BoostMe] Tron currentAddress:", currentAddress, "walletAddress:", walletAddress);
-        if (!currentAddress || currentAddress !== walletAddress) {
-          throw new Error("La wallet TRON conectada no coincide con la dirección registrada.");
-        }
+
+        // Try to obtain the current address (tronWeb may initialize asynchronously)
+        let currentAddress = null;
         try {
-          signature = await tronWeb.trx.sign(message);
-        } catch (signErr) {
-          console.warn("[BoostMe] Tron trx.sign sin parámetros falló, reintentando:", signErr);
-          signature = await tronWeb.trx.sign(message, currentAddress);
+          currentAddress = tronWeb.defaultAddress?.base58 || (await tronWeb.trx.getAccount()).address;
+        } catch (e) {
+          console.warn('[BoostMe] getAccount failed, currentAddress unknown yet', e);
+        }
+
+        console.log("[BoostMe] Tron currentAddress:", currentAddress, "walletAddress:", walletAddress);
+        // If the provider exists but the address is not yet available, still attempt signing; the wallet app will prompt for account/permission
+        try {
+          // Try simple sign; some providers accept sign(message) or sign(message, address)
+          try {
+            signature = await tronWeb.trx.sign(message);
+          } catch (signErr) {
+            console.warn("[BoostMe] Tron trx.sign without params failed, retrying with address:", signErr);
+            signature = await tronWeb.trx.sign(message, currentAddress);
+          }
+        } catch (errSign) {
+          console.error('[BoostMe] Signing failed on tronWeb:', errSign);
+          // If signing failed because provider not ready, surface fallback
+          setShowOpenInApp(true);
+          setInstruction('No se pudo firmar automáticamente. Asegúrate de que la página está cargada dentro del navegador DApp de tu wallet y vuelve a intentar.');
+          setLoading(false);
+          return;
         }
       } else {
         const provider = getEvmWalletProvider() || (window.web3 && window.web3.currentProvider);
