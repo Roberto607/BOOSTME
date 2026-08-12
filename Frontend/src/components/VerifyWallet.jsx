@@ -168,36 +168,57 @@ const VerifyWallet = () => {
           `tronlink://navigate?url=${encodeURIComponent(currentUrl)}`,
         ];
 
-        let index = 0;
-        const tryNextDeepLink = () => {
-          if (index >= deepLinks.length) {
-            console.error("[BoostMe] Falló la apertura de Trust Wallet / TronLink con todos los deep links.");
-            setError("No se pudo abrir Trust Wallet o TronLink.");
-            setSuccess("");
-            return;
+        let opened = false;
+        const start = Date.now();
+        setSuccess('Intentando abrir la wallet instalada...');
+        setError('');
+        setShowOpenInApp(false);
+
+        const onVisibilityChange = () => {
+          if (document.visibilityState === 'hidden') {
+            opened = true;
+            console.log('[BoostMe] Página escondida: la app probablemente se abrió');
+            setSuccess('App abierta, continúa en tu wallet para firmar.');
+            document.removeEventListener('visibilitychange', onVisibilityChange);
           }
-
-          const url = deepLinks[index];
-          index += 1;
-
-          console.log("[BoostMe] Intentando deep link:", url);
-
-          const link = document.createElement("a");
-          link.href = url;
-          link.style.display = "none";
-          document.body.appendChild(link);
-          link.click();
-          document.body.removeChild(link);
-
-          window.setTimeout(() => {
-            tryNextDeepLink();
-          }, 1200);
         };
 
-        setSuccess("Abre Trust Wallet o TronLink y firma.");
-        setError("");
-        setShowOpenInApp(false);
-        tryNextDeepLink();
+        document.addEventListener('visibilitychange', onVisibilityChange);
+
+        // Try to open each deep link sequentially, using location.href first then anchor click
+        const tryLinks = async () => {
+          for (let i = 0; i < deepLinks.length; i++) {
+            const url = deepLinks[i];
+            console.log('[BoostMe] Intentando deep link:', url);
+            try {
+              // try direct navigation first
+              window.location.href = url;
+            } catch (e) {
+              const a = document.createElement('a');
+              a.href = url;
+              a.style.display = 'none';
+              document.body.appendChild(a);
+              a.click();
+              document.body.removeChild(a);
+            }
+
+            // wait briefly to let handler run
+            await new Promise((r) => setTimeout(r, 1000));
+            if (opened) return;
+          }
+
+          // After attempts, wait a short time for visibility change
+          await new Promise((r) => setTimeout(r, 1200));
+          if (!opened) {
+            console.error('[BoostMe] Falló la apertura de Trust Wallet / TronLink con todos los deep links.');
+            setError('No se pudo abrir la wallet automáticamente. Usa "Copiar URL" o escanea el QR en Trust Wallet → Browser.');
+            setSuccess('');
+            setShowOpenInApp(true);
+            document.removeEventListener('visibilitychange', onVisibilityChange);
+          }
+        };
+
+        tryLinks();
         return;
       }
 
