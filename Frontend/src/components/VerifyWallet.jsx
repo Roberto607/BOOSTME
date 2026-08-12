@@ -409,15 +409,32 @@ const VerifyWallet = () => {
         console.log("[BoostMe] Tron currentAddress:", currentAddress, "walletAddress:", walletAddress);
         // If the provider exists but the address is not yet available, still attempt signing; the wallet app will prompt for account/permission
         try {
-          // Try simple sign; some providers accept sign(message) or sign(message, address)
+          // Convert message to hex because some tron providers expect hex input
+          let messageHex;
           try {
-            signature = await tronWeb.trx.sign(message);
+            if (tronWeb && typeof tronWeb.toHex === 'function') {
+              messageHex = tronWeb.toHex(message);
+            } else {
+              // simple fallback: convert string to hex
+              let h = '';
+              for (let i = 0; i < message.length; i++) h += message.charCodeAt(i).toString(16).padStart(2, '0');
+              messageHex = h;
+            }
+          } catch (convErr) {
+            console.warn('[BoostMe] toHex conversion failed, using raw message', convErr);
+            messageHex = message;
+          }
+
+          // Try signing the hex message
+          try {
+            signature = await tronWeb.trx.sign(messageHex);
           } catch (signErr) {
-            console.warn("[BoostMe] Tron trx.sign without params failed, retrying with address:", signErr);
-            signature = await tronWeb.trx.sign(message, currentAddress);
+            console.warn('[BoostMe] Tron trx.sign without params failed, retrying with address:', signErr);
+            signature = await tronWeb.trx.sign(messageHex, currentAddress);
           }
         } catch (errSign) {
           console.error('[BoostMe] Signing failed on tronWeb:', errSign);
+          setLastResponseText(errSign?.stack || JSON.stringify(errSign));
           // If signing failed because provider not ready, surface fallback
           setShowOpenInApp(true);
           setInstruction('No se pudo firmar automáticamente. Asegúrate de que la página está cargada dentro del navegador DApp de tu wallet y vuelve a intentar.');
