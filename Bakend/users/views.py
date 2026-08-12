@@ -34,6 +34,16 @@ except ImportError:
     def encode_defunct(*args, **kwargs):
         raise ImportError('web3 is required for wallet signature verification')
 
+try:
+    from tronpy.proto import tron_pb2
+    from tronpy.proto import transaction as tron_transaction_proto
+    from tronpy.keys import Signature, hash_message as tron_hash_message
+except Exception:
+    tron_pb2 = None
+    tron_transaction_proto = None
+    Signature = None
+    tron_hash_message = None
+
 from .tokens import password_reset_token
 from .models import User, Transaction, UserPlan
 from .serializers import UserSerializer, RegisterSerializer, ActivatePlanSerializer, WithdrawSerializer
@@ -103,6 +113,131 @@ def _verify_wallet_signature(wallet_address: str, nonce: str, signature: str) ->
         return signer.lower() == wallet_address.lower()
     except Exception as exc:
         logger.exception('Error verifying wallet signature: %s', exc)
+        return False
+
+
+def _verify_tron_message_signature(wallet_address: str, nonce: str, signature: str) -> bool:
+    """Verify a TRON message signature for the BoostMe nonce message."""
+    if Signature is None or tron_hash_message is None:
+        raise ImportError('tronpy is required for TRON signature verification')
+    try:
+        msg = f"BoostMe verification nonce: {nonce}"
+        msg_hash = tron_hash_message(msg)
+        sig = Signature.fromhex(signature) if isinstance(signature, str) else Signature(signature)
+        pub = sig.recover_public_key_from_msg_hash(msg_hash)
+        signer_addr = pub.to_base58check_address()
+        return signer_addr == wallet_address
+    except Exception as exc:
+        logger.exception('Error verifying TRON message signature: %s', exc)
+        return False
+
+
+def _verify_tron_signed_transaction(wallet_address: str, nonce: str, signed_tx_input) -> bool:
+    """Verify a signed TRON transaction (raw bytes or JSON) contains the nonce and was signed by wallet_address.
+    Accepts either a hex/base64 string of the protobuf-serialized Transaction, or a JSON object with
+    'raw_data' and 'signature' fields as returned by some TRON providers.
+    """
+    if tron_pb2 is None or tron_transaction_proto is None or Signature is None:
+        raise ImportError('tronpy is required for TRON transaction verification')
+    try:
+        # Normalize input to a protobuf Transaction object
+        tx = None
+        # If it's a string, try hex or base64 decode to protobuf
+        if isinstance(signed_tx_input, str):
+            s = signed_tx_input.strip()
+            # Try hex
+            try:
+                if s.startswith('0x'):
+                    raw = bytes.fromhex(s[2:])
+                else:
+                    raw = bytes.fromhex(s)
+                tx = tron_pb2.Transaction()
+                tx.ParseFromString(raw)
+            except Exception:
+                # Try JSON
+                try:
+                    import json
+                    obj = json.loads(s)
+                    signed_tx_input = obj
+                except Exception:
+                    raise
+
+        if isinstance(signed_tx_input, dict):
+            # Convert raw_data dict to protobuf raw object
+            raw_data = signed_tx_input.get('raw_data') or signed_tx_input.get('rawData')
+            if raw_data is None:
+                # Maybe the client already provided a serialized `raw_data` hex
+                if 'raw_data_hex' in signed_tx_input:
+                    raw_bytes = bytes.fromhex(signed_tx_input['raw_data_hex'])
+                    tx = tron_pb2.Transaction()
+                    tx.raw_data.ParseFromString(raw_bytes)
+                else:
+                    raise ValueError('raw_data not found in signed_tx object')
+            else:
+                raw_proto = tron_transaction_proto._raw_data_to_protobuf(raw_data)
+                tx = tron_pb2.Transaction(raw_data=raw_proto)
+
+            # Obtain signature value (first one)
+            sig_list = signed_tx_input.get('signature') or signed_tx_input.get('signatures') or []
+            if not sig_list and tx.signature:
+                # protobuf parsed signatures as bytes
+                sig_bytes = tx.signature[0]
+            elif sig_list:
+                first = sig_list[0]
+                if isinstance(first, str):
+                    sig_bytes = bytes.fromhex(first[2:] if first.startswith('0x') else first)
+                else:
+                    sig_bytes = first
+        # If tx still None, maybe we parsed protobuf earlier
+        if tx is None:
+            raise ValueError('Could not parse signed_tx')
+
+        # raw bytes to compute hash
+        raw_bytes = tx.raw_data.SerializeToString()
+        import hashlib
+        message_hash = hashlib.sha256(raw_bytes).digest()
+
+        # signature bytes
+        if not hasattr(locals().get('sig_bytes', None), '__len__') or not locals().get('sig_bytes'):
+            if tx.signature:
+                sig_bytes = tx.signature[0]
+            else:
+                raise ValueError('No signature found in signed transaction')
+
+        sig = Signature(sig_bytes)
+        pub = sig.recover_public_key_from_msg_hash(message_hash)
+        signer_addr = pub.to_base58check_address()
+        if signer_addr != wallet_address:
+            logger.warning('TRON signed_tx signer mismatch: expected %s got %s', wallet_address, signer_addr)
+            return False
+
+        # Verify nonce is embedded in any contract data field
+        found_nonce = False
+        nonce_bytes = bytes.fromhex(nonce)
+        for c in tx.raw_data.contract:
+            try:
+                # parameter is Any; need to parse according to type_url
+                # Tron trigger smart contract data accessible via parsed TriggerSmartContract
+                # The generated classes already expose `.parameter` as Any with value bytes
+                # Use the known Transaction.Contract types to access data when possible
+                if c.parameter.type_url and b'TriggerSmartContract' in c.parameter.type_url.encode():
+                    # parse TriggerSmartContract
+                    t = tron_pb2.TriggerSmartContract()
+                    t.ParseFromString(c.parameter.value)
+                    data_bytes = t.data
+                    if nonce_bytes in data_bytes:
+                        found_nonce = True
+                        break
+            except Exception:
+                continue
+
+        if not found_nonce:
+            logger.warning('Nonce not found inside signed TRON transaction')
+            return False
+
+        return True
+    except Exception as exc:
+        logger.exception('Error verifying TRON signed transaction: %s', exc)
         return False
 
 SUPPORTED_WALLET_NETWORKS = ('polygon', 'bsc', 'tron')
@@ -572,10 +707,25 @@ class VerifyWalletSignatureView(APIView):
                     'error': 'Dirección TRON inválida',
                     'code': 'invalid_wallet_address'
                 }, status=status.HTTP_400_BAD_REQUEST)
-            if not signature:
+            signed_tx = request.data.get('signed_tx')
+
+            # Prefer message signature if provided (tron message signing), otherwise accept a signed transaction
+            if signature:
+                if not _verify_tron_message_signature(wallet_address, nonce, signature):
+                    return Response({
+                        'error': 'Firma inválida',
+                        'code': 'invalid_signature'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            elif signed_tx:
+                if not _verify_tron_signed_transaction(wallet_address, nonce, signed_tx):
+                    return Response({
+                        'error': 'Firma de transacción inválida o nonce no presente',
+                        'code': 'invalid_signed_tx'
+                    }, status=status.HTTP_400_BAD_REQUEST)
+            else:
                 return Response({
-                    'error': 'Firma inválida',
-                    'code': 'invalid_signature'
+                    'error': 'signature o signed_tx son requeridos para TRON',
+                    'code': 'missing_tron_signature'
                 }, status=status.HTTP_400_BAD_REQUEST)
 
         user.is_wallet_verified = True

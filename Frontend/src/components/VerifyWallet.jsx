@@ -514,12 +514,101 @@ const VerifyWallet = () => {
 
           if (!signature) {
             console.error('[BoostMe] All signing strategies failed', lastError);
-            throw lastError || new Error('Signing failed for all strategies');
+
+            // Provider RPC-style fallbacks: some wallets expose a request() method
+            try {
+              const hexNo0x = messageHex && String(messageHex).startsWith('0x') ? String(messageHex).slice(2) : String(messageHex);
+              const requestAttempts = [
+                { label: 'tronLink.request tron_signMessage', fn: async () => window.tronLink && window.tronLink.request ? await window.tronLink.request({ method: 'tron_signMessage', params: [hexNo0x] }) : null },
+                { label: 'tronLink.request tron_sign', fn: async () => window.tronLink && window.tronLink.request ? await window.tronLink.request({ method: 'tron_sign', params: [hexNo0x] }) : null },
+                { label: 'tronWeb.request tron_signMessage', fn: async () => window.tronWeb && window.tronWeb.request ? await window.tronWeb.request({ method: 'tron_signMessage', params: [hexNo0x] }) : null },
+                { label: 'tronWeb.request sign', fn: async () => window.tronWeb && window.tronWeb.request ? await window.tronWeb.request({ method: 'sign', params: [hexNo0x] }) : null },
+              ];
+
+              for (const ra of requestAttempts) {
+                try {
+                  console.log('[BoostMe] Trying provider request attempt:', ra.label);
+                  const r = await ra.fn();
+                  console.log('[BoostMe] provider request result', ra.label, r);
+                  if (r) { signature = r; break; }
+                } catch (eReq) {
+                  console.warn('[BoostMe] provider request attempt failed', ra.label, eReq);
+                }
+              }
+            } catch (reqErr) {
+              console.warn('[BoostMe] provider request fallbacks failed', reqErr);
+            }
+
+            if (!signature) {
+              throw lastError || new Error('Signing failed for all strategies');
+            }
           }
         } catch (errSign) {
           console.error('[BoostMe] Signing failed on tronWeb:', errSign);
           setLastResponseText(errSign?.stack || JSON.stringify(errSign));
-          // If signing failed because provider not ready, surface fallback
+
+          // Try transaction-signing fallback: build a minimal 0-TRX transfer to self and request the wallet to sign it.
+          try {
+            setInstruction('Intentando fallback: solicitar firma de una transacción mínima en TRON...');
+            // Build a 0-TRX transaction to self (many TRON wallets accept signing of transactions even if message signing APIs are missing)
+            let tx = null;
+            try {
+              if (tronWeb.transactionBuilder && typeof tronWeb.transactionBuilder.sendTrx === 'function') {
+                // amount in SUN (1 TRX = 1e6 sun); 0 is safe if wallet allows
+                tx = await tronWeb.transactionBuilder.sendTrx(walletAddress, 0, currentAddress || walletAddress);
+              } else if (tronWeb.transactionBuilder && typeof tronWeb.transactionBuilder.createTransaction === 'function') {
+                tx = await tronWeb.transactionBuilder.createTransaction({ to_address: walletAddress, owner_address: currentAddress || walletAddress, amount: 0 });
+              }
+            } catch (buildErr) {
+              console.warn('[BoostMe] No se pudo construir transacción de fallback:', buildErr);
+              tx = null;
+            }
+
+            if (tx) {
+              let signedTx = null;
+              try {
+                signedTx = await tronWeb.trx.sign(tx);
+              } catch (signTxErr) {
+                console.warn('[BoostMe] Intento de firmar transacción falló:', signTxErr);
+                signedTx = null;
+              }
+
+              if (signedTx) {
+                console.log('[BoostMe] Transacción firmada (fallback):', signedTx);
+                setLastSignature(JSON.stringify(signedTx));
+
+                // Send signed transaction object to backend as fallback verification
+                const resp = await fetch(`${API_BASE_URL}/verify-wallet/`, {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  credentials: 'include',
+                  body: JSON.stringify({ wallet_address: walletAddress, wallet_network: walletNetwork, nonce, signed_tx: signedTx })
+                });
+
+                const respData = await (async () => {
+                  try { return await resp.json(); } catch(e){ return { raw: await resp.text() }; }
+                })();
+
+                if (!resp.ok) {
+                  const errMsg = (respData && (respData.error || respData.detail)) || JSON.stringify(respData) || 'Error verifying signed_tx';
+                  setError(errMsg);
+                  setLoading(false);
+                  return;
+                }
+
+                setSuccess(respData?.message || 'Wallet verificada correctamente.');
+                sessionStorage.removeItem('walletVerificationData');
+                setTimeout(() => navigate('/dashboard', { replace: true }), 1200);
+                setLoading(false);
+                return;
+              }
+            }
+
+          } catch (fallbackErr) {
+            console.error('[BoostMe] Fallback de transacción falló:', fallbackErr);
+          }
+
+          // If signing failed because provider not ready, surface fallback UI
           setShowOpenInApp(true);
           setInstruction('No se pudo firmar automáticamente. Asegúrate de que la página está cargada dentro del navegador DApp de tu wallet y vuelve a intentar.');
           setLoading(false);

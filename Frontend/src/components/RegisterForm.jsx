@@ -342,7 +342,13 @@ const RegisterForm = () => {
 
                 {walletNetwork === 'tron' && (
                     <div className="mb-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-xs text-amber-800">
-                        Para TRON la dirección debe venir de Trust Wallet o TronLink.
+                        Para TRON usa TronLink (recomendado) en su DApp Browser para firmar mensajes. Si usas Trust Wallet puede que necesites firmar una transacción como fallback.
+                    </div>
+                )}
+
+                {(walletNetwork === 'bsc' || walletNetwork === 'polygon') && (
+                    <div className="mb-3 rounded-lg border border-blue-200 bg-blue-50 px-3 py-2 text-xs text-blue-800">
+                        Para BSC/Polygon recomendamos MetaMask (extensión o móvil), Trust Wallet (móvil) o WalletConnect. Usa `personal_sign`/`eth_signTypedData` cuando sea posible.
                     </div>
                 )}
 
