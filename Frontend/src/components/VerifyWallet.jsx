@@ -323,6 +323,7 @@ const VerifyWallet = () => {
   const [tronReady, setTronReady] = useState(false);
   const [checkingTron, setCheckingTron] = useState(false);
   const [instruction, setInstruction] = useState('');
+  const [attemptedAutoSign, setAttemptedAutoSign] = useState(false);
 
   const handleSignWallet = async () => {
     setError("");
